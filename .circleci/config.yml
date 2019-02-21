@@ -1,0 +1,40 @@
+version: 2
+jobs:
+  build:
+    docker:
+      - image: circleci/openjdk:8-jdk
+
+    working_directory: ~/repo
+
+    environment:
+      JVM_OPTS: -Xmx3200m
+      TERM: dumb
+
+    branches:
+      ignore:
+        - gh-pages
+
+    steps:
+      # Checkout, with submodules
+      - checkout
+
+      # Download and cache dependencies
+      - restore_cache:
+          keys:
+            - v1-dependencies-{{ checksum "build.gradle" }}-{{ checksum ".circleci/config.yml" }}
+            - v1-dependencies-
+
+      - run: gradle detekt check
+
+      # Upload coverage report
+      - run: bash <(curl -s https://codecov.io/bash)
+
+      # Capture dependencies
+      - save_cache:
+          paths:
+            - ~/.gradle
+          key: v1-dependencies-{{ checksum "build.gradle" }}-{{ checksum ".circleci/config.yml" }}
+
+      - store_artifacts:
+          path: ./build/reports
+          destination: reports
