@@ -21,7 +21,6 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
-import java.lang.IllegalStateException
 import kotlin.coroutines.CoroutineContext
 
 /** An value which can change at any time. */

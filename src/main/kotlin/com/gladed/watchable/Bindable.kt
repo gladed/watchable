@@ -19,7 +19,7 @@ package com.gladed.watchable
 /**
  * An object whose value can be bound to a different object.
  */
-interface Bindable<T, C: Change<T>> {
+interface Bindable<T, C : Change<T>> {
     /** When the value of [other] changes, updates this object. Throws if already bound. */
     fun bind(other: Watchable<T, C>)
 

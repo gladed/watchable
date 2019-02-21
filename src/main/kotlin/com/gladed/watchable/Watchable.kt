@@ -23,7 +23,7 @@ import kotlinx.coroutines.isActive
 /**
  * An object wrapping type [T] which can be watched for changes of type [C].
  */
-interface Watchable<T, C: Change<T>> : CoroutineScope {
+interface Watchable<T, C : Change<T>> : CoroutineScope {
     /**
      * Deliver changes to [block] using [scope] until it terminates or until the returned [Job] is cancelled.
      * Note that calling [watch] will normally result in an immediate call to [block], announcing the initial value.

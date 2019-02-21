@@ -17,4 +17,4 @@
 package com.gladed.watchable
 
 /** A collection which may be watched for changes. */
-interface WatchableCollection<T, Co: Collection<T>, Ch: Change<Co>> : Watchable<Co, Ch>, Collection<T>
+interface WatchableCollection<T, Co : Collection<T>, Ch : Change<Co>> : Watchable<Co, Ch>, Collection<T>
