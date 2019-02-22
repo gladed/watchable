@@ -29,6 +29,7 @@ jobs:
       # Upload coverage report
       - run: bash <(curl -s https://codecov.io/bash)
 
+      - run: gradle sonarqube -Dsonar.projectKey=gladed_watchable -Dsonar.organization=gladed-github -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=$SONAR_LOGIN
       # Capture dependencies
       - save_cache:
           paths:
