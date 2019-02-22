@@ -76,6 +76,11 @@ compileTestKotlin.kotlinOptions {
 }
 
 test {
+    reports {
+        junitXml.enabled = true
+        html.enabled = true
+    }
+
     testLogging {
         events "failed"
         showExceptions = true
