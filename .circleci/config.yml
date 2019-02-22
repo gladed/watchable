@@ -24,10 +24,17 @@ jobs:
             - v1-dependencies-{{ checksum "build.gradle" }}-{{ checksum ".circleci/config.yml" }}
             - v1-dependencies-
 
-      - run: gradle detekt check
+      - run:
+          name: Update SonarQube
+          command: gradle sonarqube -Dsonar.projectKey=gladed_watchable -Dsonar.organization=gladed-github -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=$SONAR_LOGIN
 
-      # Upload coverage report
-      - run: bash <(curl -s https://codecov.io/bash)
+      - run:
+          name: Build and test
+          command: gradle detekt check
+
+      - run:
+          name: Update codecov.io
+          command: bash <(curl -s https://codecov.io/bash)
 
       # Capture dependencies
       - save_cache:
@@ -35,6 +42,5 @@ jobs:
             - ~/.gradle
           key: v1-dependencies-{{ checksum "build.gradle" }}-{{ checksum ".circleci/config.yml" }}
 
-      - store_artifacts:
-          path: ./build/reports
-          destination: reports
+      - store_test_results:
+          path: ./build/test-results

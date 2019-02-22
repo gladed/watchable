@@ -108,6 +108,7 @@ class BindListTest {
             yield()
             yield()
             dest.unbind()
+            dest.unbind() // twice to show it works ok
             origin -= 5
             yield()
             yield()
