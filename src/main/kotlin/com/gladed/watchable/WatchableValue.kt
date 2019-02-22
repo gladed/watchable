@@ -51,13 +51,13 @@ class WatchableValue<T>(
         BroadcastChannel<ValueChange<T>>(CAPACITY).also { cancelWithScope(it) }
     }
 
-    override fun watch(scope: CoroutineScope, block: (ValueChange<T>) -> Unit): Job {
+    override fun CoroutineScope.watch(block: (ValueChange<T>) -> Unit): Job {
         val initialValue = value
 
         // Create a subscription so that no further changes are missed
         val changes = channel.openSubscription()
 
-        return scope.launch {
+        return launch {
             // Send initial immediately, and wait for it to be processed on the target scope
             block(ValueChange(initialValue, initialValue))
             changes.consumeEach {

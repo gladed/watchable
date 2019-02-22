@@ -16,6 +16,7 @@
 
 package com.gladed.watchable
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import java.lang.IllegalStateException
 
@@ -25,7 +26,7 @@ import java.lang.IllegalStateException
 class BindableBase<T, C : Change<T>>(
     private val owner: Watchable<T, C>,
     private val onChange: (C) -> Unit
-) : Bindable<T, C> {
+) : Bindable<T, C>, CoroutineScope by owner {
     /** Binding, if any. */
     private var binding: Job? = null
 
@@ -55,7 +56,7 @@ class BindableBase<T, C : Change<T>>(
         boundTo = other
 
         // Perform the binding
-        binding = other.watch(owner) {
+        binding = watch(other) {
             isOnChange = true
             onChange(it)
             isOnChange = false

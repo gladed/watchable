@@ -85,11 +85,11 @@ class WatchableSet<T>(
         }
     }
 
-    override fun watch(scope: CoroutineScope, block: (SetChange<T>) -> Unit): Job {
+    override fun CoroutineScope.watch(block: (SetChange<T>) -> Unit): Job {
         // Open first in case there are changes
         val sub = channel.openSubscription()
         val initial = SetChange.Initial(this@WatchableSet.toSet())
-        return scope.launch {
+        return launch {
             // Send a current copy of initial content
             block(initial)
             sub.consumeEach {

@@ -16,6 +16,7 @@
 
 import com.gladed.watchable.ListChange
 import com.gladed.watchable.WatchableList
+import com.gladed.watchable.watch
 import com.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -46,7 +47,7 @@ class WatchableListTest {
         val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
             list = watchableListOf()
-            list.watch {
+            watch(list) {
                 log("Receive $it")
                 changes += it
             }
@@ -67,7 +68,7 @@ class WatchableListTest {
         val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
             list = watchableListOf(5, 6)
-            list.watch {
+            watch(list) {
                 log("Receive $it")
                 changes += it
             }
@@ -84,7 +85,7 @@ class WatchableListTest {
         val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
             list = watchableListOf(5, 6)
-            list.watch {
+            watch(list) {
                 log("Receive $it")
                 changes += it
             }
@@ -103,7 +104,7 @@ class WatchableListTest {
         runThenCancel {
             list = watchableListOf()
             val readOnly = list.readOnly().also {
-                it.watch { change ->
+                watch(it) { change ->
                     changes += change
                 }
             }
@@ -124,7 +125,7 @@ class WatchableListTest {
         val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
             list = watchableListOf(3, 4)
-            list.watch { changes += it }
+            watch(list) { changes += it }
             yield()
             yield()
             list.clear()

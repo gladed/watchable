@@ -17,9 +17,8 @@
 import com.gladed.watchable.LocalScope
 import com.gladed.watchable.ValueChange
 import com.gladed.watchable.WatchableValue
+import com.gladed.watchable.watch
 import com.gladed.watchable.watchableValueOf
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
@@ -44,7 +43,7 @@ class WatchableValueTest {
         var received = -1
         runThenCancel {
             intValue = watchableValueOf(5)
-            intValue.watch {
+            watch(intValue) {
                 log("Updating received with $it")
                 received = it.newValue
             }
@@ -68,7 +67,7 @@ class WatchableValueTest {
         val received = mutableListOf<ValueChange<Int>>()
         runThenCancel {
             intValue = watchableValueOf(5)
-            intValue.watch {
+            watch(intValue) {
                 received.add(it)
             }
             intValue.value = 5
@@ -85,7 +84,7 @@ class WatchableValueTest {
             intValue = watchableValueOf(5)
             val readOnly = intValue.readOnly()
             println("Object: $readOnly") // Coverage
-            readOnly.watch {
+            watch(readOnly) {
                 received.add(it)
             }
             intValue.value = 6
@@ -100,7 +99,7 @@ class WatchableValueTest {
         var received = -1
         runBlocking {
             intValue = scope.watchableValueOf(5)
-            intValue.watch(this) {
+            watch(intValue) {
                 log("received $it")
                 received = it.newValue
             }
@@ -123,7 +122,7 @@ class WatchableValueTest {
         var received = -1
         runThenCancel {
             intValue = watchableValueOf(5)
-            intValue.watch(scope) {
+            scope.watch(intValue) {
                 received = it.newValue
             }
             delay(50)

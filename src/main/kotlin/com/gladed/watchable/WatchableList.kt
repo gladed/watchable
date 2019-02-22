@@ -109,13 +109,13 @@ class WatchableList<T>(
         }
     }
 
-    override fun watch(scope: CoroutineScope, block: (ListChange<T>) -> Unit): Job {
+    override fun CoroutineScope.watch(block: (ListChange<T>) -> Unit): Job {
         // Open first in case there are changes
         val sub = channel.openSubscription()
         val initial = ListChange.Initial(this@WatchableList.toList())
 
         // Send a copy of initial content
-        return scope.launch {
+        return launch {
             block(initial)
             sub.consumeEach {
                 block(it)

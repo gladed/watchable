@@ -23,6 +23,7 @@ import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Test
+import java.lang.IllegalArgumentException
 import java.util.concurrent.Executors
 
 class BindValueTest {
@@ -49,6 +50,16 @@ class BindValueTest {
             yield()
             assertEquals(7, dest.value)
         }
+    }
+
+    @Test fun badBind() {
+        try {
+            runThenCancel {
+                val origin = watchableValueOf(5)
+                origin.bind(origin)
+                fail("Shouldn't get here")
+            }
+        } catch (e: IllegalStateException) { }
     }
 
     @Test fun badRebind() {

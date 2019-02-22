@@ -28,9 +28,7 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
      * Deliver changes to [block] using [scope] until it terminates or until the returned [Job] is cancelled.
      * Note that calling [watch] will normally result in an immediate call to [block], announcing the initial value.
      */
-    fun watch(
-        /** The scope within which [block] should be received. Defaults to this object's scope. */
-        scope: CoroutineScope = this,
+    fun CoroutineScope.watch(
         /** The block to invoke within [scope] whenever a change occurs. */
         block: (C) -> Unit
     ): Job

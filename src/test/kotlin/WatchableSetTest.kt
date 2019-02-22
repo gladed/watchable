@@ -16,6 +16,7 @@
 
 import com.gladed.watchable.SetChange
 import com.gladed.watchable.WatchableSet
+import com.gladed.watchable.watch
 import com.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -46,7 +47,7 @@ class WatchableSetTest {
         val changes = mutableListOf<SetChange<Int>>()
         runThenCancel {
             set = watchableSetOf()
-            set.watch {
+            watch(set) {
                 log("Receive $it")
                 changes += it
             }
@@ -65,7 +66,7 @@ class WatchableSetTest {
         val changes = mutableListOf<SetChange<Int>>()
         runThenCancel {
             set = watchableSetOf(5, 6)
-            set.watch {
+            watch(set) {
                 log("Receive $it")
                 changes += it
             }
@@ -83,7 +84,7 @@ class WatchableSetTest {
         runThenCancel {
             set = watchableSetOf()
             val readOnly = set.readOnly().also {
-                it.watch { change ->
+                watch(it) { change ->
                     changes += change
                 }
             }

@@ -17,6 +17,7 @@
 package com.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.SendChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -35,6 +36,15 @@ fun <T : Any> Collection<T>.toWatchableList(context: CoroutineContext) = Watchab
 fun <T : Any> Collection<T>.toWatchableList(scope: CoroutineScope) = toWatchableList(scope.coroutineContext)
 
 fun <T : Any> CoroutineScope.watchableListOf(vararg values: T) = values.toList().toWatchableList(this)
+
+/**
+ * Return a [Job] that for the duration of this [CoroutineScope], invokes [handler] for any changes to [watchable]
+ * (including its initial state.)
+ */
+fun <T, C : Change<T>> CoroutineScope.watch(watchable: Watchable<T, C>, handler: (C) -> Unit): Job =
+    with(watchable) {
+        this@watch.watch(handler)
+    }
 
 /**
  * For this scope, cancel the channel when the scope is closed. This means that any `runBlocking` scope
