@@ -136,6 +136,4 @@ class WatchableListTest {
         assertEquals(3, (changes[1] as ListChange.Remove).removed)
         assertEquals(4, (changes[2] as ListChange.Remove).removed)
     }
-
-    // TODO: Bind with replace etc.
 }

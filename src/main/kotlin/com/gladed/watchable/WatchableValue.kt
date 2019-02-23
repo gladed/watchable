@@ -17,10 +17,6 @@
 package com.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /** An value which can change at any time. */
@@ -34,37 +30,28 @@ class WatchableValue<T>(
     /** The current value of the underlying object. */
     @Volatile override var value: T = initialValue
         set(value) {
-            synchronized(this) {
-                binder.checkChange()
-                if (field == value) return
-                field.also { old ->
+            delegate.changeOrNull {
+                if (field == value) null else {
+                    val old = field
                     field = value
-                    launch {
-                        channel.send(ValueChange(value, old))
-                    }
+                    ValueChange(value, old)
                 }
             }
         }
 
-    /** Channel to receive all change messages. */
-    private val channel by lazy {
-        BroadcastChannel<ValueChange<T>>(CAPACITY).also { cancelWithScope(it) }
-    }
+    /** A delegate implementing common functions. */
+    private val delegate = object : WatchableDelegate<T, ValueChange<T>>(coroutineContext, this@WatchableValue) {
+        override val initialChange
+            get() = ValueChange(value, value)
 
-    override fun CoroutineScope.watch(block: (ValueChange<T>) -> Unit): Job {
-        val initialValue = value
-
-        // Create a subscription so that no further changes are missed
-        val changes = channel.openSubscription()
-
-        return launch {
-            // Send initial immediately, and wait for it to be processed on the target scope
-            block(ValueChange(initialValue, initialValue))
-            changes.consumeEach {
-                block(it)
-            }
+        override fun onBoundChange(change: ValueChange<T>) {
+            value = change.newValue
         }
     }
+
+    override fun CoroutineScope.watch(block: (ValueChange<T>) -> Unit) =
+        delegate.watchOwner(this@watch, block)
+
 
     /** Return an unmodifiable form of this [WatchableValue]. */
     fun readOnly(): ReadOnlyWatchableValue<T> = object : ReadOnlyWatchableValue<T> by this {
@@ -72,25 +59,15 @@ class WatchableValue<T>(
             "ReadOnlyWatchableValue($value)"
     }
 
-    private val binder = BindableBase(this) {
-        value = it.newValue
-    }
+    override val boundTo: Watchable<T, ValueChange<T>>?
+        get() = delegate.boundTo
 
-    override val boundTo
-        get() = binder.boundTo
+    override fun bind(other: Watchable<T, ValueChange<T>>) =
+        delegate.bind(other)
 
-    override fun bind(other: Watchable<T, ValueChange<T>>) {
-        binder.bind(other)
-    }
-
-    override fun unbind() {
-        binder.unbind()
-    }
+    override fun unbind() =
+        delegate.unbind()
 
     override fun toString() =
         "WatchableValue($value)"
-
-    companion object {
-        private const val CAPACITY = 20
-    }
 }

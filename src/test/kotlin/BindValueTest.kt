@@ -23,7 +23,6 @@ import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Test
-import java.lang.IllegalArgumentException
 import java.util.concurrent.Executors
 
 class BindValueTest {
@@ -132,32 +131,36 @@ class BindValueTest {
     private val scope2 = LocalScope(dispatcher2)
 
     @Test fun killDestScope() {
-        val origin = scope1.watchableValueOf(5)
-        val dest = scope2.watchableValueOf(6)
         runBlocking {
+            val origin = scope1.watchableValueOf(5)
+            val dest = scope2.watchableValueOf(6)
             dest.bind(origin)
             origin.value = 7
-            delay(50) // Let scopes do their thing
+            delay(50)
+            println("Dest should get 7: $dest")
             assertEquals(7, dest.value)
             scope2.close() // Kill the destination value's scope
             delay(50)
             origin.value = 8
             delay(50)
+            println("Dest should still have 7: $dest")
+            assertEquals(7, dest.value) // Because dest scope was killed it shouldn't receive any more updates
         }
-        assertEquals(7, dest.value)
     }
 
     @Test fun killOriginScope() {
-        val origin = scope1.watchableValueOf(5)
-        val dest = scope2.watchableValueOf(6)
         runBlocking {
+            val origin = scope1.watchableValueOf(5)
+            val dest = scope2.watchableValueOf(6)
             dest.bind(origin)
             origin.value = 7
-            delay(50) // Let scopes do their thing
+            delay(50)
             scope1.close() // Kill the origin value's scope
+            delay(50)
+            // Because origin scope was killed it should not pass values on to dest
             origin.value = 8
             delay(50)
+            assertEquals(7, dest.value)
         }
-        assertEquals(7, dest.value)
     }
 }

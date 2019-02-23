@@ -38,12 +38,9 @@ class WatchableMap<K, V>(
             get() = MapChange.Initial(map.toMap())
 
         override fun onBoundChange(change: MapChange<K, V>) {
-            println("Dealing with change of $change")
             when (change) {
                 is MapChange.Initial -> {
-                    println("Clearing ${this@WatchableMap}")
                     clear()
-                    println("Putting ${change.initial}")
                     putAll(change.initial)
                 }
                 is MapChange.Add -> put(change.key, change.added)
@@ -57,30 +54,32 @@ class WatchableMap<K, V>(
         get() = delegate.boundTo
 
     override val size: Int
-        get() = synchronized(map) { map.size }
+        get() = synchronized(this) { map.size }
 
     override fun put(key: K, value: V): V? =
-        synchronized(map) {
-            delegate.checkChange()
-            map[key].also {
+        delegate.changeOrNull {
+            map[key].let {
                 when (it) {
-                    value -> { } // No Change
+                    value -> null // No Change
                     null -> {
                         map[key] = value
-                        delegate.send(MapChange.Add(key, value))
+                        MapChange.Add(key, value)
                     }
                     else -> {
                         map[key] = value
-                        delegate.send(MapChange.Replace(key, it, value))
+                        MapChange.Replace(key, it, value)
                     }
                 }
             }
+        }?.let {
+            // Return the removed value if any
+            (it as? MapChange.Remove<K, V>)?.removed
         }
 
     override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
         get() = object : AbstractMutableSet<MutableMap.MutableEntry<K, V>>() {
             override val size: Int
-                get() = synchronized(map) {
+                get() = synchronized(this@WatchableMap) {
                     map.entries.size
                 }
 
@@ -102,12 +101,10 @@ class WatchableMap<K, V>(
                                 // Return a wrapped version of origin so that we can detect removal attempts.
                                 object : MutableMap.MutableEntry<K, V> by origin {
                                     override fun setValue(newValue: V) =
-                                        synchronized(map) {
-                                            delegate.checkChange()
-                                            origin.setValue(newValue).also {
-                                                delegate.send(MapChange.Replace(key, it, newValue))
-                                            }
-                                        }
+                                        delegate.change {
+                                            MapChange.Replace(key, origin.setValue(newValue), newValue)
+                                        }.removed
+
                                     override fun equals(other: Any?) = origin == other
                                     override fun hashCode() = origin.hashCode()
                                     override fun toString() = "($key, $value)"
@@ -115,12 +112,9 @@ class WatchableMap<K, V>(
                     }
 
                     override fun remove() {
-                        synchronized(map) {
-                            delegate.checkChange()
+                        delegate.change {
                             underlying.remove()
-                            last.also {
-                                delegate.send(MapChange.Remove(it.key, it.value))
-                            }
+                            MapChange.Remove(last.key, last.value)
                         }
                     }
                 }

@@ -43,15 +43,6 @@ internal abstract class WatchableDelegate<T, C : Change<T>>(
     /** Process [change], applying it to [owner]. */
     abstract fun onBoundChange(change: C)
 
-    /** Deliver a change to watchers. */
-    fun send(change: C) {
-        if (!channel.offer(change)) {
-            launch {
-                channel.send(change)
-            }
-        }
-    }
-
     /** Binding, if any. */
     private var binding: Job? = null
 
@@ -61,14 +52,43 @@ internal abstract class WatchableDelegate<T, C : Change<T>>(
     private var isOnChange: Boolean = false
 
     /** Throw if this is not a good time to change the owner object. */
-    fun checkChange() {
+    private fun checkChange() {
         if (boundTo != null && !isOnChange) {
             throw IllegalStateException("A bound object may not be modified.")
         }
     }
 
+    /**
+     * Apply a change by synchronizing on owner, throwing if this is a bad time to apply a change (because bound)
+     * running block, then sending the returned change description out to watchers.
+     */
+    fun <Ch : C> change(block: () -> Ch): Ch =
+        synchronized(owner) {
+            checkChange()
+            block().also { send(it) }
+        }
+
+    /**
+     * Same as change but allows that the block may not actually change anything
+     */
+    fun <Ch : C> changeOrNull(block: () -> Ch?): Ch? =
+        synchronized(owner) {
+            checkChange()
+            block()?.also { send(it) }
+        }
+
+    /** Deliver a change to watchers if possible. */
+    private fun send(change: C) {
+        if (!channel.isClosedForSend) {
+            if (!channel.offer(change)) {
+                launch {
+                    channel.send(change)
+                }
+            }
+        }
+    }
+
     fun bind(other: Watchable<T, C>) {
-        println("Binding $other to $owner")
         if (binding != null) throw IllegalStateException("Object already bound")
 
         // Chase up the parent stack
@@ -80,13 +100,11 @@ internal abstract class WatchableDelegate<T, C : Change<T>>(
 
         boundTo = other
 
-        // Perform the binding
-        binding = with(other) {
-            watch(other) {
-                isOnChange = true
-                onBoundChange(it)
-                isOnChange = false
-            }
+        // Perform the binding on owner's scope
+        binding = owner.watch(other) {
+            isOnChange = true
+            onBoundChange(it)
+            isOnChange = false
         }
     }
 
