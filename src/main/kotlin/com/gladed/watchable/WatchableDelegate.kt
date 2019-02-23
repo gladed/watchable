@@ -79,11 +79,10 @@ internal abstract class WatchableDelegate<T, C : Change<T>>(
 
     /** Deliver a change to watchers if possible. */
     private fun send(change: C) {
-        if (!channel.isClosedForSend) {
-            if (!channel.offer(change)) {
-                launch {
-                    channel.send(change)
-                }
+        // Send, if we can
+        if (!channel.isClosedForSend && !channel.offer(change)) {
+            launch {
+                channel.send(change)
             }
         }
     }
