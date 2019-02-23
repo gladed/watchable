@@ -17,4 +17,4 @@
 package com.gladed.watchable
 
 /** An set which cannot be modified externally, but may be watched for changes. */
-interface ReadOnlyWatchableSet<T> : WatchableCollection<T, Set<T>, SetChange<T>>, Set<T>
+interface ReadOnlyWatchableSet<T> : Watchable<Set<T>, SetChange<T>>, Set<T>

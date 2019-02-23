@@ -23,7 +23,8 @@ import java.lang.IllegalStateException
 /**
  * A utility implementation of [Bindable] which uses [onChange] to effect change.
  */
-class BindableBase<T, C : Change<T>>(
+// TODO: Remove
+internal class BindableBase<T, C : Change<T>>(
     private val owner: Watchable<T, C>,
     private val onChange: (C) -> Unit
 ) : Bindable<T, C>, CoroutineScope by owner {
