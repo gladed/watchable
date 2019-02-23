@@ -37,6 +37,12 @@ fun <T : Any> Collection<T>.toWatchableList(scope: CoroutineScope) = toWatchable
 
 fun <T : Any> CoroutineScope.watchableListOf(vararg values: T) = values.toList().toWatchableList(this)
 
+fun <K, V> Map<K, V>.toWatchableMap(context: CoroutineContext) = WatchableMap(context, this)
+
+fun <K, V> Map<K, V>.toWatchableMap(scope: CoroutineScope) = toWatchableMap(scope.coroutineContext)
+
+fun <K, V> CoroutineScope.watchableMapOf(vararg values: Pair<K, V>) = values.toMap().toWatchableMap(this)
+
 /**
  * Return a [Job] that for the duration of this [CoroutineScope], invokes [handler] for any changes to [watchable]
  * (including its initial state.)

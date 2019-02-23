@@ -96,8 +96,8 @@ class WatchableValueTest {
     }
 
     @Test fun watchFromOtherScope() {
-        var received = -1
         runBlocking {
+            var received = -1
             intValue = scope.watchableValueOf(5)
             watch(intValue) {
                 log("received $it")
@@ -112,10 +112,12 @@ class WatchableValueTest {
             // Shut down the other scope
             scope.coroutineContext.cancel()
             assertFalse(intValue.isActive())
+            delay(50)
             intValue.value = 88
             delay(50)
+
+            assertEquals(17, received) // Scope closed so no more updates
         }
-        assertEquals(17, received) // Scope closed so no more updates
     }
 
     @Test fun watchOnOtherScope() {

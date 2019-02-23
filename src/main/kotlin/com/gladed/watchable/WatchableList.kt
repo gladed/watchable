@@ -17,10 +17,6 @@
 package com.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -32,24 +28,38 @@ class WatchableList<T>(
     override val coroutineContext: CoroutineContext,
     initialValues: Collection<T> = emptyList()
 ) : AbstractMutableList<T>(), ReadOnlyWatchableList<T>, Bindable<List<T>, ListChange<T>> {
+
     /** The current list content. */
     private val list = initialValues.toMutableList()
 
-    /** Channel receiving all changes made to the list. */
-    private val channel by lazy {
-        BroadcastChannel<ListChange<T>>(CAPACITY).also { cancelWithScope(it) }
+    /** A delegate implementing common functions. */
+    private val delegate = object : WatchableDelegate<List<T>, ListChange<T>>(coroutineContext, this@WatchableList) {
+        override val initialChange
+            get() = ListChange.Initial(list.toList())
+
+        override fun onBoundChange(change: ListChange<T>) {
+            when (change) {
+                is ListChange.Initial<T> -> {
+                    clear()
+                    addAll(change.initial)
+                }
+                is ListChange.Add<T> -> add(change.index, change.added)
+                is ListChange.Remove<T> -> removeAt(change.index)
+                is ListChange.Replace<T> -> set(change.index, change.added)
+            }
+        }
     }
+
+    override val boundTo: Watchable<List<T>, ListChange<T>>?
+        get() = delegate.boundTo
 
     override val size: Int
         get() = synchronized(this) { list.size }
 
     override fun add(index: Int, element: T) {
-        synchronized(this) {
-            binder.checkChange()
+        delegate.change {
             list.add(index, element)
-            launch {
-                channel.send(ListChange.Add(index, element))
-            }
+            ListChange.Add(index, element)
         }
     }
 
@@ -57,24 +67,17 @@ class WatchableList<T>(
         list[index]
     }
 
-    override fun removeAt(index: Int): T = synchronized(this) {
-        binder.checkChange()
-        list.removeAt(index).also { removed ->
-            launch {
-                channel.send(ListChange.Remove(index, removed))
-            }
-        }
-    }
+    override fun removeAt(index: Int): T = delegate.change {
+        val removed = list.removeAt(index)
+        ListChange.Remove(index, removed)
+    }.removed
 
-    override fun set(index: Int, element: T): T = synchronized(this) {
-        binder.checkChange()
-        list[index].also { removed ->
+    override fun set(index: Int, element: T): T =
+        delegate.change {
+            val removed = list[index]
             list[index] = element
-            launch {
-                channel.send(ListChange.Replace(index, removed, element))
-            }
-        }
-    }
+            ListChange.Replace(index, removed, element)
+        }.removed
 
     override fun iterator(): MutableIterator<T> = object : MutableIterator<T> {
         val underlying: MutableIterator<T> = synchronized(this) {
@@ -99,29 +102,21 @@ class WatchableList<T>(
         }
 
         override fun remove() {
-            synchronized(this) {
-                binder.checkChange()
+            delegate.change {
                 underlying.remove()
-                launch {
-                    channel.send(ListChange.Remove(index, last ?: throw IllegalStateException("No last element")))
-                }
+                ListChange.Remove(index, last ?: throw IllegalStateException("No last element"))
             }
         }
     }
 
-    override fun CoroutineScope.watch(block: (ListChange<T>) -> Unit): Job {
-        // Open first in case there are changes
-        val sub = channel.openSubscription()
-        val initial = ListChange.Initial(this@WatchableList.toList())
+    override fun CoroutineScope.watch(block: (ListChange<T>) -> Unit) =
+        delegate.watchOwner(this@watch, block)
 
-        // Send a copy of initial content
-        return launch {
-            block(initial)
-            sub.consumeEach {
-                block(it)
-            }
-        }
-    }
+    override fun bind(other: Watchable<List<T>, ListChange<T>>) =
+        delegate.bind(other)
+
+    override fun unbind() =
+        delegate.unbind()
 
     /** Return an unmodifiable form of this [WatchableList]. */
     fun readOnly(): ReadOnlyWatchableList<T> = object : ReadOnlyWatchableList<T> by this {
@@ -129,33 +124,6 @@ class WatchableList<T>(
             "ReadOnlyWatchableList(${super.toString()})"
     }
 
-    private val binder = BindableBase(this@WatchableList) {
-        when (it) {
-            is ListChange.Initial<T> -> {
-                clear()
-                addAll(it.initial)
-            }
-            is ListChange.Add<T> -> add(it.index, it.added)
-            is ListChange.Remove<T> -> removeAt(it.index)
-            is ListChange.Replace<T> -> set(it.index, it.added)
-        }
-    }
-
-    override val boundTo
-        get() = binder.boundTo
-
-    override fun bind(other: Watchable<List<T>, ListChange<T>>) {
-        binder.bind(other)
-    }
-
-    override fun unbind() {
-        binder.unbind()
-    }
-
     override fun toString() =
         "WatchableList(${super.toString()})"
-
-    companion object {
-        private const val CAPACITY = 20
-    }
 }
