@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import com.gladed.watchable.LocalScope
 import com.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay

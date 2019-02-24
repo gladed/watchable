@@ -20,7 +20,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A thread-safe, mutable map whose contents may be watched for changes. Insertion order is preserved on iteration.
+ * A thread-safe, mutable map whose contents may be watched for changes and/or bound to other maps for the duration
+ * of its [coroutineContext]. Insertion order is preserved on iteration.
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -76,8 +77,8 @@ class WatchableMap<K, V>(
             (it as? MapChange.Remove<K, V>)?.removed
         }
 
-    override val entries: MutableSet<MutableMap.MutableEntry<K, V>>
-        get() = object : AbstractMutableSet<MutableMap.MutableEntry<K, V>>() {
+    override val entries: MutableSet<MutableMap.MutableEntry<K, V>> =
+        object : AbstractMutableSet<MutableMap.MutableEntry<K, V>>() {
             override val size: Int
                 get() = synchronized(this@WatchableMap) {
                     map.entries.size

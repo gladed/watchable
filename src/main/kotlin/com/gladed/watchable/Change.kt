@@ -16,5 +16,5 @@
 
 package com.gladed.watchable
 
-/** Describes a change to an object. */
+/** Describes a change to an object of type [T]. */
 interface Change<T>

@@ -16,7 +16,7 @@
 
 package com.gladed.watchable
 
-/** A value which may not be modified externally but may be watched for changes. */
+/** A value which may not be modified externally but may still be watched for changes. */
 interface ReadOnlyWatchableValue<T> : Watchable<T, ValueChange<T>> {
     val value: T
 }

@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import com.gladed.watchable.LocalScope
 import com.gladed.watchable.ValueChange
 import com.gladed.watchable.WatchableValue
 import com.gladed.watchable.watch
@@ -22,7 +21,9 @@ import com.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -61,6 +62,18 @@ class WatchableValueTest {
             delay(50)
             assertEquals(17, received) // Scope closed so no more updates
         }
+    }
+
+    @Test fun noFreeze() {
+        try {
+            runBlocking {
+                val value = watchableValueOf(5)
+                watch(value) { }
+                // The only way out. If we don't throw, runBlocking halts forever waiting for the internal
+                // channel to close.
+                throw Error("must throw")
+            }
+        } catch (e: Error) { }
     }
 
     @Test fun setSameValue() {
