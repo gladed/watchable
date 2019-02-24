@@ -20,24 +20,32 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.lang.IllegalStateException
 import kotlin.coroutines.CoroutineContext
 
-/** Common implementation for watchable + bindable behaviors. */
+/** Common internal implementations for watchable + bindable functions. */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-internal abstract class WatchableDelegate<T, C : Change<T>>(
+abstract class WatchableDelegate<T, C : Change<T>>(
     override val coroutineContext: CoroutineContext,
     private val owner: Watchable<T, C>
 ) : CoroutineScope {
 
     /** The internal channel used to broadcast changes to watchers. */
     private val channel: BroadcastChannel<C> by lazy {
-        BroadcastChannel<C>(CAPACITY).also { cancelWithScope(it) }
+        BroadcastChannel<C>(CAPACITY).also {
+            CoroutineScope(coroutineContext).launch {
+                // Keep channel open until the context is closed, for any reason.
+                delay(Long.MAX_VALUE)
+            }.invokeOnCompletion {
+                channel.close()
+            }
+        }
     }
 
-    /** A change reflecting the current value of this collection. (New watchers receive this.) */
+    /** A change reflecting the current value of this collection. (New watchers receive this). */
     abstract val initialChange: C
 
     /** Process [change], applying it to [owner]. */

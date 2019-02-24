@@ -23,25 +23,15 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
+import org.hamcrest.CoreMatchers
+import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Test
 
 class WatchableMapTest {
     private val changes = mutableListOf<MapChange<Int, String>>()
-
-    // A way to run a blocking section then cancel the enclosing scope
-    private fun <T> runThenCancel(block: suspend CoroutineScope.() -> T) {
-        try {
-            runBlocking {
-                block().also {
-                    coroutineContext.cancel()
-                }
-            }
-        } catch (e: CancellationException) {
-            // As expected
-        }
-    }
 
     @Test fun add() {
         runThenCancel {
@@ -52,6 +42,7 @@ class WatchableMapTest {
             }
             map.putAll(mapOf(6 to "6", 5 to "5"))
             map[6] = "6" // No-op
+            Assert.assertThat(map.toString(), CoreMatchers.startsWith("WatchableMap("))
             yield()
             yield()
         }
@@ -60,6 +51,23 @@ class WatchableMapTest {
         assertEquals(MapChange.Add(6, "6"), changes[1])
         assertEquals(MapChange.Add(5, "5"), changes[2])
         assertEquals(3, changes.size)
+    }
+
+    @Test fun noEntryAdd() {
+        try {
+            runThenCancel {
+                val map = watchableMapOf<Int, String>()
+                log("Attempting add")
+                map.entries.add(object : MutableMap.MutableEntry<Int, String> {
+                    override var key: Int = 5
+                    override var value: String = "5"
+                    override fun setValue(newValue: String): String {
+                        return value.also { value = "6" }
+                    }
+                })
+                fail("Shouldn't get here")
+            }
+        } catch (e: UnsupportedOperationException) { }
     }
 
     @Test fun remove() {
@@ -92,7 +100,23 @@ class WatchableMapTest {
         assertEquals(MapChange.Remove(5, "5"), changes[1])
     }
 
-    @Test fun updateEntry() {
+    @Test fun replace() {
+        runThenCancel {
+            val map = watchableMapOf(5 to "5")
+            watch(map) {
+                changes += it
+            }
+            map[5] = "55"
+            yield()
+            yield()
+        }
+
+        assertEquals(MapChange.Initial(mapOf(5 to "5")), changes[0])
+        assertEquals(MapChange.Replace(5, "5", "55"), changes[1])
+        assertEquals(2, changes.size)
+    }
+
+    @Test fun replaceEntry() {
         runThenCancel {
             val map = watchableMapOf(5 to "5")
             watch(map) {
@@ -112,7 +136,7 @@ class WatchableMapTest {
             val readOnly = map.readOnly().also {
                 watch(it) { change -> changes += change }
             }
-            println("$readOnly") // Coverage
+            Assert.assertThat(readOnly.toString(), CoreMatchers.startsWith("ReadOnlyWatchableMap("))
             map[5] = "55"
             assertEquals(1, readOnly.size)
             assertEquals(1, readOnly.entries.size)

@@ -23,7 +23,9 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
+import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -52,6 +54,7 @@ class WatchableSetTest {
                 changes += it
             }
             set.addAll(listOf(5, 6, 5))
+            assertThat(set.toString(), startsWith("WatchableSet("))
             yield()
             yield()
         }

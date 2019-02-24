@@ -19,10 +19,10 @@ package com.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 
 /**
- * An object whose value can be bound to a different object.
+ * An object whose contents can be "bound" to a different object.
  */
 interface Bindable<T, C : Change<T>> : CoroutineScope {
-    /** When the value of [other] changes, updates this object. Throws if already bound. */
+    /** When the value of [other] changes, update this object correspondingly. Throws if already bound. */
     fun bind(other: Watchable<T, C>)
 
     /** Cancel any existing binding that exists for this object. */

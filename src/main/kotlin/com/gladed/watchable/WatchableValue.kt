@@ -19,7 +19,10 @@ package com.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 
-/** An value which can change at any time. */
+/**
+ * A thread-safe, mutable value which be watched for replacement of its value and/or bound to other maps for the
+ * duration of its [coroutineContext].
+ */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class WatchableValue<T>(
@@ -51,7 +54,6 @@ class WatchableValue<T>(
 
     override fun CoroutineScope.watch(block: (ValueChange<T>) -> Unit) =
         delegate.watchOwner(this@watch, block)
-
 
     /** Return an unmodifiable form of this [WatchableValue]. */
     fun readOnly(): ReadOnlyWatchableValue<T> = object : ReadOnlyWatchableValue<T> by this {

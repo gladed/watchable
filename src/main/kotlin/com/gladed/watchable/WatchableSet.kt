@@ -20,7 +20,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A thread-safe, mutable set whose contents may be watched for changes. Insertion order is preserved on iteration.
+ * A thread-safe, mutable set whose contents may be watched for changes and/or bound to other maps for the duration
+ * of its [coroutineContext]. Insertion order is preserved on iteration.
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)

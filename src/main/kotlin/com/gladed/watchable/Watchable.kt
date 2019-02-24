@@ -25,11 +25,12 @@ import kotlinx.coroutines.isActive
  */
 interface Watchable<T, C : Change<T>> : CoroutineScope {
     /**
-     * Deliver changes to [block] using [scope] until it terminates or until the returned [Job] is cancelled.
-     * Note that calling [watch] will normally result in an immediate call to [block], announcing the initial value.
+     * Deliver changes to [block] using this [CoroutineScope] until it terminates or until the returned [Job] is
+     * cancelled. Note that calling [watch] will normally result in an immediate call to [block], announcing this
+     * [Watchable]'s initial value.
      */
     fun CoroutineScope.watch(
-        /** The block to invoke within [scope] whenever a change occurs. */
+        /** The block to invoke within this [CoroutineScope] whenever a change occurs. */
         block: (C) -> Unit
     ): Job
 
