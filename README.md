@@ -47,4 +47,4 @@ set += 3
 
 # Version History
 
-See [HISTORY.md]
+See [HISTORY.md](HISTORY.md)
