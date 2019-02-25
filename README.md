@@ -44,3 +44,7 @@ set += 3
 * objects can be "bound" to each other, so that a change in one object causes a corresponding change to another one.
 * When the surrounding coroutine scope completes, everything is cleaned up automatically.
 * Supports mutable and read-only types like List, Set, Map, and any wrapped object (Value).
+
+# Version History
+
+See [HISTORY.md]
