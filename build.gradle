@@ -27,6 +27,8 @@ plugins {
     id "io.gitlab.arturbosch.detekt" version "1.0.0-RC14"
     id "org.sonarqube" version "2.7"
     id "jacoco"
+    id "com.jfrog.bintray" version "1.8.4"
+    id "maven-publish"
 }
 
 apply plugin: 'kotlin'
@@ -37,7 +39,9 @@ apply plugin: 'maven-publish'
 apply plugin: 'signing'
 
 version = ext.watchable_version
-group = 'com.gladed'
+group = 'io.gladed'
+//name = "watchable" (done in settings.gradle)
+description = "Listenable data structures using Kotlin coroutines"
 
 repositories {
     mavenCentral()
@@ -139,7 +143,7 @@ license {
     excludes(["**/*.md"])
 }
 
-task sourceJar(type: Jar) {
+task sourcesJar(type: Jar) {
     classifier = "sources"
     from sourceSets.main.allSource
 }
@@ -150,126 +154,65 @@ task javadocJar(type: Jar, dependsOn: dokka) {
 }
 
 artifacts {
-    archives jar
-    archives sourceJar
+    archives sourcesJar
     archives javadocJar
 }
 
-signing {
-    required { gradle.taskGraph.hasTask("publish") }
-    sign configurations.archives
+bintray {
+    user = project.properties['bintray.user']
+    key = project.properties['bintray.key']
+    publications = ['mavenPublication']
+    pkg {
+        repo = project.name
+        name = project.name
+        userOrg = 'gladed'
+        licenses = [ 'Apache-2.0' ]
+        vcsUrl = 'https://github.com/gladed/watchable.git'
+        version {
+            name = project.version
+            desc = project.version
+            released = new Date()
+        }
+    }
 }
 
 publishing {
     publications {
-        mavenJava(MavenPublication) {
-            customizePom(pom)
-            groupId group
-            artifactId project.name
-
+        mavenPublication(MavenPublication) {
             from components.java
-
-            // create the sign pom artifact
-            pom.withXml {
-                def pomFile = file("${project.buildDir}/generated-pom.xml")
-                writeTo(pomFile)
-                def pomAscFile = signing.sign(pomFile).signatureFiles[0]
-
-                artifact(pomAscFile) {
-                    classifier = null
-                    extension = 'pom.asc'
-                }
+            groupId project.group
+            artifactId = project.name
+            version project.version
+            artifact sourcesJar {
+                classifier "sources"
             }
-
-            artifact(sourceJar) {
-                classifier = 'sources'
+            artifact javadocJar {
+                classifier "javadoc"
             }
-
-            artifact(javadocJar) {
-                classifier = 'javadoc'
-            }
-
-            // create the signed artifacts
-            project.tasks.signArchives.signatureFiles.each {
-                artifact(it) {
-                    def matcher = it.file =~ /-(sources|javadoc)\.jar\.asc$/
-                    if (matcher.find()) {
-                        classifier = matcher.group(1)
-                    } else {
-                        classifier = null
+            pom {
+                name = project.name
+                description = project.description
+                url = 'https://github.com/gladed/watchable'
+                licenses {
+                    license {
+                        name = 'Apache 2.0'
+                        url = 'https://github.com/gladed/watchable/blob/master/LICENSE'
                     }
-                    extension = 'jar.asc'
                 }
-            }
-        }
-    }
-
-    repositories {
-        maven {
-            url "https://oss.sonatype.org/service/local/staging/deploy/maven2"
-            credentials {
-                username project.ext.properties.sonatypeUsername
-                password project.ext.properties.sonatypePassword
-            }
-        }
-    }
-}
-
-def customizePom(pom) {
-    pom.withXml {
-        def root = asNode()
-
-        // eliminate test-scoped dependencies (no need in maven central POMs)
-        root.dependencies.removeAll { dep ->
-            dep.scope == "test"
-        }
-
-        // add all items necessary for maven central publication
-        root.children().last() + {
-            resolveStrategy = DELEGATE_FIRST
-
-            description 'Collections that may be watched for changes'
-            name project.name
-            url 'https://github.com/gladed/watchable'
-            organization {
-                name 'Glade Diviney'
-                url 'https://github.com/gladed'
-            }
-            issueManagement {
-                system 'GitHub'
-                url 'https://github.com/HPInc/jipp/issues'
-            }
-            licenses {
-                license {
-                    name 'Apache 2.0'
-                    url 'https://github.com/gladed/watchable/blob/master/LICENSE.md'
-                    distribution 'repo'
+                developers {
+                    developer {
+                        id = 'gladed'
+                        name = 'Glade Diviney'
+                        email = 'gladed@glamber.com'
+                    }
                 }
-            }
-            scm {
-                url 'https://github.com/gladed/watchable'
-                connection 'scm:git:git://github.com/gladed/watchable.git'
-                developerConnection 'scm:git:ssh://git@github.com:gladed/watchable.git'
-            }
-            developers {
-                developer {
-                    name 'Glade Diviney'
+                scm {
+                    url = 'https://github.com/gladed/watchable'
+                    connection = 'scm:git:git://github.com/gladed/watchable.git'
+                    developerConnection = 'scm:git:ssh://git@github.com:gladed/watchable.git'
                 }
             }
         }
     }
 }
 
-model {
-    tasks.generatePomFileForMavenJavaPublication {
-        destination = file("$buildDir/generated-pom.xml")
-    }
-
-    tasks.publishMavenJavaPublicationToMavenRepository {
-        dependsOn project.tasks.signArchives
-    }
-
-    tasks.publishMavenJavaPublicationToMavenLocal {
-        dependsOn project.tasks.signArchives
-    }
-}
