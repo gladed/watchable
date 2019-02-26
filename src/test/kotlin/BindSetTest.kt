@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import com.gladed.watchable.watchableSetOf
+import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail

@@ -7,7 +7,7 @@
 
 # Watchable
 
-This library gives your project thread-safe, listenable data structures using [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html).
+This library provides listenable data structures using [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html).
 
 This is especially useful in [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html). The data model lives at the center, and everyone points in. If the data model is defined as Watchable objects, then other components can simply listen for changes and react accordingly, without coupling directly to each other.  
 
@@ -38,9 +38,8 @@ set += 3
 //   Got Add(added=3)
 ```
 
-
 # Features
-* Watchable objects can be modified, watched, and bound from different whatever scope or thread is convenient.
+* Watchable objects can be watched, and bound from different whatever scope is convenient.
 * objects can be "bound" to each other, so that a change in one object causes a corresponding change to another one.
 * When the surrounding coroutine scope completes, everything is cleaned up automatically.
 * Supports mutable and read-only types like List, Set, Map, and any wrapped object (Value).

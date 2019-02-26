@@ -14,14 +14,14 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A thread-safe, mutable list whose contents may be watched for changes and/or bound to other maps for the duration
- * of its [coroutineContext]. Insertion order is preserved on iteration.
+ * A mutable list whose contents may be watched for changes and/or bound to other maps for the duration
+ * of its [coroutineContext].
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -55,7 +55,7 @@ class WatchableList<T>(
         get() = delegate.boundTo
 
     override val size: Int
-        get() = synchronized(this) { list.size }
+        get() = list.size
 
     override fun add(index: Int, element: T) {
         delegate.change {
@@ -64,26 +64,21 @@ class WatchableList<T>(
         }
     }
 
-    override fun get(index: Int) = synchronized(this) {
-        list[index]
-    }
+    override fun get(index: Int) = list[index]
 
     override fun removeAt(index: Int): T = delegate.change {
         val removed = list.removeAt(index)
         ListChange.Remove(index, removed)
     }.removed
 
-    override fun set(index: Int, element: T): T =
-        delegate.change {
-            val removed = list[index]
-            list[index] = element
-            ListChange.Replace(index, removed, element)
-        }.removed
+    override fun set(index: Int, element: T): T = delegate.change {
+        val removed = list[index]
+        list[index] = element
+        ListChange.Replace(index, removed, element)
+    }.removed
 
     override fun iterator(): MutableIterator<T> = object : MutableIterator<T> {
-        val underlying: MutableIterator<T> = synchronized(this) {
-            list.iterator()
-        }
+        val underlying: MutableIterator<T> = list.iterator()
 
         /** A cache of the prior return from [next]. */
         var last: T? = null
@@ -91,16 +86,13 @@ class WatchableList<T>(
         /** Current index. */
         var index: Int = -1
 
-        override fun hasNext() = synchronized(this) {
-            underlying.hasNext()
-        }
+        override fun hasNext() = underlying.hasNext()
 
-        override fun next() = synchronized(this) {
+        override fun next() =
             underlying.next().also {
                 index++
                 last = it
             }
-        }
 
         override fun remove() {
             delegate.change {

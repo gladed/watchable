@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 

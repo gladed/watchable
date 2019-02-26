@@ -14,14 +14,17 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
+import java.util.Collections
 
 /**
- * A thread-safe, mutable set whose contents may be watched for changes and/or bound to other maps for the duration
+ * A mutable set whose contents may be watched for changes and/or bound to other maps for the duration
  * of its [coroutineContext]. Insertion order is preserved on iteration.
+ *
+ * This collection is not thread-safe, but may be wrapped with [Collections.synchronizedSet].
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -54,7 +57,7 @@ class WatchableSet<T>(
         get() = delegate.boundTo
 
     override val size: Int
-        get() = synchronized(this) { set.size }
+        get() = set.size
 
     override fun add(element: T): Boolean =
         delegate.changeOrNull {
@@ -65,20 +68,14 @@ class WatchableSet<T>(
         } is SetChange.Add
 
     override fun iterator(): MutableIterator<T> = object : MutableIterator<T> {
-        val underlying: MutableIterator<T> = synchronized(this@WatchableSet) {
-            set.iterator()
-        }
+        val underlying: MutableIterator<T> = set.iterator()
 
         /** A cache of the prior return from [next]. */
         var last: T? = null
 
-        override fun hasNext() = synchronized(this@WatchableSet) {
-            underlying.hasNext()
-        }
+        override fun hasNext() = underlying.hasNext()
 
-        override fun next() = synchronized(this@WatchableSet) {
-            underlying.next().also { last = it }
-        }
+        override fun next() = underlying.next().also { last = it }
 
         override fun remove() {
             delegate.change {

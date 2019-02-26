@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A thread-safe, mutable value which be watched for replacement of its value and/or bound to other maps for the
+ * A mutable value which be watched for replacement of its value and/or bound to other maps for the
  * duration of its [coroutineContext].
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,

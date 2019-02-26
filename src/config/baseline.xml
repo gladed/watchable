@@ -2,6 +2,6 @@
 <SmellBaseline>
   <Blacklist timestamp="1550536286024"></Blacklist>
   <Whitelist timestamp="1551047692350">
-    <ID>TooManyFunctions:package.kt$com.gladed.watchable.package.kt</ID>
+    <ID>TooManyFunctions:package.kt$io.gladed.watchable.package.kt</ID>
   </Whitelist>
 </SmellBaseline>

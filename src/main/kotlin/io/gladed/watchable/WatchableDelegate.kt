@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -66,32 +66,32 @@ abstract class WatchableDelegate<T, C : Change<T>>(
         }
     }
 
+    internal fun <U> applyIfOk(func: () -> U): U {
+        checkChange()
+        return func()
+    }
+
     /**
-     * Apply a change by synchronizing on owner, throwing if this is a bad time to apply a change (because bound)
-     * running block, then sending the returned change description out to watchers.
+     * Apply and deliver a change if it's safe to do so
      */
-    fun <Ch : C> change(block: () -> Ch): Ch =
-        synchronized(owner) {
-            checkChange()
-            block().also { send(it) }
-        }
+    fun <C2 : C> change(block: () -> C2): C2 {
+        checkChange()
+        return block().also { owner.launch { send(it) } }
+    }
 
     /**
      * Same as change but allows that the block may not actually change anything
      */
-    fun <Ch : C> changeOrNull(block: () -> Ch?): Ch? =
-        synchronized(owner) {
-            checkChange()
-            block()?.also { send(it) }
-        }
+    fun <C2 : C> changeOrNull(block: () -> C2?): C2? {
+        checkChange()
+        return block()?.also { owner.launch { send(it) } }
+    }
 
     /** Deliver a change to watchers if possible. */
-    private fun send(change: C) {
+    private suspend fun send(change: C) {
         // Send, if we can
-        if (!channel.isClosedForSend && !channel.offer(change)) {
-            launch {
-                channel.send(change)
-            }
+        if (!channel.isClosedForSend) {
+            channel.send(change)
         }
     }
 
@@ -101,7 +101,7 @@ abstract class WatchableDelegate<T, C : Change<T>>(
         // Chase up the parent stack
         var parent = other as? Bindable<*, *>
         while (parent != null) {
-            if (parent == owner) throw IllegalStateException("Circular binding not permitted")
+            if (parent === owner) throw IllegalStateException("Circular binding not permitted")
             parent = parent.boundTo as? Bindable<*, *>
         }
 
@@ -137,6 +137,6 @@ abstract class WatchableDelegate<T, C : Change<T>>(
     }
 
     companion object {
-        private const val CAPACITY = 20
+        private const val CAPACITY = 2
     }
 }

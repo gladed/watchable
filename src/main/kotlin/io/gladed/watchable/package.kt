@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -51,8 +51,8 @@ fun <K, V> Map<K, V>.toWatchableMap(scope: CoroutineScope) = toWatchableMap(scop
 fun <K, V> CoroutineScope.watchableMapOf(vararg values: Pair<K, V>) = values.toMap().toWatchableMap(this)
 
 /**
- * Return a [Job] that for the duration of this [CoroutineScope], invokes [handler] for any changes to [watchable]
- * (including its initial state.)
+ * Return a [Job] that for the duration of this [CoroutineScope] invokes [handler] for any changes to [watchable],
+ * starting with its initial state.
  */
 fun <T, C : Change<T>> CoroutineScope.watch(watchable: Watchable<T, C>, handler: (C) -> Unit): Job =
     with(watchable) {

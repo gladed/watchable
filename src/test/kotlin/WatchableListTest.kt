@@ -14,39 +14,31 @@
  * limitations under the License.
  */
 
-import com.gladed.watchable.ListChange
-import com.gladed.watchable.WatchableList
-import com.gladed.watchable.watch
-import com.gladed.watchable.watchableListOf
+import io.gladed.watchable.ListChange
+import io.gladed.watchable.watch
+import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 class WatchableListTest {
-    private lateinit var list: WatchableList<Int>
 
-    // A way to run a blocking section then cancel the enclosing scope
-    private fun <T> runThenCancel(block: suspend CoroutineScope.() -> T) {
-        try {
-            runBlocking {
-                block().also {
-                    coroutineContext.cancel()
-                }
-            }
-        } catch (e: CancellationException) {
-            // As expected
-        }
-    }
+    @Rule @JvmField val scope = ScopeRule(Dispatchers.Default)
 
     @Test fun add() {
         val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
-            list = watchableListOf()
+            val list = watchableListOf<Int>()
             watch(list) {
                 log("Receive $it")
                 changes += it
@@ -64,10 +56,21 @@ class WatchableListTest {
         assertEquals(4, changes.size)
     }
 
+    @Test fun equality() {
+        runThenCancel {
+            val list = watchableListOf(1, 2, 3)
+            assertEquals(list, list)
+            assertEquals(listOf(1, 2, 3), list)
+            assertEquals(list, listOf(1, 2, 3))
+            val list2 = watchableListOf(1, 2, 3)
+            assertEquals(list, list2)
+        }
+    }
+
     @Test fun remove() {
         val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
-            list = watchableListOf(5, 6)
+            val list = watchableListOf(5, 6)
             watch(list) {
                 log("Receive $it")
                 changes += it
@@ -84,7 +87,7 @@ class WatchableListTest {
     @Test fun update() {
         val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
-            list = watchableListOf(5, 6)
+            val list = watchableListOf(5, 6)
             watch(list) {
                 log("Receive $it")
                 changes += it
@@ -102,7 +105,7 @@ class WatchableListTest {
     @Test fun readOnly() {
         val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
-            list = watchableListOf()
+            val list = watchableListOf<Int>()
             val readOnly = list.readOnly().also {
                 watch(it) { change ->
                     changes += change
@@ -124,7 +127,7 @@ class WatchableListTest {
     @Test fun clear() {
         val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
-            list = watchableListOf(3, 4)
+            val list = watchableListOf(3, 4)
             watch(list) { changes += it }
             yield()
             yield()
@@ -135,5 +138,46 @@ class WatchableListTest {
         assertEquals(3, changes.size)
         assertEquals(3, (changes[1] as ListChange.Remove).removed)
         assertEquals(4, (changes[2] as ListChange.Remove).removed)
+    }
+
+    @Test fun dogPile() {
+        fun pileOn(list: MutableList<Int>, count: Int) = scope.launch {
+            (0 until count).forEach { _ ->
+                when ((Math.random() * 3).toInt()) {
+                    0 -> synchronized(list) { // Sync necessary due to size + add
+                        if (list.isNotEmpty()) {
+                            val at = (list.size * Math.random()).toInt()
+                            list.removeAt(at)
+                        }
+                    }
+                    1 -> synchronized(list) {
+                        val num = (Math.random() * 10).toInt()
+                        list.add(num)
+                    }
+                    2 -> synchronized(list) {
+                        if (list.isNotEmpty()) {
+                            val at = (list.size * Math.random()).toInt()
+                            val num = (Math.random() * 10).toInt()
+                            list[at] = num
+                        }
+                    }
+                }
+            }
+        }
+
+        runThenCancel {
+            val perPile = 100
+            val list = watchableListOf(1)
+            val list2 = watchableListOf(7)
+            list2.bind(list)
+            val jobs = listOf(pileOn(list, perPile), pileOn(list, perPile), pileOn(list, perPile), pileOn(list, perPile))
+            (0 until 100).forEach { _ ->
+                // TODO(#13): How can we make this safe without `synchronize`?
+                // list.toString()
+            }
+            jobs.joinAll()
+            delay(50)
+            assertEquals(list2, list)
+        }
     }
 }

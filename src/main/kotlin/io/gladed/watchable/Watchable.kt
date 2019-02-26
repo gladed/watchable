@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -26,8 +26,11 @@ import kotlinx.coroutines.isActive
 interface Watchable<T, C : Change<T>> : CoroutineScope {
     /**
      * Deliver changes to [block] using this [CoroutineScope] until it terminates or until the returned [Job] is
-     * cancelled. Note that calling [watch] will normally result in an immediate call to [block], announcing this
-     * [Watchable]'s initial value.
+     * cancelled. Each change is processed to completion (e.g. [block] must return) before the next change is
+     * delivered.
+     *
+     * Calling [watch] will immediately launch a call to [block] to inform it of the [Watchable]'s initial value.
+     * Further calls will arrive if and when this [Watchable] changes.
      */
     fun CoroutineScope.watch(
         /** The block to invoke within this [CoroutineScope] whenever a change occurs. */

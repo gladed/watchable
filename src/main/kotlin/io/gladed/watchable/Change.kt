@@ -14,16 +14,7 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
-/** Describes a change to a [Set]. */
-sealed class SetChange<T> : Change<Set<T>> {
-    /** The initial state of the set at the time watching began. */
-    data class Initial<T>(val initial: Set<T>) : SetChange<T>()
-
-    /** A change representing the addition of an element to the set. */
-    data class Add<T>(val added: T) : SetChange<T>()
-
-    /** A change representing the removal of an element from the set. */
-    data class Remove<T>(val removed: T) : SetChange<T>()
-}
+/** Describes a change to an object of type [T]. */
+interface Change<T>

@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import com.gladed.watchable.MapChange
-import com.gladed.watchable.WatchableMap
-import com.gladed.watchable.watch
-import com.gladed.watchable.watchableMapOf
+import io.gladed.watchable.MapChange
+import io.gladed.watchable.WatchableMap
+import io.gladed.watchable.watch
+import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel

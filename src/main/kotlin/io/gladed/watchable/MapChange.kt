@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
 /** Describes a change to a [Map]. */
 sealed class MapChange<K, V> : Change<Map<K, V>> {

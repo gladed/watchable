@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import com.gladed.watchable.watchableValueOf
+import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking

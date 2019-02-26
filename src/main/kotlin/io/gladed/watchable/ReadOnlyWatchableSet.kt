@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
 /** An set which cannot be modified externally, but may be watched for changes. */
-interface ReadOnlyWatchableMap<K, V> : Watchable<Map<K, V>, MapChange<K, V>>, Map<K, V>
+interface ReadOnlyWatchableSet<T> : Watchable<Set<T>, SetChange<T>>, Set<T>

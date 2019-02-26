@@ -14,10 +14,10 @@
  * limitations under the License.
  */
 
-import com.gladed.watchable.ValueChange
-import com.gladed.watchable.WatchableValue
-import com.gladed.watchable.watch
-import com.gladed.watchable.watchableValueOf
+import io.gladed.watchable.ValueChange
+import io.gladed.watchable.WatchableValue
+import io.gladed.watchable.watch
+import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay

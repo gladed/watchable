@@ -14,13 +14,13 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A thread-safe, mutable map whose contents may be watched for changes and/or bound to other maps for the duration
+ * A mutable map whose contents may be watched for changes and/or bound to other maps for the duration
  * of its [coroutineContext]. Insertion order is preserved on iteration.
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
@@ -55,7 +55,7 @@ class WatchableMap<K, V>(
         get() = delegate.boundTo
 
     override val size: Int
-        get() = synchronized(this) { map.size }
+        get() = map.size
 
     override fun put(key: K, value: V): V? =
         delegate.changeOrNull {
@@ -80,9 +80,7 @@ class WatchableMap<K, V>(
     override val entries: MutableSet<MutableMap.MutableEntry<K, V>> =
         object : AbstractMutableSet<MutableMap.MutableEntry<K, V>>() {
             override val size: Int
-                get() = synchronized(this@WatchableMap) {
-                    map.entries.size
-                }
+                get() = map.entries.size
 
             override fun add(element: MutableMap.MutableEntry<K, V>) =
                 // Kotlin MutableMap doesn't support this so we won't either
