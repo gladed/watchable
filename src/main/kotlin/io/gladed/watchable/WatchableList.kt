@@ -17,6 +17,8 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.async
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -28,10 +30,23 @@ import kotlin.coroutines.CoroutineContext
 class WatchableList<T>(
     override val coroutineContext: CoroutineContext,
     initialValues: Collection<T> = emptyList()
-) : AbstractMutableList<T>(), ReadOnlyWatchableList<T>, Bindable<List<T>, ListChange<T>> {
+) : AbstractList<T>(), ReadOnlyWatchableList<T>, Bindable<List<T>, ListChange<T>> {
+
+    /**
+     * Suspend until [block] can safely execute, during which [block] may make any number of changes to a mutable
+     * form of this [WatchableList], and return [block]'s result.
+     */
+    suspend fun <U> invoke(block: MutableList<T>.() -> U): U {
+        // Async, execute block on the single-threaded context, join, and return result.
+        return withContext(coroutineContext) {
+            TODO("Pass list which traps and delivers all modifications to delegate AND produces an updated list")
+            block(list)
+            TODO("Upon return replaces our list with a raw form of the updated list")
+        }
+    }
 
     /** The current list content. */
-    private val list = initialValues.toMutableList()
+    private var list = initialValues.toMutableList()
 
     /** A delegate implementing common functions. */
     private val delegate = object : WatchableDelegate<List<T>, ListChange<T>>(coroutineContext, this@WatchableList) {
@@ -57,27 +72,27 @@ class WatchableList<T>(
     override val size: Int
         get() = list.size
 
-    override fun add(index: Int, element: T) {
-        delegate.change {
-            list.add(index, element)
-            ListChange.Add(index, element)
-        }
-    }
+//    override fun add(index: Int, element: T) {
+//        delegate.change {
+//            list.add(index, element)
+//            ListChange.Add(index, element)
+//        }
+//    }
 
     override fun get(index: Int) = list[index]
 
-    override fun removeAt(index: Int): T = delegate.change {
-        val removed = list.removeAt(index)
-        ListChange.Remove(index, removed)
-    }.removed
+//    override fun removeAt(index: Int): T = delegate.change {
+//        val removed = list.removeAt(index)
+//        ListChange.Remove(index, removed)
+//    }.removed
 
-    override fun set(index: Int, element: T): T = delegate.change {
-        val removed = list[index]
-        list[index] = element
-        ListChange.Replace(index, removed, element)
-    }.removed
+//    override fun set(index: Int, element: T): T = delegate.change {
+//        val removed = list[index]
+//        list[index] = element
+//        ListChange.Replace(index, removed, element)
+//    }.removed
 
-    override fun iterator(): MutableIterator<T> = object : MutableIterator<T> {
+    override fun iterator(): Iterator<T> = object : Iterator<T> {
         val underlying: MutableIterator<T> = list.iterator()
 
         /** A cache of the prior return from [next]. */
@@ -94,12 +109,12 @@ class WatchableList<T>(
                 last = it
             }
 
-        override fun remove() {
-            delegate.change {
-                underlying.remove()
-                ListChange.Remove(index, last ?: throw IllegalStateException("No last element"))
-            }
-        }
+//        override fun remove() {
+//            delegate.change {
+//                underlying.remove()
+//                ListChange.Remove(index, last ?: throw IllegalStateException("No last element"))
+//            }
+//        }
     }
 
     override fun CoroutineScope.watch(block: (ListChange<T>) -> Unit) =
