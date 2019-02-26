@@ -21,7 +21,10 @@ import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.none
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -31,30 +34,30 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import java.util.concurrent.CountDownLatch
+import kotlin.system.measureTimeMillis
 
+@ExperimentalCoroutinesApi
 class WatchableListTest {
 
     @Rule @JvmField val scope = ScopeRule(Dispatchers.Default)
+    private val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
 
     @Test fun add() {
-        val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
             val list = watchableListOf<Int>()
             watch(list) {
                 log("Receive $it")
-                changes += it
+                changes.send(it)
             }
             list.use { addAll(listOf(5, 6, 5)) }
-            yield()
-            yield()
-        }
 
-        assertTrue(changes[0] is ListChange.Initial)
-        assertEquals(5, (changes[1] as ListChange.Add).added)
-        assertEquals(6, (changes[2] as ListChange.Add).added)
-        assertEquals(5, (changes[3] as ListChange.Add).added)
-        assertEquals(2, (changes[3] as ListChange.Add).index)
-        assertEquals(4, changes.size)
+            assertEquals(ListChange.Initial(listOf<Int>()), changes.receive())
+            assertEquals(ListChange.Add(0, 5), changes.receive())
+            assertEquals(ListChange.Add(1, 6), changes.receive())
+            assertEquals(ListChange.Add(2, 5), changes.receive())
+            assertTrue(changes.isEmpty)
+        }
     }
 
     @Test fun equality() {
@@ -69,47 +72,38 @@ class WatchableListTest {
     }
 
     @Test fun remove() {
-        val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
             val list = watchableListOf(5, 6)
             watch(list) {
                 log("Receive $it")
-                changes += it
+                changes.send(it)
             }
             list.use { remove(6) }
-            yield()
-            yield()
+            assertEquals(ListChange.Initial(listOf(5, 6)), changes.receive())
+            assertEquals(ListChange.Remove(1, 6), changes.receive())
         }
-
-        assertEquals(listOf(5, 6), (changes[0] as ListChange.Initial).initial)
-        assertEquals(6, (changes[1] as ListChange.Remove).removed)
     }
 
     @Test fun update() {
-        val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
             val list = watchableListOf(5, 6)
             watch(list) {
                 log("Receive $it")
-                changes += it
+                changes.send(it)
             }
             list.use { this[1] = 4 }
-            yield()
-            yield()
+            assertEquals(ListChange.Initial(listOf(5, 6)), changes.receive())
+            assertEquals(ListChange.Replace(1, 6, 4), changes.receive())
         }
-
-        assertEquals(listOf(5, 6), (changes[0] as ListChange.Initial).initial)
-        assertEquals(6, (changes[1] as ListChange.Replace).removed)
-        assertEquals(4, (changes[1] as ListChange.Replace).added)
     }
 
     @Test fun readOnly() {
-        val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
             val list = watchableListOf<Int>()
             val readOnly = list.readOnly().also {
-                watch(it) { change ->
-                    changes += change
+                watch(list) {
+                    log("Receive $it")
+                    changes.send(it)
                 }
             }
             println("$readOnly") // Coverage
@@ -118,63 +112,70 @@ class WatchableListTest {
                 removeAll(listOf(6, 7, 8))
             }
             assertEquals(1, readOnly.list.size)
-            yield()
+
+            assertEquals(ListChange.Initial(listOf<Int>()), changes.receive())
+            assertEquals(ListChange.Add(0, 5), changes.receive())
+            assertEquals(ListChange.Add(1, 6), changes.receive())
+            assertEquals(ListChange.Remove(1, 6), changes.receive())
+            delay(50)
+            assertTrue(changes.isEmpty)
         }
 
-        assertTrue(changes[0] is ListChange.Initial)
-        assertEquals(5, (changes[1] as ListChange.Add).added)
-        assertEquals(6, (changes[2] as ListChange.Add).added)
-        assertEquals(6, (changes[3] as ListChange.Remove).removed)
     }
 
     @Test fun clear() {
-        val changes = mutableListOf<ListChange<Int>>()
         runThenCancel {
             val list = watchableListOf(3, 4)
-            watch(list) { changes += it }
-            yield()
-            yield()
+            watch(list) {
+                log("Receive $it")
+                changes.send(it)
+            }
             list.use { clear() }
-            yield()
-            yield()
+
+            assertEquals(ListChange.Initial(listOf(3, 4)), changes.receive())
+            assertEquals(ListChange.Remove(0, 3), changes.receive())
+            assertEquals(ListChange.Remove(0, 4), changes.receive())
+            delay(50)
+            assertTrue(changes.isEmpty)
         }
-        assertEquals(3, changes.size)
-        assertEquals(3, (changes[1] as ListChange.Remove).removed)
-        assertEquals(4, (changes[2] as ListChange.Remove).removed)
+    }
+
+    private fun MutableList<Int>.randomChange() {
+        when ((Math.random() * 3).toInt()) {
+            0 -> if (isNotEmpty()) {
+                val at = (size * Math.random()).toInt()
+                removeAt(at)
+            }
+            1 -> {
+                add((Math.random() * 20).toInt())
+            }
+            2 -> if (isNotEmpty()) {
+                val at = (size * Math.random()).toInt()
+                val num = (Math.random() * 10).toInt()
+                this[at] = num
+            }
+        }
+    }
+
+    private fun pileOn(count: Int, block: suspend () -> Unit) = scope.launch {
+        (0 until count).forEach { _ ->
+            block()
+        }
     }
 
     @Test fun dogPile() {
-        fun pileOn(list: WatchableList<Int>, count: Int) = scope.launch {
-            (0 until count).forEach { _ ->
-                when ((Math.random() * 3).toInt()) {
-                    0 -> list.use {
-                            if (isNotEmpty()) {
-                                val at = (size * Math.random()).toInt()
-                                removeAt(at)
-                            }
-                        }
-                    1 -> list.use {
-                        val num = (Math.random() * 10).toInt()
-                        add(num)
-                    }
-                    2 -> list.use {
-                        if (isNotEmpty()) {
-                            val at = (size * Math.random()).toInt()
-                            val num = (Math.random() * 10).toInt()
-                            this[at] = num
-                        }
-                    }
-                }
-            }
-        }
-
         runThenCancel {
             val perPile = 100
             val list = watchableListOf(1)
             val list2 = watchableListOf(7)
+            log("Binding $list to $list2")
             list2.bind(list)
-            val jobs = listOf(pileOn(list, perPile), pileOn(list, perPile), pileOn(list, perPile), pileOn(list, perPile))
-            (0 until 100).forEach { _ ->
+            val act = suspend {
+                list.use { randomChange(); randomChange() }
+            }
+            val jobs = listOf(pileOn(perPile, act), pileOn(perPile, act), pileOn(perPile, act), pileOn(perPile, act))
+            (0 until 200).forEach { _ ->
+                // Prove that ConcurrentModificationException will not happen
                 list.list.toString()
             }
             jobs.joinAll()
@@ -182,4 +183,34 @@ class WatchableListTest {
             assertEquals(list2.list, list.list)
         }
     }
+
+    @Test fun perfCheck() {
+        val start = System.currentTimeMillis()
+        val elapsed = measureTimeMillis {
+            runThenCancel {
+                val perPile = 10000
+                val list = watchableListOf(1, 2, 3, 4, 5, 6)
+                val list2 = watchableListOf(7, 8, 9)
+                list2.bind(list)
+                val act = suspend {
+                    list.use { randomChange(); randomChange() }
+                }
+
+                val jobs = listOf(pileOn(perPile, act), pileOn(perPile, act), pileOn(perPile, act), pileOn(perPile, act))
+                jobs.joinAll()
+
+                log("Done, waiting for alignment after ${System.currentTimeMillis() - start}")
+                watch(list2) {
+                    if (list2.list == list.list) {
+                        log("Alignment with ${list.list}")
+                        coroutineContext.cancel()
+                    }
+                }
+                delay(8000) // Wait up to 8 seconds for the correct list to finally filter into list2.
+            }
+        }
+        // At present about 2100ms-2300ms
+        println("Elapsed: $elapsed")
+    }
+
 }

@@ -19,6 +19,7 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.newSingleThreadContext
 
 /**
  * An object wrapping type [T] which can be watched for changes of type [C].
@@ -32,11 +33,32 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
      * Calling [watch] will immediately launch a call to [block] to inform it of the [Watchable]'s initial value.
      * Further calls will arrive if and when this [Watchable] changes.
      */
+    fun CoroutineScope.watchBatches(
+        /** The block to invoke within this [CoroutineScope] whenever a change occurs. */
+        block: suspend (List<C>) -> Unit
+    ): Job
+
+    /**
+     * Deliver changes to [block] using this [CoroutineScope] until it terminates or until the returned [Job] is
+     * cancelled. Each change is processed to completion (e.g. [block] must return) before the next change is
+     * delivered.
+     *
+     * Calling [watch] will immediately launch a call to [block] to inform it of the [Watchable]'s initial value.
+     * Further calls will arrive if and when this [Watchable] changes.
+     */
     fun CoroutineScope.watch(
         /** The block to invoke within this [CoroutineScope] whenever a change occurs. */
-        block: (C) -> Unit
-    ): Job
+        block: suspend (C) -> Unit
+    ): Job =
+        watchBatches { changes ->
+            changes.forEach { change -> block(change) }
+        }
 
     /** Return true if this [Watchable]'s scope is still active, allowing new [watch] requests to succeed. */
     fun isActive() = coroutineContext.isActive
+
+    companion object {
+        @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class)
+        internal val writeContext = newSingleThreadContext("watchables")
+    }
 }

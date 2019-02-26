@@ -85,8 +85,8 @@ class WatchableSet<T>(
         }
     }
 
-    override fun CoroutineScope.watch(block: (SetChange<T>) -> Unit) =
-        delegate.watchOwner(this@watch, block)
+    override fun CoroutineScope.watchBatches(block: suspend (List<SetChange<T>>) -> Unit) =
+        delegate.watchOwnerBatch(this@watchBatches, block)
 
     /** Return an unmodifiable form of this [WatchableSet]. */
     fun readOnly(): ReadOnlyWatchableSet<T> = object : ReadOnlyWatchableSet<T> by this {

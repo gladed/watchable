@@ -16,9 +16,9 @@
 
 package io.gladed.watchable
 
+import io.gladed.watchable.Watchable.Companion.writeContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.withContext
 import java.lang.IllegalStateException
 import kotlin.coroutines.CoroutineContext
@@ -38,45 +38,52 @@ class WatchableList<T>(
     @Volatile override var list = initialValues.toList()
         private set(value) { field = value }
 
+    private val mutator = Mutator()
+
     /**
      * Suspend until [block] can safely execute, reading and writing data within the list as desired
      * and returning [block]'s result. This [WatchableList] must not be bound ([isBound] must return false).
      */
     suspend fun <U> use(block: MutableList<T>.() -> U): U =
         // Async, execute block on the single-threaded context, join, and return result.
-        withContext(singleThreadContext) {
+        withContext(writeContext) {
             if (isBound()) throw IllegalStateException("Watchable object is bound")
             write(block)
         }
 
-    private suspend fun <U> unboundWrite(block: MutableList<T>.() -> U): U =
-        withContext(singleThreadContext) {
-            write(block)
+    /** Handles a change. Must be on writeContext. */
+    private suspend fun <U> write(block: MutableList<T>.() -> U): U =
+        mutator.block().also {
+            mutator.deliver()
         }
-
-    private fun <U> write(block: MutableList<T>.() -> U): U =
-        block(mutableList).also {
-            // If there was a change swap it into list
-            modified?.also {
-                list = it
-                modified = null
-            }
-            // TODO(#13): Deliver batched changes here if we do that. Need performance test for it.
-        }
-
-    var modified: MutableList<T>? = null
 
     /**
      * A mutable list which duplicates [list] into [modified] if a change is made, and delivers changes
      * made to the delegate.
      */
-    private val mutableList: MutableList<T> = object : AbstractMutableList<T>() {
+    private inner class Mutator : AbstractMutableList<T>() {
+        var modified: MutableList<T>? = null
         val current: List<T> get() = modified ?: list
-
-        // TODO(#13): batched changes for a possible performance gain? launch all changes at once...
+        val changes = mutableListOf<ListChange<T>>()
 
         override val size: Int
             get() = modified?.size ?: list.size
+
+        suspend fun deliver() {
+            // If there was a change swap it into list
+            modified?.also { newList ->
+                // Push the modified list back into the outer object
+                list = newList
+                modified = null
+
+                // Deliver and clear the changes
+                val toDeliver = changes.toList()
+                changes.clear()
+
+                // send() may suspend so we need to deliver changes all at once.
+                delegate.send(toDeliver)
+            }
+        }
 
         // Copy on write for the duration of this session
         private fun <U> change(func: MutableList<T>.() -> U) =
@@ -87,7 +94,7 @@ class WatchableList<T>(
         override fun add(index: Int, element: T) {
             change {
                 add(index, element).also {
-                    delegate.deliver(ListChange.Add(index, element))
+                    changes.add(ListChange.Add(index, element))
                 }
             }
         }
@@ -95,14 +102,14 @@ class WatchableList<T>(
         override fun removeAt(index: Int) =
             change {
                 removeAt(index).also {
-                    delegate.deliver(ListChange.Remove(index, it))
+                    changes.add(ListChange.Remove(index, it))
                 }
             }
 
         override fun set(index: Int, element: T) =
             change {
                 set(index, element).also {
-                    delegate.deliver(ListChange.Replace(index, it, element))
+                    changes.add(ListChange.Replace(index, it, element))
                 }
             }
     }
@@ -113,22 +120,14 @@ class WatchableList<T>(
             get() = ListChange.Initial(list.toList())
 
         override fun onBoundChange(change: ListChange<T>) {
-            when (change) {
-                is ListChange.Initial<T> -> launch {
-                        unboundWrite {
-                            clear()
-                            addAll(change.initial)
-                        }
+            launch(writeContext) {
+                write {
+                    when (change) {
+                        is ListChange.Initial<T> -> clear().also { addAll(change.initial) }
+                        is ListChange.Add<T> -> add(change.index, change.added)
+                        is ListChange.Remove<T> -> removeAt(change.index)
+                        is ListChange.Replace<T> -> set(change.index, change.added)
                     }
-
-                is ListChange.Add<T> -> launch {
-                    unboundWrite { add(change.index, change.added) }
-                }
-                is ListChange.Remove<T> -> launch {
-                    unboundWrite { removeAt(change.index) }
-                }
-                is ListChange.Replace<T> -> launch {
-                    unboundWrite { set(change.index, change.added) }
                 }
             }
         }
@@ -137,8 +136,8 @@ class WatchableList<T>(
     override val boundTo: Watchable<List<T>, ListChange<T>>?
         get() = delegate.boundTo
 
-    override fun CoroutineScope.watch(block: (ListChange<T>) -> Unit) =
-        delegate.watchOwner(this@watch, block)
+    override fun CoroutineScope.watchBatches(block: suspend (List<ListChange<T>>) -> Unit) =
+        delegate.watchOwnerBatch(this@watchBatches, block)
 
     override fun bind(other: Watchable<List<T>, ListChange<T>>) =
         delegate.bind(other)
@@ -152,10 +151,6 @@ class WatchableList<T>(
             "ReadOnlyWatchableList(${super.toString()})"
     }
 
-    override fun toString() =
-        "WatchableList(${super.toString()})"
-
-    companion object {
-        private val singleThreadContext = newSingleThreadContext("WatchableList")
-    }
+//    override fun toString() =
+//        "WatchableList(${super.toString()})"
 }

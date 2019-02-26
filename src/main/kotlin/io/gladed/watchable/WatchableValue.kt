@@ -52,8 +52,8 @@ class WatchableValue<T>(
         }
     }
 
-    override fun CoroutineScope.watch(block: (ValueChange<T>) -> Unit) =
-        delegate.watchOwner(this@watch, block)
+    override fun CoroutineScope.watchBatches(block: suspend (List<ValueChange<T>>) -> Unit) =
+        delegate.watchOwnerBatch(this@watchBatches, block)
 
     /** Return an unmodifiable form of this [WatchableValue]. */
     fun readOnly(): ReadOnlyWatchableValue<T> = object : ReadOnlyWatchableValue<T> by this {

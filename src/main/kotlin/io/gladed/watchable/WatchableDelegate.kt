@@ -34,8 +34,8 @@ abstract class WatchableDelegate<T, C : Change<T>>(
 ) : CoroutineScope {
 
     /** The internal channel used to broadcast changes to watchers. */
-    private val channel: BroadcastChannel<C> by lazy {
-        BroadcastChannel<C>(CAPACITY).also {
+    private val channel: BroadcastChannel<List<C>> by lazy {
+        BroadcastChannel<List<C>>(CAPACITY).also {
             CoroutineScope(coroutineContext).launch {
                 // Keep channel open until the context is closed, for any reason.
                 delay(Long.MAX_VALUE)
@@ -76,7 +76,7 @@ abstract class WatchableDelegate<T, C : Change<T>>(
      */
     fun <C2 : C> change(block: () -> C2): C2 {
         checkChange()
-        return block().also { owner.launch { send(it) } }
+        return block().also { owner.launch { send(listOf(it)) } }
     }
 
     /**
@@ -84,20 +84,11 @@ abstract class WatchableDelegate<T, C : Change<T>>(
      */
     fun <C2 : C> changeOrNull(block: () -> C2?): C2? {
         checkChange()
-        return block()?.also { owner.launch { send(it) } }
+        return block()?.also { owner.launch { send(listOf(it)) } }
     }
 
     /** Deliver a change to watchers if possible. */
-    fun deliver(change: C) {
-        if (!channel.isClosedForSend) {
-            launch {
-                send(change)
-            }
-        }
-    }
-
-    /** Deliver a change to watchers if possible. */
-    suspend fun send(change: C) {
+    suspend fun send(change: List<C>) {
         // Send, if we can
         if (!channel.isClosedForSend) {
             channel.send(change)
@@ -132,20 +123,33 @@ abstract class WatchableDelegate<T, C : Change<T>>(
         }
     }
 
-    fun watchOwner(scope: CoroutineScope, block: (C) -> Unit): Job {
+    fun watchOwner(scope: CoroutineScope, block: suspend (C) -> Unit): Job {
         // Open first in case there are changes
         val sub = channel.openSubscription()
         val initial = initialChange
         return scope.launch {
-            // Send a current copy of initial content
+            // Send initial content
             block(initial)
-            sub.consumeEach {
-                block(it)
+            sub.consumeEach { changes ->
+                changes.forEach { change -> block(change) }
+            }
+        }
+    }
+
+    fun watchOwnerBatch(scope: CoroutineScope, block: suspend (List<C>) -> Unit): Job {
+        // Open first in case there are changes
+        val sub = channel.openSubscription()
+        val initial = initialChange
+        return scope.launch {
+            // Send initial content
+            block(listOf(initial))
+            sub.consumeEach { changes ->
+                block(changes)
             }
         }
     }
 
     companion object {
-        private const val CAPACITY = 2
+        private const val CAPACITY = 1
     }
 }

@@ -119,8 +119,8 @@ class WatchableMap<K, V>(
                 }
         }
 
-    override fun CoroutineScope.watch(block: (MapChange<K, V>) -> Unit) =
-        delegate.watchOwner(this@watch, block)
+    override fun CoroutineScope.watchBatches(block: suspend (List<MapChange<K, V>>) -> Unit) =
+        delegate.watchOwnerBatch(this@watchBatches, block)
 
     override fun bind(other: Watchable<Map<K, V>, MapChange<K, V>>) =
         delegate.bind(other)
