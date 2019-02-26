@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.ListChange
+import io.gladed.watchable.WatchableList
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CancellationException
@@ -43,7 +44,7 @@ class WatchableListTest {
                 log("Receive $it")
                 changes += it
             }
-            list.addAll(listOf(5, 6, 5))
+            list { addAll(listOf(5, 6, 5)) }
             yield()
             yield()
         }
@@ -59,11 +60,11 @@ class WatchableListTest {
     @Test fun equality() {
         runThenCancel {
             val list = watchableListOf(1, 2, 3)
-            assertEquals(list, list)
-            assertEquals(listOf(1, 2, 3), list)
-            assertEquals(list, listOf(1, 2, 3))
+            assertEquals(list.list, list.list)
+            assertEquals(listOf(1, 2, 3), list.list)
+            assertEquals(list.list, listOf(1, 2, 3))
             val list2 = watchableListOf(1, 2, 3)
-            assertEquals(list, list2)
+            assertEquals(list.list, list2.list)
         }
     }
 
@@ -75,7 +76,7 @@ class WatchableListTest {
                 log("Receive $it")
                 changes += it
             }
-            list.remove(6)
+            list { remove(6) }
             yield()
             yield()
         }
@@ -92,7 +93,7 @@ class WatchableListTest {
                 log("Receive $it")
                 changes += it
             }
-            list[1] = 4
+            list { this[1] = 4 }
             yield()
             yield()
         }
@@ -112,9 +113,11 @@ class WatchableListTest {
                 }
             }
             println("$readOnly") // Coverage
-            list.addAll(listOf(5, 6))
-            list.removeAll(listOf(6, 7, 8))
-            assertEquals(1, readOnly.size)
+            list {
+                addAll(listOf(5, 6))
+                removeAll(listOf(6, 7, 8))
+            }
+            assertEquals(1, readOnly.list.size)
             yield()
         }
 
@@ -131,7 +134,7 @@ class WatchableListTest {
             watch(list) { changes += it }
             yield()
             yield()
-            list.clear()
+            list { clear() }
             yield()
             yield()
         }
@@ -141,24 +144,24 @@ class WatchableListTest {
     }
 
     @Test fun dogPile() {
-        fun pileOn(list: MutableList<Int>, count: Int) = scope.launch {
+        fun pileOn(list: WatchableList<Int>, count: Int) = scope.launch {
             (0 until count).forEach { _ ->
                 when ((Math.random() * 3).toInt()) {
-                    0 -> synchronized(list) { // Sync necessary due to size + add
-                        if (list.isNotEmpty()) {
-                            val at = (list.size * Math.random()).toInt()
-                            list.removeAt(at)
+                    0 -> list {
+                            if (isNotEmpty()) {
+                                val at = (size * Math.random()).toInt()
+                                removeAt(at)
+                            }
                         }
-                    }
-                    1 -> synchronized(list) {
+                    1 -> list {
                         val num = (Math.random() * 10).toInt()
-                        list.add(num)
+                        add(num)
                     }
-                    2 -> synchronized(list) {
-                        if (list.isNotEmpty()) {
-                            val at = (list.size * Math.random()).toInt()
+                    2 -> list {
+                        if (isNotEmpty()) {
+                            val at = (size * Math.random()).toInt()
                             val num = (Math.random() * 10).toInt()
-                            list[at] = num
+                            this[at] = num
                         }
                     }
                 }
@@ -172,12 +175,11 @@ class WatchableListTest {
             list2.bind(list)
             val jobs = listOf(pileOn(list, perPile), pileOn(list, perPile), pileOn(list, perPile), pileOn(list, perPile))
             (0 until 100).forEach { _ ->
-                // TODO(#13): How can we make this safe without `synchronize`?
-                // list.toString()
+                list.list.toString()
             }
             jobs.joinAll()
             delay(50)
-            assertEquals(list2, list)
+            assertEquals(list2.list, list.list)
         }
     }
 }

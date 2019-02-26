@@ -88,7 +88,7 @@ abstract class WatchableDelegate<T, C : Change<T>>(
     }
 
     /** Deliver a change to watchers if possible. */
-    private suspend fun send(change: C) {
+    suspend fun send(change: C) {
         // Send, if we can
         if (!channel.isClosedForSend) {
             channel.send(change)

@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.watchableListOf
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
@@ -27,9 +28,8 @@ class BindListTest {
             val origin = watchableListOf(5)
             val dest = watchableListOf(6)
             dest.bind(origin)
-            yield()
-            yield()
-            assertEquals(listOf(5), dest)
+            delay(50)
+            assertEquals(listOf(5), dest.list)
         }
     }
 
@@ -38,58 +38,28 @@ class BindListTest {
             val origin = watchableListOf(4, 5)
             val dest = watchableListOf(6)
             dest.bind(origin)
-            origin += listOf(8, 7)
-            origin -= 5
-            yield()
-            yield()
-            origin += listOf(9)
-            origin -= 4
-            origin[1] = 11
-            yield()
-            yield()
-            assertEquals(listOf(8, 11, 9), dest)
-        }
-    }
-
-    @Test fun badAdd() {
-        try {
-            runThenCancel {
-                val origin = watchableListOf(4, 5)
-                val dest = watchableListOf(6)
-                dest.bind(origin)
-                dest += 7
-                fail("Modification should not have been permitted")
+            origin {
+                addAll(listOf(8, 7))
+                remove(5)
             }
-        } catch (e: IllegalStateException) {
-            // Expected
-        }
-    }
-
-    @Test fun badRemove() {
-        try {
-            runThenCancel {
-                val origin = watchableListOf(4, 5)
-                val dest = watchableListOf(6)
-                dest.bind(origin)
-                yield()
-                yield()
-                dest -= 5
-                fail("Modification should not have been permitted")
+            delay(50)
+            origin {
+                add(9)
+                remove(4)
+                this[1] = 11
             }
-        } catch (e: IllegalStateException) {
-            // Expected
+            delay(50)
+            assertEquals(listOf(8, 11, 9), dest.list)
         }
     }
 
-    @Test fun badReplace() {
+    @Test fun badWrite() {
         try {
             runThenCancel {
                 val origin = watchableListOf(4, 5)
                 val dest = watchableListOf(6)
                 dest.bind(origin)
-                yield()
-                yield()
-                dest[0] = 4
+                dest { }
                 fail("Modification should not have been permitted")
             }
         } catch (e: IllegalStateException) {
@@ -104,15 +74,13 @@ class BindListTest {
 
             println("Binding $dest to $origin")
             dest.bind(origin)
-            origin += listOf(8, 7) // Race condition here. If the origin is modified AND generates new changes...
-            yield()
-            yield()
+            origin { addAll(listOf(8, 7)) }
+            delay(50)
             dest.unbind()
             dest.unbind() // twice to show it works ok
-            origin -= 5
-            yield()
-            yield()
-            assertEquals(listOf(4, 5, 8, 7), dest)
+            origin { remove(5) }
+            delay(50)
+            assertEquals(listOf(4, 5, 8, 7), dest.list)
         }
     }
 }
