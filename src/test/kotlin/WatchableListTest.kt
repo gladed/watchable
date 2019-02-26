@@ -44,7 +44,7 @@ class WatchableListTest {
                 log("Receive $it")
                 changes += it
             }
-            list { addAll(listOf(5, 6, 5)) }
+            list.use { addAll(listOf(5, 6, 5)) }
             yield()
             yield()
         }
@@ -76,7 +76,7 @@ class WatchableListTest {
                 log("Receive $it")
                 changes += it
             }
-            list { remove(6) }
+            list.use { remove(6) }
             yield()
             yield()
         }
@@ -93,7 +93,7 @@ class WatchableListTest {
                 log("Receive $it")
                 changes += it
             }
-            list { this[1] = 4 }
+            list.use { this[1] = 4 }
             yield()
             yield()
         }
@@ -113,7 +113,7 @@ class WatchableListTest {
                 }
             }
             println("$readOnly") // Coverage
-            list {
+            list.use {
                 addAll(listOf(5, 6))
                 removeAll(listOf(6, 7, 8))
             }
@@ -134,7 +134,7 @@ class WatchableListTest {
             watch(list) { changes += it }
             yield()
             yield()
-            list { clear() }
+            list.use { clear() }
             yield()
             yield()
         }
@@ -147,17 +147,17 @@ class WatchableListTest {
         fun pileOn(list: WatchableList<Int>, count: Int) = scope.launch {
             (0 until count).forEach { _ ->
                 when ((Math.random() * 3).toInt()) {
-                    0 -> list {
+                    0 -> list.use {
                             if (isNotEmpty()) {
                                 val at = (size * Math.random()).toInt()
                                 removeAt(at)
                             }
                         }
-                    1 -> list {
+                    1 -> list.use {
                         val num = (Math.random() * 10).toInt()
                         add(num)
                     }
-                    2 -> list {
+                    2 -> list.use {
                         if (isNotEmpty()) {
                             val at = (size * Math.random()).toInt()
                             val num = (Math.random() * 10).toInt()

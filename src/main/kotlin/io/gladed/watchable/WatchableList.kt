@@ -34,42 +34,52 @@ class WatchableList<T>(
     initialValues: Collection<T> = emptyList()
 ) : ReadOnlyWatchableList<T>, Bindable<List<T>, ListChange<T>> {
 
-    /** The most current list content, accessible via read() */
+    /** The most current list content. */
     @Volatile override var list = initialValues.toList()
         private set(value) { field = value }
 
     /**
-     * Suspend until [block] can safely execute, reading and writing data within the list
+     * Suspend until [block] can safely execute, reading and writing data within the list as desired
      * and returning [block]'s result. This [WatchableList] must not be bound ([isBound] must return false).
      */
-    suspend operator fun <U> invoke(block: MutableList<T>.() -> U): U {
+    suspend fun <U> use(block: MutableList<T>.() -> U): U =
         // Async, execute block on the single-threaded context, join, and return result.
-        return withContext(singleThreadContext) {
+        withContext(singleThreadContext) {
             if (isBound()) throw IllegalStateException("Watchable object is bound")
-            unboundWrite(block)
+            write(block)
         }
-    }
 
-    private suspend fun <U> unboundWrite(block: MutableList<T>.() -> U): U {
-        return withContext(singleThreadContext) {
-            block(mutableList).also {
-                // If there was a change swap it into list
-                modified?.also {
-                    list = it
-                    modified = null
-                }
-            }
+    private suspend fun <U> unboundWrite(block: MutableList<T>.() -> U): U =
+        withContext(singleThreadContext) {
+            write(block)
         }
-    }
+
+    private fun <U> write(block: MutableList<T>.() -> U): U =
+        block(mutableList).also {
+            // If there was a change swap it into list
+            modified?.also {
+                list = it
+                modified = null
+            }
+            // TODO(#13): Deliver batched changes here if we do that. Need performance test for it.
+        }
 
     var modified: MutableList<T>? = null
+
+    /**
+     * A mutable list which duplicates [list] into [modified] if a change is made, and delivers changes
+     * made to the delegate.
+     */
     private val mutableList: MutableList<T> = object : AbstractMutableList<T>() {
         val current: List<T> get() = modified ?: list
+
+        // TODO(#13): batched changes for a possible performance gain? launch all changes at once...
 
         override val size: Int
             get() = modified?.size ?: list.size
 
-        fun <U> change(func: MutableList<T>.() -> U) =
+        // Copy on write for the duration of this session
+        private fun <U> change(func: MutableList<T>.() -> U) =
             (modified ?: list.toMutableList().also { modified = it }).func()
 
         override fun get(index: Int) = current[index]
@@ -77,7 +87,7 @@ class WatchableList<T>(
         override fun add(index: Int, element: T) {
             change {
                 add(index, element).also {
-                    launch { delegate.send(ListChange.Add(index, element)) }
+                    delegate.deliver(ListChange.Add(index, element))
                 }
             }
         }
@@ -85,14 +95,14 @@ class WatchableList<T>(
         override fun removeAt(index: Int) =
             change {
                 removeAt(index).also {
-                    launch { delegate.send(ListChange.Remove(index, it)) }
+                    delegate.deliver(ListChange.Remove(index, it))
                 }
             }
 
         override fun set(index: Int, element: T) =
             change {
                 set(index, element).also {
-                    launch { delegate.send(ListChange.Replace(index, it, element)) }
+                    delegate.deliver(ListChange.Replace(index, it, element))
                 }
             }
     }
@@ -146,6 +156,6 @@ class WatchableList<T>(
         "WatchableList(${super.toString()})"
 
     companion object {
-        val singleThreadContext = newSingleThreadContext("Watchable")
+        private val singleThreadContext = newSingleThreadContext("WatchableList")
     }
 }

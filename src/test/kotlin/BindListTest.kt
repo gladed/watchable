@@ -38,12 +38,12 @@ class BindListTest {
             val origin = watchableListOf(4, 5)
             val dest = watchableListOf(6)
             dest.bind(origin)
-            origin {
+            origin.use {
                 addAll(listOf(8, 7))
                 remove(5)
             }
             delay(50)
-            origin {
+            origin.use {
                 add(9)
                 remove(4)
                 this[1] = 11
@@ -59,7 +59,7 @@ class BindListTest {
                 val origin = watchableListOf(4, 5)
                 val dest = watchableListOf(6)
                 dest.bind(origin)
-                dest { }
+                dest.use { }
                 fail("Modification should not have been permitted")
             }
         } catch (e: IllegalStateException) {
@@ -74,11 +74,11 @@ class BindListTest {
 
             println("Binding $dest to $origin")
             dest.bind(origin)
-            origin { addAll(listOf(8, 7)) }
+            origin.use { addAll(listOf(8, 7)) }
             delay(50)
             dest.unbind()
             dest.unbind() // twice to show it works ok
-            origin { remove(5) }
+            origin.use { remove(5) }
             delay(50)
             assertEquals(listOf(4, 5, 8, 7), dest.list)
         }
