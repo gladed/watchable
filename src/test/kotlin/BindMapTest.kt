@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.watchableMapOf
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
@@ -27,9 +28,8 @@ class BindMapTest {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
             dest.bind(origin)
-            yield()
-            yield()
-            assertEquals(mapOf(5 to "5"), dest)
+            delay(50)
+            assertEquals(mapOf(5 to "5"), dest.map)
         }
     }
 
@@ -43,14 +43,12 @@ class BindMapTest {
                 this -= 5
                 this[7] = "77"
             }
-            yield()
-            yield()
+            delay(50)
             origin.use {
                 put(9, "9")
             }
-            yield()
-            yield()
-            assertEquals(mapOf(7 to "77", 9 to "9"), dest)
+            delay(50)
+            assertEquals(mapOf(7 to "77", 9 to "9"), dest.map)
         }
     }
 
@@ -74,8 +72,7 @@ class BindMapTest {
                 val origin = watchableMapOf(5 to "5")
                 val dest = watchableMapOf(6 to "6")
                 dest.bind(origin)
-                yield()
-                yield()
+                delay(50)
                 dest.use {
                     remove(5)
                 }
@@ -94,15 +91,13 @@ class BindMapTest {
             origin.use {
                 putAll(listOf(8 to "8", 7 to "7"))
             }
-            yield()
-            yield()
+            delay(50)
             dest.unbind()
             origin.use {
                 remove(5)
             }
-            yield()
-            yield()
-            assertEquals(mapOf(5 to "5", 8 to "8", 7 to "7"), dest)
+            delay(50)
+            assertEquals(mapOf(5 to "5", 8 to "8", 7 to "7"), dest.map)
         }
     }
 }

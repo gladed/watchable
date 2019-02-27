@@ -88,6 +88,47 @@ class WatchableMap<K, V>(
             }
         }
 
+        override val entries: MutableSet<MutableMap.MutableEntry<K, V>> =
+            object : AbstractMutableSet<MutableMap.MutableEntry<K, V>>() {
+                override val size: Int
+                    get() = mutableMap.size
+
+                override fun add(element: MutableMap.MutableEntry<K, V>): Boolean {
+                    // Kotlin MutableMap doesn't support this so we won't either
+                    throw UnsupportedOperationException()
+                }
+
+                override fun iterator() = object : MutableIterator<MutableMap.MutableEntry<K, V>> {
+                    val underlying = mutableMap.iterator()
+                    var last: MutableMap.MutableEntry<K, V>? = null
+
+                    override fun hasNext() = underlying.hasNext()
+
+                    override fun next(): MutableMap.MutableEntry<K, V> =
+                        underlying.next().also { last = it }.let { original ->
+                            object : MutableMap.MutableEntry<K, V> by original {
+                                override fun setValue(newValue: V): V {
+                                    delegate.checkChange()
+                                    val removed = original.setValue(newValue)
+                                    changes.add(MapChange.Replace(key, removed, newValue))
+                                    return removed
+                                }
+                                override fun equals(other: Any?) = original == other
+                                override fun hashCode() = original.hashCode()
+                                override fun toString() = "($key, $value)"
+                            }
+                        }
+
+                    override fun remove() {
+                        delegate.checkChange()
+                        underlying.remove()
+                        last?.also {
+                            changes.add(MapChange.Remove(it.key, it.value))
+                        }
+                    }
+                }
+            }
+
         override fun put(key: K, value: V): V? {
             delegate.checkChange()
             return mutableMap.put(key, value).also { oldValue ->
@@ -95,34 +136,6 @@ class WatchableMap<K, V>(
                     changes.add(MapChange.Add(key, value))
                 } else {
                     changes.add(MapChange.Replace(key, oldValue, value))
-                }
-            }
-        }
-
-        override val entries = object : AbstractMutableSet<MutableMap.MutableEntry<K, V>>() {
-            override val size: Int
-                get() = mutableMap.size
-
-            override fun add(element: MutableMap.MutableEntry<K, V>): Boolean {
-                // Kotlin MutableMap doesn't support this so we won't either
-                throw UnsupportedOperationException()
-            }
-
-            override fun iterator() = object : MutableIterator<MutableMap.MutableEntry<K, V>> {
-                val underlying = mutableMap.iterator()
-                var last: MutableMap.MutableEntry<K, V>? = null
-
-                override fun hasNext() = underlying.hasNext()
-
-                // TODO: This isn't quite enough
-                override fun next() = underlying.next().also { last = it }
-
-                override fun remove() {
-                    delegate.checkChange()
-                    underlying.remove()
-                    last?.also {
-                        changes.add(MapChange.Remove(it.key, it.value))
-                    }
                 }
             }
         }
@@ -134,15 +147,19 @@ class WatchableMap<K, V>(
             get() = MapChange.Initial(map.toMap())
 
         override fun onBoundChanges(changes: List<MapChange<K, V>>) {
-            changes.forEach { change ->
-                when (change) {
-                    is MapChange.Initial -> {
-                        mutableMap.clear()
-                        mutableMap.putAll(change.initial)
+            synchronized(mutableMap) {
+                useWhileSynced {
+                    changes.forEach { change ->
+                        when (change) {
+                            is MapChange.Initial -> {
+                                clear()
+                                putAll(change.initial)
+                            }
+                            is MapChange.Add -> put(change.key, change.added)
+                            is MapChange.Remove -> remove(change.key)
+                            is MapChange.Replace -> put(change.key, change.added)
+                        }
                     }
-                    is MapChange.Add -> mutableMap[change.key] = change.added
-                    is MapChange.Remove -> mutableMap.remove(change.key)
-                    is MapChange.Replace -> mutableMap[change.key] = change.added
                 }
             }
         }
@@ -150,68 +167,6 @@ class WatchableMap<K, V>(
 
     override val boundTo: Watchable<Map<K, V>, MapChange<K, V>>?
         get() = delegate.boundTo
-
-//    override fun put(key: K, value: V): V? =
-//        delegate.changeOrNull {
-//            map[key].let {
-//                when (it) {
-//                    value -> null // No Change
-//                    null -> {
-//                        map[key] = value
-//                        MapChange.Add(key, value)
-//                    }
-//                    else -> {
-//                        map[key] = value
-//                        MapChange.Replace(key, it, value)
-//                    }
-//                }
-//            }
-//        }?.let {
-//            // Return the removed value if any
-//            (it as? MapChange.Remove<K, V>)?.removed
-//        }
-//
-//    override val entries: MutableSet<MutableMap.MutableEntry<K, V>> =
-//        object : AbstractMutableSet<MutableMap.MutableEntry<K, V>>() {
-//            override val size: Int
-//                get() = map.entries.size
-//
-//            override fun add(element: MutableMap.MutableEntry<K, V>) =
-//                // Kotlin MutableMap doesn't support this so we won't either
-//                throw UnsupportedOperationException()
-//
-//            override fun iterator(): MutableIterator<MutableMap.MutableEntry<K, V>> =
-//                object : MutableIterator<MutableMap.MutableEntry<K, V>> {
-//                    val underlying = map.entries.iterator()
-//                    lateinit var last: MutableMap.MutableEntry<K, V>
-//
-//                    override fun hasNext() = underlying.hasNext()
-//
-//                    override fun next(): MutableMap.MutableEntry<K, V> =
-//                        underlying.next()
-//                            .also { last = it }
-//                            .let { origin ->
-//                                // Return a wrapped version of origin so that we can detect removal attempts.
-//                                object : MutableMap.MutableEntry<K, V> by origin {
-//                                    override fun setValue(newValue: V) =
-//                                        delegate.change {
-//                                            MapChange.Replace(key, origin.setValue(newValue), newValue)
-//                                        }.removed
-//
-//                                    override fun equals(other: Any?) = origin == other
-//                                    override fun hashCode() = origin.hashCode()
-//                                    override fun toString() = "($key, $value)"
-//                                }
-//                    }
-//
-//                    override fun remove() {
-//                        delegate.change {
-//                            underlying.remove()
-//                            MapChange.Remove(last.key, last.value)
-//                        }
-//                    }
-//                }
-//        }
 
     override fun CoroutineScope.watchBatches(block: (List<MapChange<K, V>>) -> Unit) =
         delegate.watchOwnerBatch(this@watchBatches, block)

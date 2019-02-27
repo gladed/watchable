@@ -18,6 +18,8 @@ import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 import java.lang.IllegalStateException
@@ -37,7 +39,9 @@ class BindListTest {
         runThenCancel {
             val origin = watchableListOf(4, 5)
             val dest = watchableListOf(6)
+            assertFalse(dest.isBound())
             dest.bind(origin)
+            assertTrue(dest.isBound())
             origin.use {
                 addAll(listOf(8, 7))
                 remove(5)

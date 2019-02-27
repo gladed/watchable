@@ -21,6 +21,7 @@ import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import org.hamcrest.CoreMatchers
@@ -44,17 +45,17 @@ class WatchableMapTest {
                 putAll(mapOf(6 to "6", 5 to "5"))
             }
             map.use {
-                this[6] = "6" // No-op
+                this[6] = "6" // No-op but now not really
             }
             Assert.assertThat(map.toString(), CoreMatchers.startsWith("WatchableMap("))
-            yield()
-            yield()
+            delay(50)
+            println(changes)
+            assertEquals(MapChange.Initial(emptyMap<Int, String>()), changes[0])
+            assertEquals(MapChange.Add(6, "6"), changes[1])
+            assertEquals(MapChange.Add(5, "5"), changes[2])
+            assertEquals(MapChange.Replace(6, "6", "6"), changes[3])
+            assertEquals(4, changes.size)
         }
-
-        assertEquals(MapChange.Initial(emptyMap<Int, String>()), changes[0])
-        assertEquals(MapChange.Add(6, "6"), changes[1])
-        assertEquals(MapChange.Add(5, "5"), changes[2])
-        assertEquals(3, changes.size)
     }
 
     @Test fun noEntryAdd() {
@@ -102,10 +103,9 @@ class WatchableMapTest {
             map.use {
                 entries.remove(entries.first().also { println("Entry: $it, HashCode: ${it.hashCode()}") })
             }
-            yield()
-            yield()
+            delay(50)
+            assertEquals(MapChange.Remove(5, "5"), changes[1])
         }
-        assertEquals(MapChange.Remove(5, "5"), changes[1])
     }
 
     @Test fun replace() {

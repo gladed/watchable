@@ -71,15 +71,7 @@ abstract class WatchableDelegate<T, C : Change<T>>(
         }
     }
 
-    // Note: remove change and changeOrNull when other watchables are refactored
-    /**
-     * Apply and deliver a change if it's safe to do so
-     */
-    fun <C2 : C> change(block: () -> C2): C2 {
-        checkChange()
-        return block().also { owner.launch { send(listOf(it)) } }
-    }
-
+    // TODO(#12): Remove after value refactor
     /**
      * Same as change but allows that the block may not actually change anything
      */
@@ -140,8 +132,8 @@ abstract class WatchableDelegate<T, C : Change<T>>(
     }
 
     /** Like consumeEach, but instead of handling each item, try to get a bunch of them and pass them along. */
-    private suspend inline fun <T : Any> ReceiveChannel<List<T>>.consumeBatched(
-        handleItems: (List<T>) -> Unit
+    private suspend fun <T : Any> ReceiveChannel<List<T>>.consumeBatched(
+        handleItems: suspend (List<T>) -> Unit
     ) {
         val buffer = mutableListOf<T>()
         while (true) {
