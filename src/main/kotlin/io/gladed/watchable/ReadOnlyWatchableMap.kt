@@ -14,16 +14,10 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
-/** Describes a change to a [Set]. */
-sealed class SetChange<T> : Change<Set<T>> {
-    /** The initial state of the set at the time watching began. */
-    data class Initial<T>(val initial: Set<T>) : SetChange<T>()
-
-    /** A change representing the addition of an element to the set. */
-    data class Add<T>(val added: T) : SetChange<T>()
-
-    /** A change representing the removal of an element from the set. */
-    data class Remove<T>(val removed: T) : SetChange<T>()
+/** An set which cannot be modified externally, but may be watched for changes. */
+interface ReadOnlyWatchableMap<K, V> : Watchable<Map<K, V>, MapChange<K, V>> {
+    /** The current contents of the map (may change between accesses). */
+    val map: Map<K, V>
 }

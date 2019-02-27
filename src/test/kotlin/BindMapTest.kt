@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-import com.gladed.watchable.watchableMapOf
+import io.gladed.watchable.watchableMapOf
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
@@ -27,9 +28,8 @@ class BindMapTest {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
             dest.bind(origin)
-            yield()
-            yield()
-            assertEquals(mapOf(5 to "5"), dest)
+            delay(50)
+            assertEquals(mapOf(5 to "5"), dest.map)
         }
     }
 
@@ -38,15 +38,17 @@ class BindMapTest {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
             dest.bind(origin)
-            origin[7] = "7"
-            origin -= 5
-            origin[7] = "77"
-            yield()
-            yield()
-            origin += 9 to "9"
-            yield()
-            yield()
-            assertEquals(mapOf(7 to "77", 9 to "9"), dest)
+            origin.use {
+                this[7] = "7"
+                this -= 5
+                this[7] = "77"
+            }
+            delay(50)
+            origin.use {
+                put(9, "9")
+            }
+            delay(50)
+            assertEquals(mapOf(7 to "77", 9 to "9"), dest.map)
         }
     }
 
@@ -56,7 +58,7 @@ class BindMapTest {
                 val origin = watchableMapOf(5 to "5")
                 val dest = watchableMapOf(6 to "6")
                 dest.bind(origin)
-                dest += 7 to "7"
+                dest.use { put(7, "7") }
                 fail("Modification should not have been permitted")
             }
         } catch (e: IllegalStateException) {
@@ -70,9 +72,10 @@ class BindMapTest {
                 val origin = watchableMapOf(5 to "5")
                 val dest = watchableMapOf(6 to "6")
                 dest.bind(origin)
-                yield()
-                yield()
-                dest -= 5
+                delay(50)
+                dest.use {
+                    remove(5)
+                }
                 fail("Modification should not have been permitted")
             }
         } catch (e: IllegalStateException) {
@@ -85,14 +88,16 @@ class BindMapTest {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
             dest.bind(origin)
-            origin += listOf(8 to "8", 7 to "7")
-            yield()
-            yield()
+            origin.use {
+                putAll(listOf(8 to "8", 7 to "7"))
+            }
+            delay(50)
             dest.unbind()
-            origin -= 5
-            yield()
-            yield()
-            assertEquals(mapOf(5 to "5", 8 to "8", 7 to "7"), dest)
+            origin.use {
+                remove(5)
+            }
+            delay(50)
+            assertEquals(mapOf(5 to "5", 8 to "8", 7 to "7"), dest.map)
         }
     }
 }

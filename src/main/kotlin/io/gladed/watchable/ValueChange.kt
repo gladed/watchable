@@ -14,7 +14,12 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
-/** An set which cannot be modified externally, but may be watched for changes. */
-interface ReadOnlyWatchableList<T> : Watchable<List<T>, ListChange<T>>, List<T>
+/** An initial announcement or change to the underlying value for a [WatchableValue]. */
+data class ValueChange<T>(
+    /** The new object value. */
+    val newValue: T,
+    /** The old value, or the same as [newValue] if this is the initial notification. */
+    val oldValue: T
+) : Change<T>

@@ -14,66 +14,62 @@
  * limitations under the License.
  */
 
-import com.gladed.watchable.SetChange
-import com.gladed.watchable.WatchableSet
-import com.gladed.watchable.watch
-import com.gladed.watchable.watchableSetOf
+import io.gladed.watchable.SetChange
+import io.gladed.watchable.WatchableSet
+import io.gladed.watchable.watch
+import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
+import java.util.Collections
+import java.util.concurrent.CountDownLatch
 
 class WatchableSetTest {
     private lateinit var set: WatchableSet<Int>
+    private val changes = mutableListOf<SetChange<Int>>()
 
-    // A way to run a blocking section then cancel the enclosing scope
-    private fun <T> runThenCancel(block: suspend CoroutineScope.() -> T) {
-        try {
-            runBlocking {
-                block().also {
-                    coroutineContext.cancel()
-                }
-            }
-        } catch (e: CancellationException) {
-            // As expected
-        }
-    }
+    @Rule @JvmField val scope = ScopeRule(Dispatchers.Default)
 
     @Test fun add() {
-        val changes = mutableListOf<SetChange<Int>>()
-        runThenCancel {
-            set = watchableSetOf()
-            watch(set) {
-                log("Receive $it")
-                changes += it
-            }
-            set.addAll(listOf(5, 6, 5))
-            assertThat(set.toString(), startsWith("WatchableSet("))
-            yield()
-            yield()
+        val latch = CountDownLatch(3) // Expect 3 events
+        set = scope.watchableSetOf()
+        scope.watch(set) {
+            log("Receive $it")
+            changes += it
+            latch.countDown()
         }
+        set.use { addAll(listOf(6, 5)) }
 
+        latch.await()
+        assertThat(set.toString(), startsWith("WatchableSet("))
         assertTrue(changes[0] is SetChange.Initial)
-        assertEquals(5, (changes[1] as SetChange.Add).added)
-        assertEquals(6, (changes[2] as SetChange.Add).added)
+        assertEquals(6, (changes[1] as SetChange.Add).added)
+        assertEquals(5, (changes[2] as SetChange.Add).added)
         assertEquals(3, changes.size)
     }
 
     @Test fun remove() {
-        val changes = mutableListOf<SetChange<Int>>()
         runThenCancel {
             set = watchableSetOf(5, 6)
             watch(set) {
                 log("Receive $it")
                 changes += it
             }
-            set.remove(6)
+            set.use { remove(6)}
             yield()
             yield()
         }
@@ -83,7 +79,6 @@ class WatchableSetTest {
     }
 
     @Test fun readOnly() {
-        val changes = mutableListOf<SetChange<Int>>()
         runThenCancel {
             set = watchableSetOf()
             val readOnly = set.readOnly().also {
@@ -92,9 +87,11 @@ class WatchableSetTest {
                 }
             }
             println("$readOnly") // Coverage
-            set.addAll(listOf(5, 6))
-            set.removeAll(listOf(6, 7, 8))
-            assertEquals(1, readOnly.size)
+            set.use {
+                addAll(listOf(5, 6))
+                removeAll(listOf(6, 7, 8))
+            }
+            assertEquals(1, readOnly.set.size)
             yield()
         }
 

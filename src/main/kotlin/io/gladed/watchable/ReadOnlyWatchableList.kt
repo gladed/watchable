@@ -14,7 +14,10 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
-/** Describes a change to an object of type [T]. */
-interface Change<T>
+/** An set which cannot be modified externally, but may be watched for changes. */
+interface ReadOnlyWatchableList<T> : Watchable<List<T>, ListChange<T>> {
+    /** The current contents of the list (may change between accesses). */
+    val list: List<T>
+}

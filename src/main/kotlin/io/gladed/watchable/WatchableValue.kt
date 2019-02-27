@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A thread-safe, mutable value which be watched for replacement of its value and/or bound to other maps for the
+ * A mutable value which be watched for replacement of its value and/or bound to other maps for the
  * duration of its [coroutineContext].
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
@@ -33,12 +34,11 @@ class WatchableValue<T>(
     /** The current value of the underlying object. */
     @Volatile override var value: T = initialValue
         set(value) {
-            delegate.changeOrNull {
-                if (field == value) null else {
-                    val old = field
-                    field = value
-                    ValueChange(value, old)
-                }
+            delegate.checkChange()
+            val old = field
+            field = value
+            launch(coroutineContext) {
+                delegate.send(listOf(ValueChange(value, old)))
             }
         }
 
@@ -47,13 +47,15 @@ class WatchableValue<T>(
         override val initialChange
             get() = ValueChange(value, value)
 
-        override fun onBoundChange(change: ValueChange<T>) {
-            value = change.newValue
+        override fun onBoundChanges(changes: List<ValueChange<T>>) {
+            changes.forEach { change ->
+                value = change.newValue
+            }
         }
     }
 
-    override fun CoroutineScope.watch(block: (ValueChange<T>) -> Unit) =
-        delegate.watchOwner(this@watch, block)
+    override fun CoroutineScope.watchBatches(block: (List<ValueChange<T>>) -> Unit) =
+        delegate.watchOwnerBatch(this@watchBatches, block)
 
     /** Return an unmodifiable form of this [WatchableValue]. */
     fun readOnly(): ReadOnlyWatchableValue<T> = object : ReadOnlyWatchableValue<T> by this {

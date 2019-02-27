@@ -14,13 +14,14 @@
  * limitations under the License.
  */
 
-import com.gladed.watchable.MapChange
-import com.gladed.watchable.WatchableMap
-import com.gladed.watchable.watch
-import com.gladed.watchable.watchableMapOf
+import io.gladed.watchable.MapChange
+import io.gladed.watchable.WatchableMap
+import io.gladed.watchable.watch
+import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import org.hamcrest.CoreMatchers
@@ -40,17 +41,21 @@ class WatchableMapTest {
                 log("Receive $it")
                 changes += it
             }
-            map.putAll(mapOf(6 to "6", 5 to "5"))
-            map[6] = "6" // No-op
+            map.use {
+                putAll(mapOf(6 to "6", 5 to "5"))
+            }
+            map.use {
+                this[6] = "6" // No-op but now not really
+            }
             Assert.assertThat(map.toString(), CoreMatchers.startsWith("WatchableMap("))
-            yield()
-            yield()
+            delay(50)
+            println(changes)
+            assertEquals(MapChange.Initial(emptyMap<Int, String>()), changes[0])
+            assertEquals(MapChange.Add(6, "6"), changes[1])
+            assertEquals(MapChange.Add(5, "5"), changes[2])
+            assertEquals(MapChange.Replace(6, "6", "6"), changes[3])
+            assertEquals(4, changes.size)
         }
-
-        assertEquals(MapChange.Initial(emptyMap<Int, String>()), changes[0])
-        assertEquals(MapChange.Add(6, "6"), changes[1])
-        assertEquals(MapChange.Add(5, "5"), changes[2])
-        assertEquals(3, changes.size)
     }
 
     @Test fun noEntryAdd() {
@@ -58,13 +63,15 @@ class WatchableMapTest {
             runThenCancel {
                 val map = watchableMapOf<Int, String>()
                 log("Attempting add")
-                map.entries.add(object : MutableMap.MutableEntry<Int, String> {
-                    override var key: Int = 5
-                    override var value: String = "5"
-                    override fun setValue(newValue: String): String {
-                        return value.also { value = "6" }
-                    }
-                })
+                map.use {
+                    entries.add(object : MutableMap.MutableEntry<Int, String> {
+                        override var key: Int = 5
+                        override var value: String = "5"
+                        override fun setValue(newValue: String): String {
+                            return value.also { value = "6" }
+                        }
+                    })
+                }
                 fail("Shouldn't get here")
             }
         } catch (e: UnsupportedOperationException) { }
@@ -77,7 +84,7 @@ class WatchableMapTest {
                 log("Receive $it")
                 changes += it
             }
-            assertEquals("5", map.remove(5))
+            assertEquals("5", map.use { remove(5) })
             yield()
             yield()
         }
@@ -93,11 +100,12 @@ class WatchableMapTest {
                 log("Receive $it")
                 changes += it
             }
-            map.entries.remove(map.entries.first().also { println("Entry: $it, HashCode: ${it.hashCode()}") })
-            yield()
-            yield()
+            map.use {
+                entries.remove(entries.first().also { println("Entry: $it, HashCode: ${it.hashCode()}") })
+            }
+            delay(50)
+            assertEquals(MapChange.Remove(5, "5"), changes[1])
         }
-        assertEquals(MapChange.Remove(5, "5"), changes[1])
     }
 
     @Test fun replace() {
@@ -106,7 +114,7 @@ class WatchableMapTest {
             watch(map) {
                 changes += it
             }
-            map[5] = "55"
+            map.use { this[5] = "55" }
             yield()
             yield()
         }
@@ -123,7 +131,7 @@ class WatchableMapTest {
                 log("Receive $it")
                 changes += it
             }
-            map.entries.first().setValue("55")
+            map.use { entries.first().setValue("55") }
             yield()
             yield()
         }
@@ -137,9 +145,9 @@ class WatchableMapTest {
                 watch(it) { change -> changes += change }
             }
             Assert.assertThat(readOnly.toString(), CoreMatchers.startsWith("ReadOnlyWatchableMap("))
-            map[5] = "55"
-            assertEquals(1, readOnly.size)
-            assertEquals(1, readOnly.entries.size)
+            map.use { this[5] = "55" }
+            assertEquals(1, readOnly.map.size)
+            assertEquals(1, readOnly.map.entries.size)
             yield()
         }
         assertEquals(MapChange.Initial(mapOf(5 to "5")), changes[0])

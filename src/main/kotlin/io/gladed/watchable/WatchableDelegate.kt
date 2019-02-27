@@ -14,14 +14,16 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import java.lang.IllegalStateException
 import kotlin.coroutines.CoroutineContext
 
@@ -34,8 +36,8 @@ abstract class WatchableDelegate<T, C : Change<T>>(
 ) : CoroutineScope {
 
     /** The internal channel used to broadcast changes to watchers. */
-    private val channel: BroadcastChannel<C> by lazy {
-        BroadcastChannel<C>(CAPACITY).also {
+    private val channel: BroadcastChannel<List<C>> by lazy {
+        BroadcastChannel<List<C>>(CAPACITY).also {
             CoroutineScope(coroutineContext).launch {
                 // Keep channel open until the context is closed, for any reason.
                 delay(Long.MAX_VALUE)
@@ -48,8 +50,8 @@ abstract class WatchableDelegate<T, C : Change<T>>(
     /** A change reflecting the current value of this collection. (New watchers receive this). */
     abstract val initialChange: C
 
-    /** Process [change], applying it to [owner]. */
-    abstract fun onBoundChange(change: C)
+    /** Process [changes], applying them to [owner]. */
+    abstract fun onBoundChanges(changes: List<C>)
 
     /** Binding, if any. */
     private var binding: Job? = null
@@ -59,39 +61,21 @@ abstract class WatchableDelegate<T, C : Change<T>>(
     /** True if current processing a change from the watchable to which [owner] is bound. */
     private var isOnChange: Boolean = false
 
-    /** Throw if this is not a good time to change the owner object. */
-    private fun checkChange() {
+    /**
+     * Throw if this is not a good time to mutate the owner object (because it's bound and not currently
+     * processing binding-related changes).
+     */
+    fun checkChange() {
         if (boundTo != null && !isOnChange) {
             throw IllegalStateException("A bound object may not be modified.")
         }
     }
 
-    /**
-     * Apply a change by synchronizing on owner, throwing if this is a bad time to apply a change (because bound)
-     * running block, then sending the returned change description out to watchers.
-     */
-    fun <Ch : C> change(block: () -> Ch): Ch =
-        synchronized(owner) {
-            checkChange()
-            block().also { send(it) }
-        }
-
-    /**
-     * Same as change but allows that the block may not actually change anything
-     */
-    fun <Ch : C> changeOrNull(block: () -> Ch?): Ch? =
-        synchronized(owner) {
-            checkChange()
-            block()?.also { send(it) }
-        }
-
-    /** Deliver a change to watchers if possible. */
-    private fun send(change: C) {
+    /** Deliver changes to watchers if possible. */
+    suspend fun send(changes: List<C>) {
         // Send, if we can
-        if (!channel.isClosedForSend && !channel.offer(change)) {
-            launch {
-                channel.send(change)
-            }
+        if (!channel.isClosedForSend) {
+            channel.send(changes)
         }
     }
 
@@ -101,16 +85,16 @@ abstract class WatchableDelegate<T, C : Change<T>>(
         // Chase up the parent stack
         var parent = other as? Bindable<*, *>
         while (parent != null) {
-            if (parent == owner) throw IllegalStateException("Circular binding not permitted")
+            if (parent === owner) throw IllegalStateException("Circular binding not permitted")
             parent = parent.boundTo as? Bindable<*, *>
         }
 
         boundTo = other
 
         // Perform the binding on owner's scope
-        binding = owner.watch(other) {
+        binding = owner.watchBatches(other) {
             isOnChange = true
-            onBoundChange(it)
+            onBoundChanges(it)
             isOnChange = false
         }
     }
@@ -123,16 +107,33 @@ abstract class WatchableDelegate<T, C : Change<T>>(
         }
     }
 
-    fun watchOwner(scope: CoroutineScope, block: (C) -> Unit): Job {
+    fun watchOwnerBatch(scope: CoroutineScope, block: (List<C>) -> Unit): Job {
         // Open first in case there are changes
         val sub = channel.openSubscription()
         val initial = initialChange
         return scope.launch {
-            // Send a current copy of initial content
-            block(initial)
-            sub.consumeEach {
-                block(it)
+            // Send initial content
+            block(listOf(initial))
+            // Batch received events for a measurable performance benefit
+            sub.consumeBatched { changes ->
+                block(changes)
+                yield()
             }
+        }
+    }
+
+    /** Like consumeEach, but instead of handling each item, try to get a bunch of them and pass them along. */
+    private suspend fun <T : Any> ReceiveChannel<List<T>>.consumeBatched(
+        handleItems: suspend (List<T>) -> Unit
+    ) {
+        val buffer = mutableListOf<T>()
+        while (true) {
+            receiveOrNull()?.also { buffer.addAll(it) } ?: break
+            for (x in 2..CAPACITY) {
+                poll()?.also { buffer.addAll(it) } ?: break
+            }
+            handleItems(buffer)
+            buffer.clear()
         }
     }
 

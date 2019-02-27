@@ -14,12 +14,16 @@
  * limitations under the License.
  */
 
-package com.gladed.watchable
+package io.gladed.watchable
 
-/** An initial announcement or change to the underlying value for a [WatchableValue]. */
-data class ValueChange<T>(
-    /** The new object value. */
-    val newValue: T,
-    /** The old value, or the same as [newValue] if this is the initial notification. */
-    val oldValue: T
-) : Change<T>
+/** Describes a change to a [Set]. */
+sealed class SetChange<T> : Change<Set<T>> {
+    /** The initial state of the set at the time watching began. */
+    data class Initial<T>(val initial: Set<T>) : SetChange<T>()
+
+    /** A change representing the addition of an element to the set. */
+    data class Add<T>(val added: T) : SetChange<T>()
+
+    /** A change representing the removal of an element from the set. */
+    data class Remove<T>(val removed: T) : SetChange<T>()
+}
