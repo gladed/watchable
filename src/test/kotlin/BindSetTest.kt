@@ -42,14 +42,11 @@ class BindSetTest {
                 addAll(listOf(8, 7))
                 remove(5)
             }
-            yield()
-            yield()
             origin.use {
                 addAll(listOf(9))
                 remove(4)
             }
-            yield()
-            yield()
+            delay(50)
             // Order doesn't matter to sets
             assertEquals(setOf(7, 8, 9), dest.set)
             // But it matters to iterators
@@ -79,8 +76,7 @@ class BindSetTest {
                 val origin = watchableSetOf(4, 5)
                 val dest = watchableSetOf(6)
                 dest.bind(origin)
-                yield()
-                yield()
+                delay(50) // allow 4, 5 to arrive
                 dest.use {
                     remove(5)
                 }
@@ -99,14 +95,12 @@ class BindSetTest {
             origin.use {
                 addAll(listOf(8, 7))
             }
-            yield()
-            yield()
+            delay(50)
             dest.unbind()
             origin.use {
                 remove(5)
             }
-            yield()
-            yield()
+            delay(50)
             assertEquals(setOf(4, 5, 7, 8), dest.set)
         }
     }
