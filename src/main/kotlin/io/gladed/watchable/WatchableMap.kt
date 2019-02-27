@@ -17,7 +17,6 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -38,6 +37,9 @@ class WatchableMap<K, V>(
      * from [mutableMap].
      */
     @Volatile private var current: Map<K, V>? = null
+
+    // Note: It would be nicer and perhaps more performant to use Mutex instead of synchronized. But this would
+    // require runBlocking here, and suspend on "use" and on other callbacks.
 
     private val map
         get() = current ?: synchronized(mutableMap) {
@@ -77,18 +79,15 @@ class WatchableMap<K, V>(
         override val size: Int
             get() = mutableMap.size
 
+        /** Deliver outstanding changes (while synchronized). */
         fun deliver() {
             // If there was a change swap it into map
             if (changes.isNotEmpty()) {
-                // Assign the local copy
+                // Destroy the current copy, forcing it to be repopulated from when mutableMap at a later point
                 current = null
 
-                // send() may suspend so we need to deliver changes all at once.
-                changes.toList().also {
-                    launch(coroutineContext) {
-                        delegate.send(it)
-                    }
-                }
+                // Capture a list of changes and deliver to the single-threaded dispatcher to guarantee order
+                delegate.send(changes)
                 changes.clear()
             }
         }

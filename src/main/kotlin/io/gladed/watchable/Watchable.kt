@@ -19,6 +19,7 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.newSingleThreadContext
 
 /**
  * An object wrapping type [T] which can be watched for changes of type [C].
@@ -42,9 +43,16 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
         block: (C) -> Unit
     ): Job =
         watchBatches { changes ->
-            changes.forEach { change -> block(change) }
+            for (change in changes) {
+                if (coroutineContext.isActive) block(change) else break
+            }
         }
 
     /** Return true if this [Watchable]'s scope is still active, allowing new [watch] requests to succeed. */
     fun isActive() = coroutineContext.isActive
+
+    companion object {
+        @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class)
+        internal val singleDispatcher = newSingleThreadContext("watchable")
+    }
 }

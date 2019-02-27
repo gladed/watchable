@@ -17,7 +17,6 @@
 import io.gladed.watchable.ListChange
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
-import javafx.collections.ObservableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
@@ -34,7 +33,6 @@ import kotlin.system.measureTimeMillis
 
 @ExperimentalCoroutinesApi
 class WatchableListTest {
-
     @Rule @JvmField val scope = ScopeRule(Dispatchers.Default)
     private val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
 

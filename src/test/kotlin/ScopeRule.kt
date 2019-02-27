@@ -15,6 +15,7 @@
  */
 
 import kotlinx.coroutines.CoroutineDispatcher
+import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import org.junit.rules.TestRule
@@ -23,15 +24,14 @@ import org.junit.runners.model.Statement
 
 class ScopeRule(dispatcher: CoroutineDispatcher) : TestRule, CoroutineScope {
 
-    private val job = Job()
-    override val coroutineContext = dispatcher + job
+    override val coroutineContext = dispatcher + Job() + CoroutineExceptionHandler { _, cause -> log(cause.toString())}
 
     override fun apply(base: Statement, description: Description) = object : Statement() {
         override fun evaluate() {
             try {
                 base.evaluate()
             } finally {
-                job.cancel()
+                coroutineContext[Job]!!.cancel()
             }
         }
     }

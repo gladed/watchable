@@ -17,7 +17,6 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -36,9 +35,7 @@ class WatchableValue<T>(
             delegate.checkChange()
             val old = field
             field = value
-            launch(coroutineContext) {
-                delegate.send(listOf(ValueChange(value, old)))
-            }
+            delegate.send(listOf(ValueChange(value, old)))
         }
 
     /** A delegate implementing common functions. */

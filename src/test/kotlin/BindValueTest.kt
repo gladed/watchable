@@ -18,7 +18,6 @@ import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Test
@@ -30,8 +29,7 @@ class BindValueTest {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             dest.bind(origin)
-            yield()
-            yield()
+            delay(50)
             assertEquals(5, dest.value)
         }
     }
@@ -41,11 +39,9 @@ class BindValueTest {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             dest.bind(origin)
-            yield()
-            yield()
+            delay(50)
             origin.value = 7
-            yield()
-            yield()
+            delay(50)
             assertEquals(7, dest.value)
         }
     }
@@ -96,8 +92,7 @@ class BindValueTest {
                 dest.bind(origin)
                 dest.value = 7
                 fail("Modification should not be permitted")
-                yield()
-                yield()
+                delay(50)
                 assertEquals(6, dest.value)
             }
         } catch (e: IllegalStateException) {
@@ -110,11 +105,10 @@ class BindValueTest {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             dest.bind(origin)
-            yield()
-            yield()
+            delay(50)
             dest.unbind()
             origin.value = 7
-            yield()
+            delay(50)
             assertEquals(5, dest.value)
         }
     }

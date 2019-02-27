@@ -72,10 +72,14 @@ internal abstract class WatchableDelegate<T, C : Change<T>>(
     }
 
     /** Deliver changes to watchers if possible. */
-    suspend fun send(changes: List<C>) {
-        // Send, if we can
+    fun send(changes: List<C>) {
+        // Send, if we can and it's necessary
         if (!channel.isClosedForSend) {
-            channel.send(changes)
+            // Make a copy here in case changes mutate
+            val changeList = changes.toList()
+            launch(Watchable.singleDispatcher) {
+                channel.send(changeList)
+            }
         }
     }
 

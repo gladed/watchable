@@ -17,6 +17,7 @@
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 
 /** Create a scope, run the block() in it, then cancel the scope. */
@@ -32,6 +33,17 @@ fun <T> runThenCancel(block: suspend CoroutineScope.() -> T) {
     }
 }
 
-fun log(message: String) {
+fun log(message: Any?) {
     println(Thread.currentThread().name + ": $message")
+}
+
+/** Launch block on the current scope then block until it completes. */
+fun CoroutineScope.runToEnd(block: suspend () -> Unit) {
+    launch { block() }.also {
+        runBlocking {
+            it.join()
+        }
+    }.invokeOnCompletion { cause ->
+        if (cause != null && cause !is CancellationException) throw cause
+    }
 }

@@ -21,10 +21,7 @@ import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -48,10 +45,10 @@ class WatchableValueTest {
                 log("Updating received with $it")
                 received = it.newValue
             }
-            yield() // Yield to allow initial callback
+            delay(50)
             assertEquals(5, received)
             intValue.value = 17
-            yield()
+            delay(50)
             assertTrue(intValue.isActive())
         }
         assertEquals(17, received)
@@ -102,7 +99,7 @@ class WatchableValueTest {
             }
             intValue.value = 6
             assertEquals(6, readOnly.value)
-            yield()
+            delay(50)
         }
         println(received)
         assertEquals(listOf(5, 6), received.map { it.newValue })

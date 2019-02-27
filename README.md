@@ -72,6 +72,8 @@ set.use {
 
 The `use` block is synchronized to prevent concurrent modification, so it's safe to call from any thread or scope as long as its implementation does not block. Changes are complete when `use` returns.
 
+`WatchableList`, `WatchableSet`, and `WatchableMap` implement their respective collections, but their contents may change at any time.  
+
 ## Read-Only Watchable
 
 If you need pass a Watchable that can be watched, but should not be altered, call its `.readOnly()` accessor. This will return a form of the original object that does not have the `.use` method.

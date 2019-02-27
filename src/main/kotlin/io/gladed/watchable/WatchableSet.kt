@@ -17,7 +17,6 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -77,13 +76,7 @@ class WatchableSet<T>(
             if (changes.isNotEmpty()) {
                 // Assign the local copy
                 current = null
-
-                // send() may suspend so we need to deliver changes all at once.
-                changes.toList().also {
-                    launch(coroutineContext) {
-                        delegate.send(it)
-                    }
-                }
+                delegate.send(changes)
                 changes.clear()
             }
         }
