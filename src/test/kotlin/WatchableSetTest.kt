@@ -57,7 +57,7 @@ class WatchableSetTest {
         latch.await()
         assertThat(set.toString(), startsWith("WatchableSet("))
         assertTrue(changes[0] is SetChange.Initial)
-        assertEquals(6, (changes[1] as SetChange.Add).added) // TODO: Sometimes this returns 5
+        assertEquals(6, (changes[1] as SetChange.Add).added)
         assertEquals(5, (changes[2] as SetChange.Add).added)
         assertEquals(3, changes.size)
     }
