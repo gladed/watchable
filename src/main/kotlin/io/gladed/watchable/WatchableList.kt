@@ -26,7 +26,7 @@ import kotlin.coroutines.CoroutineContext
 class WatchableList<T>(
     override val coroutineContext: CoroutineContext,
     initialValues: Collection<T> = emptyList()
-) : AbstractList<T>(), ReadOnlyWatchableList<T>, Bindable<List<T>, ListChange<T>> {
+) : ReadOnlyWatchableList<T>, Bindable<List<T>, ListChange<T>> {
 
     /** The internal mutable list representing the most current state. */
     private val mutableList: MutableList<T> = initialValues.toMutableList()
@@ -34,17 +34,12 @@ class WatchableList<T>(
     /** The most current list content. */
     @Volatile private var current: List<T>? = null
 
-    private val list
+    override val list
         get() = current ?: synchronized(mutableList) {
             mutableList.toList().also { current = it }
         }
 
     private val mutator = Mutator()
-
-    override val size: Int
-        get() = list.size
-
-    override fun get(index: Int): T = list[index]
 
     /**
      * Suspend until [func] can safely execute, reading and/or writing data within the list as desired
@@ -142,12 +137,8 @@ class WatchableList<T>(
 
     /** Return an unmodifiable form of this [WatchableList]. */
     fun readOnly(): ReadOnlyWatchableList<T> = object : ReadOnlyWatchableList<T> by this {
-        override fun equals(other: Any?) = list == other
-        override fun hashCode(): Int = list.hashCode()
         override fun toString() = "ReadOnlyWatchableList($list})"
     }
 
-    override fun equals(other: Any?) = list == other
-    override fun hashCode(): Int = list.hashCode()
     override fun toString() = "WatchableList($list)"
 }

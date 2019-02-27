@@ -58,7 +58,15 @@ You can watch for changes on these objects from the same or a different Coroutin
 
 Every Watchable object requires a `CoroutineContext`. When the context cancels, the Watchable object will stop notifying changes and all watchers will be released.
 
-## Modification
+## Reading
+
+`WatchableSet`, and `WatchableMap` implement Set and Map respectively and are safe to access from multiple threads. But their contents may change at any moment.
+
+The current state of `WatchableList` may be accessed with `WatchableList.list`.
+
+The current content of `WatchableValue` is accessible with `WatchableValue.value`.
+
+## Writing
 
 Watchable objects may be modified within a special "use" block, which takes a modifiable form as its receiver:
 
@@ -71,8 +79,6 @@ set.use {
 ```
 
 The `use` block is synchronized to prevent concurrent modification, so it's safe to call from any thread or scope as long as its implementation does not block. Changes are complete when `use` returns.
-
-`WatchableList`, `WatchableSet`, and `WatchableMap` implement their respective collections, but their contents may change at any time.  
 
 ## Read-Only Watchable
 
