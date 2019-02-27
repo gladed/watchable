@@ -71,15 +71,6 @@ abstract class WatchableDelegate<T, C : Change<T>>(
         }
     }
 
-    // TODO(#12): Remove after value refactor
-    /**
-     * Same as change but allows that the block may not actually change anything
-     */
-    fun <C2 : C> changeOrNull(block: () -> C2?): C2? {
-        checkChange()
-        return block()?.also { owner.launch { send(listOf(it)) } }
-    }
-
     /** Deliver changes to watchers if possible. */
     suspend fun send(changes: List<C>) {
         // Send, if we can

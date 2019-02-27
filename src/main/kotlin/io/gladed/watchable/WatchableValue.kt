@@ -17,6 +17,7 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -33,12 +34,11 @@ class WatchableValue<T>(
     /** The current value of the underlying object. */
     @Volatile override var value: T = initialValue
         set(value) {
-            delegate.changeOrNull {
-                if (field == value) null else {
-                    val old = field
-                    field = value
-                    ValueChange(value, old)
-                }
+            delegate.checkChange()
+            val old = field
+            field = value
+            launch(coroutineContext) {
+                delegate.send(listOf(ValueChange(value, old)))
             }
         }
 

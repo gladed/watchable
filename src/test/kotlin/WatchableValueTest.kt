@@ -84,10 +84,10 @@ class WatchableValueTest {
                 received.add(it)
             }
             intValue.value = 5
-            yield()
+            delay(50)
+            // Both announcements, value is NOT compared for equality
+            assertEquals(listOf(5, 5), received.map { it.newValue })
         }
-        // Only one announcement
-        assertEquals(listOf(5), received.map { it.newValue })
         println(intValue)
     }
 
