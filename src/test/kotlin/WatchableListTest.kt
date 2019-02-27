@@ -15,26 +15,21 @@
  */
 
 import io.gladed.watchable.ListChange
-import io.gladed.watchable.WatchableList
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
+import javafx.collections.ObservableList
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.none
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import java.util.concurrent.CountDownLatch
+import java.util.Collections
 import kotlin.system.measureTimeMillis
 
 @ExperimentalCoroutinesApi
@@ -48,7 +43,9 @@ class WatchableListTest {
             val list = watchableListOf<Int>()
             watch(list) {
                 log("Receive $it")
-                changes.send(it)
+                launch {
+                    changes.send(it)
+                }
             }
             list.use { addAll(listOf(5, 6, 5)) }
 
@@ -76,7 +73,9 @@ class WatchableListTest {
             val list = watchableListOf(5, 6)
             watch(list) {
                 log("Receive $it")
-                changes.send(it)
+                launch {
+                    changes.send(it)
+                }
             }
             list.use { remove(6) }
             assertEquals(ListChange.Initial(listOf(5, 6)), changes.receive())
@@ -89,7 +88,9 @@ class WatchableListTest {
             val list = watchableListOf(5, 6)
             watch(list) {
                 log("Receive $it")
-                changes.send(it)
+                launch {
+                    changes.send(it)
+                }
             }
             list.use { this[1] = 4 }
             assertEquals(ListChange.Initial(listOf(5, 6)), changes.receive())
@@ -103,7 +104,9 @@ class WatchableListTest {
             val readOnly = list.readOnly().also {
                 watch(list) {
                     log("Receive $it")
-                    changes.send(it)
+                    launch {
+                        changes.send(it)
+                    }
                 }
             }
             println("$readOnly") // Coverage
@@ -128,7 +131,9 @@ class WatchableListTest {
             val list = watchableListOf(3, 4)
             watch(list) {
                 log("Receive $it")
-                changes.send(it)
+                launch {
+                    changes.send(it)
+                }
             }
             list.use { clear() }
 
@@ -141,7 +146,7 @@ class WatchableListTest {
     }
 
     private fun MutableList<Int>.randomChange() {
-        when ((Math.random() * 3).toInt()) {
+        when ((Math.random() * 4).toInt()) {
             0 -> if (isNotEmpty()) {
                 val at = (size * Math.random()).toInt()
                 removeAt(at)
@@ -154,46 +159,71 @@ class WatchableListTest {
                 val num = (Math.random() * 10).toInt()
                 this[at] = num
             }
+            3 -> { } // Sometimes just do nothing
         }
     }
 
-    private fun pileOn(count: Int, block: suspend () -> Unit) = scope.launch {
+    private fun pileOn(count: Int, block: () -> Unit) = scope.launch {
         (0 until count).forEach { _ ->
             block()
         }
     }
 
-    @Test fun dogPile() {
-        runThenCancel {
-            val perPile = 100
-            val list = watchableListOf(1)
-            val list2 = watchableListOf(7)
-            log("Binding $list to $list2")
-            list2.bind(list)
-            val act = suspend {
-                list.use { randomChange(); randomChange() }
+    @Test fun syncPerfCheck() {
+        val list = Collections.synchronizedList(mutableListOf(1, 2, 3, 4, 5, 6))
+        val elapsed = measureTimeMillis {
+            runThenCancel {
+                val perPile = PER_PILE
+                val act = {
+                    synchronized(list) {
+                        list.randomChange()
+                        list.randomChange()
+                    }
+                }
+
+                val jobs = listOf(pileOn(perPile, act), pileOn(perPile, act), pileOn(perPile, act), pileOn(perPile, act))
+                jobs.joinAll()
             }
-            val jobs = listOf(pileOn(perPile, act), pileOn(perPile, act), pileOn(perPile, act), pileOn(perPile, act))
-            (0 until 200).forEach { _ ->
-                // Prove that ConcurrentModificationException will not happen
-                list.list.toString()
-            }
-            jobs.joinAll()
-            delay(50)
-            assertEquals(list2.list, list.list)
         }
+        // About 55ms
+        println("syncPerfCheck: $elapsed")
     }
 
     @Test fun perfCheck() {
-        val start = System.currentTimeMillis()
         val elapsed = measureTimeMillis {
             runThenCancel {
-                val perPile = 10000
+                val perPile = PER_PILE
+                val list = watchableListOf(1, 2, 3, 4, 5, 6)
+                // List is watchable but nobody is actually watching.
+                val act = {
+                    list.use {
+                        randomChange()
+                        randomChange()
+                    }
+                }
+
+                val jobs = listOf(pileOn(perPile, act), pileOn(perPile, act), pileOn(perPile, act), pileOn(perPile, act))
+                jobs.joinAll()
+            }
+        }
+        // About 340ms
+        println("perfCheck: $elapsed")
+    }
+
+    @Test fun perfBindCheck() {
+        val start = System.currentTimeMillis()
+        var listMatch = false
+        val elapsed = measureTimeMillis {
+            runThenCancel {
+                val perPile = PER_PILE
                 val list = watchableListOf(1, 2, 3, 4, 5, 6)
                 val list2 = watchableListOf(7, 8, 9)
                 list2.bind(list)
-                val act = suspend {
-                    list.use { randomChange(); randomChange() }
+                val act = {
+                    list.use {
+                        randomChange()
+                        randomChange()
+                    }
                 }
 
                 val jobs = listOf(pileOn(perPile, act), pileOn(perPile, act), pileOn(perPile, act), pileOn(perPile, act))
@@ -202,15 +232,19 @@ class WatchableListTest {
                 log("Done, waiting for alignment after ${System.currentTimeMillis() - start}")
                 watch(list2) {
                     if (list2.list == list.list) {
-                        log("Alignment with ${list.list}")
+                        listMatch = true
                         coroutineContext.cancel()
                     }
                 }
-                delay(8000) // Wait up to 8 seconds for the correct list to finally filter into list2.
+                delay(4000) // Wait for lists to align (they had better)
             }
         }
-        // At present about 2100ms-2300ms
-        println("Elapsed: $elapsed")
+        assertTrue(listMatch)
+        // About 774ms
+        println("perfBindCheck: $elapsed")
     }
 
+    companion object {
+        const val PER_PILE = 10000 // Increase to run larger-scale performance tests
+    }
 }

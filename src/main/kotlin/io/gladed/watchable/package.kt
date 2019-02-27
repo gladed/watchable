@@ -54,7 +54,12 @@ fun <K, V> CoroutineScope.watchableMapOf(vararg values: Pair<K, V>) = values.toM
  * Return a [Job] that for the duration of this [CoroutineScope] invokes [handler] for any changes to [watchable],
  * starting with its initial state.
  */
-fun <T, C : Change<T>> CoroutineScope.watch(watchable: Watchable<T, C>, block: suspend (C) -> Unit): Job =
+fun <T, C : Change<T>> CoroutineScope.watch(watchable: Watchable<T, C>, block: (C) -> Unit): Job =
     with(watchable) {
         this@watch.watch(block)
+    }
+
+fun <T, C : Change<T>> CoroutineScope.watchBatches(watchable: Watchable<T, C>, block: (List<C>) -> Unit): Job =
+    with(watchable) {
+        this@watchBatches.watchBatches(block)
     }

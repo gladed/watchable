@@ -38,15 +38,17 @@ class WatchableMap<K, V>(
         override val initialChange
             get() = MapChange.Initial(map.toMap())
 
-        override fun onBoundChange(change: MapChange<K, V>) {
-            when (change) {
-                is MapChange.Initial -> {
-                    clear()
-                    putAll(change.initial)
+        override fun onBoundChanges(changes: List<MapChange<K, V>>) {
+            changes.forEach { change ->
+                when (change) {
+                    is MapChange.Initial -> {
+                        clear()
+                        putAll(change.initial)
+                    }
+                    is MapChange.Add -> put(change.key, change.added)
+                    is MapChange.Remove -> remove(change.key)
+                    is MapChange.Replace -> put(change.key, change.added)
                 }
-                is MapChange.Add -> put(change.key, change.added)
-                is MapChange.Remove -> remove(change.key)
-                is MapChange.Replace -> put(change.key, change.added)
             }
         }
     }
@@ -119,7 +121,7 @@ class WatchableMap<K, V>(
                 }
         }
 
-    override fun CoroutineScope.watchBatches(block: suspend (List<MapChange<K, V>>) -> Unit) =
+    override fun CoroutineScope.watchBatches(block: (List<MapChange<K, V>>) -> Unit) =
         delegate.watchOwnerBatch(this@watchBatches, block)
 
     override fun bind(other: Watchable<Map<K, V>, MapChange<K, V>>) =

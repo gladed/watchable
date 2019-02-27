@@ -59,7 +59,7 @@ class BindListTest {
                 val origin = watchableListOf(4, 5)
                 val dest = watchableListOf(6)
                 dest.bind(origin)
-                dest.use { }
+                dest.use { add(5) }
                 fail("Modification should not have been permitted")
             }
         } catch (e: IllegalStateException) {

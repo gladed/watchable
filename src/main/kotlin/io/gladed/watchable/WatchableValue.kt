@@ -47,12 +47,14 @@ class WatchableValue<T>(
         override val initialChange
             get() = ValueChange(value, value)
 
-        override fun onBoundChange(change: ValueChange<T>) {
-            value = change.newValue
+        override fun onBoundChanges(changes: List<ValueChange<T>>) {
+            changes.forEach { change ->
+                value = change.newValue
+            }
         }
     }
 
-    override fun CoroutineScope.watchBatches(block: suspend (List<ValueChange<T>>) -> Unit) =
+    override fun CoroutineScope.watchBatches(block: (List<ValueChange<T>>) -> Unit) =
         delegate.watchOwnerBatch(this@watchBatches, block)
 
     /** Return an unmodifiable form of this [WatchableValue]. */

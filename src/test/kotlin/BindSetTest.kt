@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.watchableSetOf
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
@@ -27,9 +28,8 @@ class BindSetTest {
             val origin = watchableSetOf(5)
             val dest = watchableSetOf(6)
             dest.bind(origin)
-            yield()
-            yield()
-            assertEquals(setOf(5), dest)
+            delay(50)
+            assertEquals(setOf(5), dest.set)
         }
     }
 
@@ -38,18 +38,22 @@ class BindSetTest {
             val origin = watchableSetOf(4, 5)
             val dest = watchableSetOf(6)
             dest.bind(origin)
-            origin += listOf(8, 7)
-            origin -= 5
+            origin.use {
+                addAll(listOf(8, 7))
+                remove(5)
+            }
             yield()
             yield()
-            origin += listOf(9)
-            origin -= 4
+            origin.use {
+                addAll(listOf(9))
+                remove(4)
+            }
             yield()
             yield()
             // Order doesn't matter to sets
-            assertEquals(setOf(7, 8, 9), dest)
+            assertEquals(setOf(7, 8, 9), dest.set)
             // But it matters to iterators
-            assertEquals(8, dest.iterator().next())
+            assertEquals(8, dest.set.iterator().next())
         }
     }
 
@@ -59,7 +63,9 @@ class BindSetTest {
                 val origin = watchableSetOf(4, 5)
                 val dest = watchableSetOf(6)
                 dest.bind(origin)
-                dest += 7
+                dest.use {
+                    add(7)
+                }
                 fail("Modification should not have been permitted")
             }
         } catch (e: IllegalStateException) {
@@ -75,7 +81,9 @@ class BindSetTest {
                 dest.bind(origin)
                 yield()
                 yield()
-                dest -= 5
+                dest.use {
+                    remove(5)
+                }
                 fail("Modification should not have been permitted")
             }
         } catch (e: IllegalStateException) {
@@ -88,14 +96,18 @@ class BindSetTest {
             val origin = watchableSetOf(4, 5)
             val dest = watchableSetOf(6)
             dest.bind(origin)
-            origin += listOf(8, 7)
+            origin.use {
+                addAll(listOf(8, 7))
+            }
             yield()
             yield()
             dest.unbind()
-            origin -= 5
+            origin.use {
+                remove(5)
+            }
             yield()
             yield()
-            assertEquals(setOf(4, 5, 7, 8), dest)
+            assertEquals(setOf(4, 5, 7, 8), dest.set)
         }
     }
 }

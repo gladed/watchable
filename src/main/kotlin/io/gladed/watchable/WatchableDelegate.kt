@@ -18,10 +18,12 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.yield
 import java.lang.IllegalStateException
 import kotlin.coroutines.CoroutineContext
 
@@ -48,8 +50,8 @@ abstract class WatchableDelegate<T, C : Change<T>>(
     /** A change reflecting the current value of this collection. (New watchers receive this). */
     abstract val initialChange: C
 
-    /** Process [change], applying it to [owner]. */
-    abstract fun onBoundChange(change: C)
+    /** Process [changes], applying them to [owner]. */
+    abstract fun onBoundChanges(changes: List<C>)
 
     /** Binding, if any. */
     private var binding: Job? = null
@@ -59,18 +61,17 @@ abstract class WatchableDelegate<T, C : Change<T>>(
     /** True if current processing a change from the watchable to which [owner] is bound. */
     private var isOnChange: Boolean = false
 
-    /** Throw if this is not a good time to change the owner object. */
-    private fun checkChange() {
+    /**
+     * Throw if this is not a good time to mutate the owner object (because it's bound and not currently
+     * processing binding-related changes).
+     */
+    fun checkChange() {
         if (boundTo != null && !isOnChange) {
             throw IllegalStateException("A bound object may not be modified.")
         }
     }
 
-    internal fun <U> applyIfOk(func: () -> U): U {
-        checkChange()
-        return func()
-    }
-
+    // Note: remove change and changeOrNull when other watchables are refactored
     /**
      * Apply and deliver a change if it's safe to do so
      */
@@ -87,11 +88,11 @@ abstract class WatchableDelegate<T, C : Change<T>>(
         return block()?.also { owner.launch { send(listOf(it)) } }
     }
 
-    /** Deliver a change to watchers if possible. */
-    suspend fun send(change: List<C>) {
+    /** Deliver changes to watchers if possible. */
+    suspend fun send(changes: List<C>) {
         // Send, if we can
         if (!channel.isClosedForSend) {
-            channel.send(change)
+            channel.send(changes)
         }
     }
 
@@ -108,9 +109,9 @@ abstract class WatchableDelegate<T, C : Change<T>>(
         boundTo = other
 
         // Perform the binding on owner's scope
-        binding = owner.watch(other) {
+        binding = owner.watchBatches(other) {
             isOnChange = true
-            onBoundChange(it)
+            onBoundChanges(it)
             isOnChange = false
         }
     }
@@ -123,33 +124,37 @@ abstract class WatchableDelegate<T, C : Change<T>>(
         }
     }
 
-    fun watchOwner(scope: CoroutineScope, block: suspend (C) -> Unit): Job {
-        // Open first in case there are changes
-        val sub = channel.openSubscription()
-        val initial = initialChange
-        return scope.launch {
-            // Send initial content
-            block(initial)
-            sub.consumeEach { changes ->
-                changes.forEach { change -> block(change) }
-            }
-        }
-    }
-
-    fun watchOwnerBatch(scope: CoroutineScope, block: suspend (List<C>) -> Unit): Job {
+    fun watchOwnerBatch(scope: CoroutineScope, block: (List<C>) -> Unit): Job {
         // Open first in case there are changes
         val sub = channel.openSubscription()
         val initial = initialChange
         return scope.launch {
             // Send initial content
             block(listOf(initial))
-            sub.consumeEach { changes ->
+            // Batch received events for a measurable performance benefit
+            sub.consumeBatched { changes ->
                 block(changes)
+                yield()
             }
         }
     }
 
+    /** Like consumeEach, but instead of handling each item, try to get a bunch of them and pass them along. */
+    private suspend inline fun <T : Any> ReceiveChannel<List<T>>.consumeBatched(
+        handleItems: (List<T>) -> Unit
+    ) {
+        val buffer = mutableListOf<T>()
+        while (true) {
+            receiveOrNull()?.also { buffer.addAll(it) } ?: break
+            for (x in 2..CAPACITY) {
+                poll()?.also { buffer.addAll(it) } ?: break
+            }
+            handleItems(buffer)
+            buffer.clear()
+        }
+    }
+
     companion object {
-        private const val CAPACITY = 1
+        private const val CAPACITY = 20
     }
 }

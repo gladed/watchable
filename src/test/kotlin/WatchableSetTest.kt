@@ -52,7 +52,7 @@ class WatchableSetTest {
             changes += it
             latch.countDown()
         }
-        set.addAll(listOf(6, 5))
+        set.use { addAll(listOf(6, 5)) }
 
         latch.await()
         assertThat(set.toString(), startsWith("WatchableSet("))
@@ -69,7 +69,7 @@ class WatchableSetTest {
                 log("Receive $it")
                 changes += it
             }
-            set.remove(6)
+            set.use { remove(6)}
             yield()
             yield()
         }
@@ -87,9 +87,11 @@ class WatchableSetTest {
                 }
             }
             println("$readOnly") // Coverage
-            set.addAll(listOf(5, 6))
-            set.removeAll(listOf(6, 7, 8))
-            assertEquals(1, readOnly.size)
+            set.use {
+                addAll(listOf(5, 6))
+                removeAll(listOf(6, 7, 8))
+            }
+            assertEquals(1, readOnly.set.size)
             yield()
         }
 
