@@ -1,0 +1,50 @@
+[io.gladed.watchable](../index.md) / [WatchableSet](./index.md)
+
+# WatchableSet
+
+`class WatchableSet<T> : `[`ReadOnlyWatchableSet`](../-read-only-watchable-set/index.md)`<`[`T`](index.md#T)`>, `[`Bindable`](../-bindable/index.md)`<`[`Set`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-set/index.html)`<`[`T`](index.md#T)`>, `[`SetChange`](../-set-change/index.md)`<`[`T`](index.md#T)`>>`
+
+A mutable set whose contents may be watched for changes and/or bound to other maps for the duration
+of its [coroutineContext](coroutine-context.md). Insertion order is preserved on iteration.
+
+### Constructors
+
+| Name | Summary |
+|---|---|
+| [&lt;init&gt;](-init-.md) | `WatchableSet(coroutineContext: `[`CoroutineContext`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.coroutines/-coroutine-context/index.html)`, elements: `[`Collection`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-collection/index.html)`<`[`T`](index.md#T)`> = emptyList())`<br>A mutable set whose contents may be watched for changes and/or bound to other maps for the duration of its [coroutineContext](coroutine-context.md). Insertion order is preserved on iteration. |
+
+### Properties
+
+| Name | Summary |
+|---|---|
+| [boundTo](bound-to.md) | `val boundTo: `[`Watchable`](../-watchable/index.md)`<`[`Set`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-set/index.html)`<`[`T`](index.md#T)`>, `[`SetChange`](../-set-change/index.md)`<`[`T`](index.md#T)`>>?`<br>The current binding, if any. |
+| [coroutineContext](coroutine-context.md) | `val coroutineContext: `[`CoroutineContext`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.coroutines/-coroutine-context/index.html) |
+| [set](set.md) | `val set: `[`Set`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-set/index.html)`<`[`T`](index.md#T)`>`<br>The current contents of the set (may change between accesses). |
+
+### Functions
+
+| Name | Summary |
+|---|---|
+| [bind](bind.md) | `fun bind(other: `[`Watchable`](../-watchable/index.md)`<`[`Set`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-set/index.html)`<`[`T`](index.md#T)`>, `[`SetChange`](../-set-change/index.md)`<`[`T`](index.md#T)`>>): `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)<br>Binds this unbound object so that when [other](../-bindable/bind.md#io.gladed.watchable.Bindable$bind(io.gladed.watchable.Watchable((io.gladed.watchable.Bindable.T, io.gladed.watchable.Bindable.C)))/other) changes, it is updated accordingly. This object must not be modified while it is bound. |
+| [readOnly](read-only.md) | `fun readOnly(): `[`ReadOnlyWatchableSet`](../-read-only-watchable-set/index.md)`<`[`T`](index.md#T)`>`<br>Return an unmodifiable form of this [WatchableSet](./index.md). |
+| [toString](to-string.md) | `fun toString(): `[`String`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html) |
+| [unbind](unbind.md) | `fun unbind(): `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)<br>Cancel any existing binding that exists for this object. |
+| [use](use.md) | `fun <U> use(func: `[`MutableSet`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-mutable-set/index.html)`<`[`T`](index.md#T)`>.() -> `[`U`](use.md#U)`): `[`U`](use.md#U)<br>Suspend until [func](use.md#io.gladed.watchable.WatchableSet$use(kotlin.Function1((kotlin.collections.MutableSet((io.gladed.watchable.WatchableSet.T)), io.gladed.watchable.WatchableSet.use.U)))/func) can safely execute, reading and/or writing data within the set as desired and returning [func](use.md#io.gladed.watchable.WatchableSet$use(kotlin.Function1((kotlin.collections.MutableSet((io.gladed.watchable.WatchableSet.T)), io.gladed.watchable.WatchableSet.use.U)))/func)'s result. This [WatchableSet](./index.md) must not be bound ([isBound](../-bindable/is-bound.md) must return false). [func](use.md#io.gladed.watchable.WatchableSet$use(kotlin.Function1((kotlin.collections.MutableSet((io.gladed.watchable.WatchableSet.T)), io.gladed.watchable.WatchableSet.use.U)))/func) should not itself block but simply apply changes and return. |
+| [watchBatches](watch-batches.md) | `fun CoroutineScope.watchBatches(block: (`[`List`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html)`<`[`SetChange`](../-set-change/index.md)`<`[`T`](index.md#T)`>>) -> `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)`): Job`<br>Deliver changes to [block](../-watchable/watch-batches.md#io.gladed.watchable.Watchable$watchBatches(kotlinx.coroutines.CoroutineScope, kotlin.Function1((kotlin.collections.List((io.gladed.watchable.Watchable.C)), kotlin.Unit)))/block) using this [CoroutineScope](#) until it terminates or until the returned [Job](#) is cancelled. Each change is processed to completion (e.g. [block](../-watchable/watch-batches.md#io.gladed.watchable.Watchable$watchBatches(kotlinx.coroutines.CoroutineScope, kotlin.Function1((kotlin.collections.List((io.gladed.watchable.Watchable.C)), kotlin.Unit)))/block) must return) before the next change is delivered. |
+
+### Inherited Functions
+
+| Name | Summary |
+|---|---|
+| [isBound](../-bindable/is-bound.md) | `open fun isBound(): `[`Boolean`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-boolean/index.html)<br>Return true if this object is already bound. |
+
+### Extension Functions
+
+| Name | Summary |
+|---|---|
+| [watch](../kotlinx.coroutines.-coroutine-scope/watch.md) | `fun <T, C : `[`Change`](../-change.md)`<`[`T`](../kotlinx.coroutines.-coroutine-scope/watch.md#T)`>> CoroutineScope.watch(watchable: `[`Watchable`](../-watchable/index.md)`<`[`T`](../kotlinx.coroutines.-coroutine-scope/watch.md#T)`, `[`C`](../kotlinx.coroutines.-coroutine-scope/watch.md#C)`>, block: (`[`C`](../kotlinx.coroutines.-coroutine-scope/watch.md#C)`) -> `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)`): Job`<br>Return a [Job](#) that for the duration of this [CoroutineScope](#) invokes [handler](#) for any changes to [watchable](../kotlinx.coroutines.-coroutine-scope/watch.md#io.gladed.watchable$watch(kotlinx.coroutines.CoroutineScope, io.gladed.watchable.Watchable((io.gladed.watchable.watch.T, io.gladed.watchable.watch.C)), kotlin.Function1((io.gladed.watchable.watch.C, kotlin.Unit)))/watchable), starting with its initial state. |
+| [watchBatches](../kotlinx.coroutines.-coroutine-scope/watch-batches.md) | `fun <T, C : `[`Change`](../-change.md)`<`[`T`](../kotlinx.coroutines.-coroutine-scope/watch-batches.md#T)`>> CoroutineScope.watchBatches(watchable: `[`Watchable`](../-watchable/index.md)`<`[`T`](../kotlinx.coroutines.-coroutine-scope/watch-batches.md#T)`, `[`C`](../kotlinx.coroutines.-coroutine-scope/watch-batches.md#C)`>, block: (`[`List`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-list/index.html)`<`[`C`](../kotlinx.coroutines.-coroutine-scope/watch-batches.md#C)`>) -> `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)`): Job` |
+| [watchableListOf](../kotlinx.coroutines.-coroutine-scope/watchable-list-of.md) | `fun <T : `[`Any`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html)`> CoroutineScope.watchableListOf(vararg values: `[`T`](../kotlinx.coroutines.-coroutine-scope/watchable-list-of.md#T)`): `[`WatchableList`](../-watchable-list/index.md)`<`[`T`](../kotlinx.coroutines.-coroutine-scope/watchable-list-of.md#T)`>`<br>Return a new [WatchableList](../-watchable-list/index.md) containing [values](../kotlinx.coroutines.-coroutine-scope/watchable-list-of.md#io.gladed.watchable$watchableListOf(kotlinx.coroutines.CoroutineScope, kotlin.Array((io.gladed.watchable.watchableListOf.T)))/values), watchable on this [CoroutineScope](#). |
+| [watchableMapOf](../kotlinx.coroutines.-coroutine-scope/watchable-map-of.md) | `fun <K, V> CoroutineScope.watchableMapOf(vararg values: `[`Pair`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-pair/index.html)`<`[`K`](../kotlinx.coroutines.-coroutine-scope/watchable-map-of.md#K)`, `[`V`](../kotlinx.coroutines.-coroutine-scope/watchable-map-of.md#V)`>): `[`WatchableMap`](../-watchable-map/index.md)`<`[`K`](../kotlinx.coroutines.-coroutine-scope/watchable-map-of.md#K)`, `[`V`](../kotlinx.coroutines.-coroutine-scope/watchable-map-of.md#V)`>`<br>Return a new [WatchableMap](../-watchable-map/index.md) containing a map of [values](../kotlinx.coroutines.-coroutine-scope/watchable-map-of.md#io.gladed.watchable$watchableMapOf(kotlinx.coroutines.CoroutineScope, kotlin.Array((kotlin.Pair((io.gladed.watchable.watchableMapOf.K, io.gladed.watchable.watchableMapOf.V)))))/values), watchable on this [CoroutineScope](#). |
+| [watchableSetOf](../kotlinx.coroutines.-coroutine-scope/watchable-set-of.md) | `fun <T : `[`Any`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html)`> CoroutineScope.watchableSetOf(vararg values: `[`T`](../kotlinx.coroutines.-coroutine-scope/watchable-set-of.md#T)`): `[`WatchableSet`](./index.md)`<`[`T`](../kotlinx.coroutines.-coroutine-scope/watchable-set-of.md#T)`>`<br>Return a new [WatchableSet](./index.md) containing [values](../kotlinx.coroutines.-coroutine-scope/watchable-set-of.md#io.gladed.watchable$watchableSetOf(kotlinx.coroutines.CoroutineScope, kotlin.Array((io.gladed.watchable.watchableSetOf.T)))/values), watchable on this [CoroutineScope](#). |
+| [watchableValueOf](../kotlinx.coroutines.-coroutine-scope/watchable-value-of.md) | `fun <T : `[`Any`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html)`> CoroutineScope.watchableValueOf(value: `[`T`](../kotlinx.coroutines.-coroutine-scope/watchable-value-of.md#T)`): `[`WatchableValue`](../-watchable-value/index.md)`<`[`T`](../kotlinx.coroutines.-coroutine-scope/watchable-value-of.md#T)`>`<br>Return a new [WatchableValue](../-watchable-value/index.md) wrapping [value](../kotlinx.coroutines.-coroutine-scope/watchable-value-of.md#io.gladed.watchable$watchableValueOf(kotlinx.coroutines.CoroutineScope, io.gladed.watchable.watchableValueOf.T)/value) which may be watched for the duration of the scope. |
