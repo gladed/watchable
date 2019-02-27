@@ -38,12 +38,16 @@ class BindMapTest {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
             dest.bind(origin)
-            origin[7] = "7"
-            origin -= 5
-            origin[7] = "77"
+            origin.use {
+                this[7] = "7"
+                this -= 5
+                this[7] = "77"
+            }
             yield()
             yield()
-            origin += 9 to "9"
+            origin.use {
+                put(9, "9")
+            }
             yield()
             yield()
             assertEquals(mapOf(7 to "77", 9 to "9"), dest)
@@ -56,7 +60,7 @@ class BindMapTest {
                 val origin = watchableMapOf(5 to "5")
                 val dest = watchableMapOf(6 to "6")
                 dest.bind(origin)
-                dest += 7 to "7"
+                dest.use { put(7, "7") }
                 fail("Modification should not have been permitted")
             }
         } catch (e: IllegalStateException) {
@@ -72,7 +76,9 @@ class BindMapTest {
                 dest.bind(origin)
                 yield()
                 yield()
-                dest -= 5
+                dest.use {
+                    remove(5)
+                }
                 fail("Modification should not have been permitted")
             }
         } catch (e: IllegalStateException) {
@@ -85,11 +91,15 @@ class BindMapTest {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
             dest.bind(origin)
-            origin += listOf(8 to "8", 7 to "7")
+            origin.use {
+                putAll(listOf(8 to "8", 7 to "7"))
+            }
             yield()
             yield()
             dest.unbind()
-            origin -= 5
+            origin.use {
+                remove(5)
+            }
             yield()
             yield()
             assertEquals(mapOf(5 to "5", 8 to "8", 7 to "7"), dest)

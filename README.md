@@ -32,7 +32,7 @@ set = watchableSetOf(1, 2)
 watch(set) {
     println("Got $it")
 }
-set += 3
+set.use { add(3) }
 // Output:
 //   Got Initial(initial=[1, 2])
 //   Got Add(added=3)
@@ -41,8 +41,10 @@ set += 3
 # Features
 * Watchable objects can be watched, and bound from different whatever scope is convenient.
 * objects can be "bound" to each other, so that a change in one object causes a corresponding change to another one.
+* Modifications are synchronized and can safely be applied from any thread.
 * When the surrounding coroutine scope completes, everything is cleaned up automatically.
 * Supports mutable and read-only types like List, Set, Map, and any wrapped object (Value).
+* OK performance compared to synchronized collections.
 
 # Version History
 
