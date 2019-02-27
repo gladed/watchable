@@ -60,11 +60,11 @@ class WatchableListTest {
     @Test fun equality() {
         runThenCancel {
             val list = watchableListOf(1, 2, 3)
-            assertEquals(list.list, list.list)
-            assertEquals(listOf(1, 2, 3), list.list)
-            assertEquals(list.list, listOf(1, 2, 3))
+            assertEquals(list, list)
+            assertEquals(listOf(1, 2, 3), list)
+            assertEquals(list, listOf(1, 2, 3))
             val list2 = watchableListOf(1, 2, 3)
-            assertEquals(list.list, list2.list)
+            assertEquals(list, list2)
         }
     }
 
@@ -114,7 +114,7 @@ class WatchableListTest {
                 addAll(listOf(5, 6))
                 removeAll(listOf(6, 7, 8))
             }
-            assertEquals(1, readOnly.list.size)
+            assertEquals(1, readOnly.size)
 
             assertEquals(ListChange.Initial(listOf<Int>()), changes.receive())
             assertEquals(ListChange.Add(0, 5), changes.receive())
@@ -231,7 +231,7 @@ class WatchableListTest {
 
                 log("Done, waiting for alignment after ${System.currentTimeMillis() - start}")
                 watch(list2) {
-                    if (list2.list == list.list) {
+                    if (list2 == list) {
                         listMatch = true
                         coroutineContext.cancel()
                     }

@@ -21,27 +21,31 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A mutable list whose contents may be watched for changes and/or bound to other maps for the duration
- * of its [coroutineContext].
+ * A [List] whose contents may be watched for changes.
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class WatchableList<T>(
     override val coroutineContext: CoroutineContext,
     initialValues: Collection<T> = emptyList()
-) : ReadOnlyWatchableList<T>, Bindable<List<T>, ListChange<T>> {
+) : AbstractList<T>(), ReadOnlyWatchableList<T>, Bindable<List<T>, ListChange<T>> {
+
+    /** The internal mutable list representing the most current state. */
+    private val mutableList: MutableList<T> = initialValues.toMutableList()
 
     /** The most current list content. */
-    @Volatile private var current: List<T>? = initialValues.toList()
+    @Volatile private var current: List<T>? = null
 
-    override val list
+    private val list
         get() = current ?: synchronized(mutableList) {
             mutableList.toList().also { current = it }
         }
 
-    /** The internal mutable list representing the most current state. */
-    private val mutableList: MutableList<T> = list.toMutableList()
-
     private val mutator = Mutator()
+
+    override val size: Int
+        get() = list.size
+
+    override fun get(index: Int): T = list[index]
 
     /**
      * Suspend until [func] can safely execute, reading and/or writing data within the list as desired
@@ -145,10 +149,12 @@ class WatchableList<T>(
 
     /** Return an unmodifiable form of this [WatchableList]. */
     fun readOnly(): ReadOnlyWatchableList<T> = object : ReadOnlyWatchableList<T> by this {
-        override fun toString() =
-            "ReadOnlyWatchableList($list})"
+        override fun equals(other: Any?) = list == other
+        override fun hashCode(): Int = list.hashCode()
+        override fun toString() = "ReadOnlyWatchableList($list})"
     }
 
-    override fun toString() =
-        "WatchableList($list)"
+    override fun equals(other: Any?) = list == other
+    override fun hashCode(): Int = list.hashCode()
+    override fun toString() = "WatchableList($list)"
 }

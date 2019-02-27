@@ -16,7 +16,7 @@
 
 package io.gladed.watchable
 
-/** An initial announcement or change to the underlying value for a [WatchableValue]. */
+/** Describes a change to a value. */
 data class ValueChange<T>(
     /** The new object value. */
     val newValue: T,

@@ -29,7 +29,7 @@ class BindMapTest {
             val dest = watchableMapOf(6 to "6")
             dest.bind(origin)
             delay(50)
-            assertEquals(mapOf(5 to "5"), dest.map)
+            assertEquals(mapOf(5 to "5"), dest)
         }
     }
 
@@ -48,7 +48,7 @@ class BindMapTest {
                 put(9, "9")
             }
             delay(50)
-            assertEquals(mapOf(7 to "77", 9 to "9"), dest.map)
+            assertEquals(mapOf(7 to "77", 9 to "9"), dest)
         }
     }
 
@@ -97,7 +97,7 @@ class BindMapTest {
                 remove(5)
             }
             delay(50)
-            assertEquals(mapOf(5 to "5", 8 to "8", 7 to "7"), dest.map)
+            assertEquals(mapOf(5 to "5", 8 to "8", 7 to "7"), dest)
         }
     }
 }

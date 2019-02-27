@@ -21,26 +21,31 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A mutable map whose contents may be watched for changes and/or bound to other maps for the duration
- * of its [coroutineContext]. Insertion order is preserved on iteration.
+ * A [Map] whose contents may be watched for changes.
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class WatchableMap<K, V>(
     override val coroutineContext: CoroutineContext,
     initialElements: Map<K, V>
-) : ReadOnlyWatchableMap<K, V>, Bindable<Map<K, V>, MapChange<K, V>> {
+) : AbstractMap<K, V>(), ReadOnlyWatchableMap<K, V>, Bindable<Map<K, V>, MapChange<K, V>> {
 
-    /** The most current map content. */
-    @Volatile private var current: Map<K, V>? = initialElements.toMap()
+    /** The internal mutable map representing the most current state. */
+    private val mutableMap: MutableMap<K, V> = initialElements.toMutableMap()
 
-    override val map
+    /**
+     * The current map content, which may be swapped out at any time. If null, it needs to be refreshed
+     * from [mutableMap].
+     */
+    @Volatile private var current: Map<K, V>? = null
+
+    private val map
         get() = current ?: synchronized(mutableMap) {
             mutableMap.toMap().also { current = it }
         }
 
-    /** The internal mutable map representing the most current state. */
-    private val mutableMap: MutableMap<K, V> = map.toMutableMap()
+    override val entries: Set<Map.Entry<K, V>>
+        get() = map.entries
 
     private val mutator = Mutator()
 
@@ -62,7 +67,7 @@ class WatchableMap<K, V>(
         }
 
     /**
-     * A mutable map which duplicates [map] into [mutableMap] if a change is made, and delivers changes
+     * A mutable map which duplicates [map] into [mutableMap] if a change is made, and delivers any changes
      * made to the delegate.
      */
     private inner class Mutator : AbstractMutableMap<K, V>() {
@@ -184,10 +189,12 @@ class WatchableMap<K, V>(
 
     /** Return an unmodifiable form of this [WatchableMap]. */
     fun readOnly(): ReadOnlyWatchableMap<K, V> = object : ReadOnlyWatchableMap<K, V> by this {
-        override fun toString() =
-            "ReadOnlyWatchableMap($map)"
+        override fun equals(other: Any?) = map == other
+        override fun hashCode() = map.hashCode()
+        override fun toString() = "ReadOnlyWatchableMap($map)"
     }
 
-    override fun toString() =
-        "WatchableMap($map)"
+    override fun equals(other: Any?) = map == other
+    override fun hashCode() = map.hashCode()
+    override fun toString() = "WatchableMap($map)"
 }

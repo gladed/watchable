@@ -30,7 +30,7 @@ import kotlin.coroutines.CoroutineContext
 /** Common internal implementations for watchable + bindable functions. */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-abstract class WatchableDelegate<T, C : Change<T>>(
+internal abstract class WatchableDelegate<T, C : Change<T>>(
     override val coroutineContext: CoroutineContext,
     private val owner: Watchable<T, C>
 ) : CoroutineScope {

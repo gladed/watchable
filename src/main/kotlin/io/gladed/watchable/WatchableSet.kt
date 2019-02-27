@@ -21,26 +21,29 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A mutable set whose contents may be watched for changes and/or bound to other maps for the duration
- * of its [coroutineContext]. Insertion order is preserved on iteration.
+ * A [Set] whose contents may be watched for changes.
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class WatchableSet<T>(
     override val coroutineContext: CoroutineContext,
     elements: Collection<T> = emptyList()
-) : ReadOnlyWatchableSet<T>, Bindable<Set<T>, SetChange<T>> {
+) : AbstractSet<T>(), ReadOnlyWatchableSet<T>, Bindable<Set<T>, SetChange<T>> {
+    private val mutableSet = elements.toMutableSet()
 
     /** The actual set to be used; must not be modified except through this object's accessors. */
     @Volatile private var current: Set<T>? = elements.toMutableSet()
 
-    override val set: Set<T>
+    private val set: Set<T>
         get() = current ?: synchronized(mutableSet) {
             mutableSet.toSet().also { current = it }
         }
 
-    private val mutableSet = set.toMutableSet()
-
     private val mutator = Mutator()
+
+    override val size: Int
+        get() = set.size
+
+    override fun iterator(): Iterator<T> = set.iterator()
 
     /**
      * Suspend until [func] can safely execute, reading and/or writing data within the set as desired
@@ -143,16 +146,18 @@ class WatchableSet<T>(
     override fun CoroutineScope.watchBatches(block: (List<SetChange<T>>) -> Unit) =
         delegate.watchOwnerBatch(this@watchBatches, block)
 
-    /** Return an unmodifiable form of this [WatchableSet]. */
-    fun readOnly(): ReadOnlyWatchableSet<T> = object : ReadOnlyWatchableSet<T> by this {
-        override fun toString() =
-            "ReadOnlyWatchableSet($set})"
-    }
-
     override fun bind(other: Watchable<Set<T>, SetChange<T>>) = delegate.bind(other)
 
     override fun unbind() = delegate.unbind()
 
-    override fun toString() =
-        "WatchableSet($set})"
+    /** Return an unmodifiable form of this [WatchableSet]. */
+    fun readOnly(): ReadOnlyWatchableSet<T> = object : ReadOnlyWatchableSet<T> by this {
+        override fun equals(other: Any?) = set == other
+        override fun hashCode() = set.hashCode()
+        override fun toString() = "ReadOnlyWatchableSet($set})"
+    }
+
+    override fun equals(other: Any?) = set == other
+    override fun hashCode() = set.hashCode()
+    override fun toString() = "WatchableSet($set})"
 }

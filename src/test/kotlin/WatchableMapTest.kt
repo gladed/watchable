@@ -21,7 +21,9 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.yield
 import org.hamcrest.CoreMatchers.startsWith
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
@@ -81,13 +83,14 @@ class WatchableMapTest {
             // Watch the read-only map until it catches up the original map and cancel.
             watch(map3) {
                 // Assert that map2 reaches equality with map1
-                if (map3.map == map.map && coroutineContext.isActive) {
+                if (map3 == map && coroutineContext.isActive) {
                     coroutineContext.cancel()
                 }
             }
 
             delay(2000) // Give the above time to wrap up
-            fail("Maps $map and $map3 never reached equality")
+            assertEquals(map, map3)
+            assertTrue(map3 == map)
         }
     }
 }

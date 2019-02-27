@@ -16,13 +16,11 @@
 
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.lang.IllegalStateException
 
 class BindListTest {
     @Test fun bind() {
@@ -31,7 +29,7 @@ class BindListTest {
             val dest = watchableListOf(6)
             dest.bind(origin)
             delay(50)
-            assertEquals(listOf(5), dest.list)
+            assertEquals(listOf(5), dest)
         }
     }
 
@@ -53,7 +51,7 @@ class BindListTest {
                 this[1] = 11
             }
             delay(50)
-            assertEquals(listOf(8, 11, 9), dest.list)
+            assertEquals(listOf(8, 11, 9), dest)
         }
     }
 
@@ -84,7 +82,7 @@ class BindListTest {
             dest.unbind() // twice to show it works ok
             origin.use { remove(5) }
             delay(50)
-            assertEquals(listOf(4, 5, 8, 7), dest.list)
+            assertEquals(listOf(4, 5, 8, 7), dest)
         }
     }
 }

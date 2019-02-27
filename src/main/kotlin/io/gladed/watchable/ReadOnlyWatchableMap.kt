@@ -16,8 +16,5 @@
 
 package io.gladed.watchable
 
-/** An set which cannot be modified externally, but may be watched for changes. */
-interface ReadOnlyWatchableMap<K, V> : Watchable<Map<K, V>, MapChange<K, V>> {
-    /** The current contents of the map (may change between accesses). */
-    val map: Map<K, V>
-}
+/** A map which cannot be modified externally, but may be watched for changes. */
+interface ReadOnlyWatchableMap<K, V> : Watchable<Map<K, V>, MapChange<K, V>>, Map<K, V>

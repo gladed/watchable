@@ -18,16 +18,7 @@ import io.gladed.watchable.SetChange
 import io.gladed.watchable.WatchableSet
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
@@ -35,7 +26,6 @@ import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import java.util.Collections
 import java.util.concurrent.CountDownLatch
 
 class WatchableSetTest {
@@ -91,7 +81,7 @@ class WatchableSetTest {
                 addAll(listOf(5, 6))
                 removeAll(listOf(6, 7, 8))
             }
-            assertEquals(1, readOnly.set.size)
+            assertEquals(1, readOnly.size)
             yield()
         }
 
