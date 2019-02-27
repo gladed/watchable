@@ -28,11 +28,11 @@ import kotlin.coroutines.CoroutineContext
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class WatchableMap<K, V>(
     override val coroutineContext: CoroutineContext,
-    elements: Map<K, V> = emptyMap()
+    initialElements: Map<K, V>
 ) : ReadOnlyWatchableMap<K, V>, Bindable<Map<K, V>, MapChange<K, V>> {
 
     /** The most current map content. */
-    @Volatile private var current: Map<K, V>? = elements.toMap()
+    @Volatile private var current: Map<K, V>? = initialElements.toMap()
 
     override val map
         get() = current ?: synchronized(mutableMap) {
@@ -105,19 +105,24 @@ class WatchableMap<K, V>(
                     override fun hasNext() = underlying.hasNext()
 
                     override fun next(): MutableMap.MutableEntry<K, V> =
-                        underlying.next().also { last = it }.let { original ->
-                            object : MutableMap.MutableEntry<K, V> by original {
+                        underlying.next()
+                            // Cache last so that it can be removed if necessary
+                            .also { last = it }
+                            // Wrap the returned entry so that we can detect changes on it
+                            .let { original -> object : MutableMap.MutableEntry<K, V> by original {
                                 override fun setValue(newValue: V): V {
                                     delegate.checkChange()
-                                    val removed = original.setValue(newValue)
-                                    changes.add(MapChange.Replace(key, removed, newValue))
-                                    return removed
+                                    return original.setValue(newValue).also {
+                                        changes.add(MapChange.Replace(key, it, newValue))
+                                    }
                                 }
+                                // Override equals to compare with the original object
                                 override fun equals(other: Any?) = original == other
                                 override fun hashCode() = original.hashCode()
+                                // Print nicely
                                 override fun toString() = "($key, $value)"
                             }
-                        }
+                            }
 
                     override fun remove() {
                         delegate.checkChange()
@@ -180,9 +185,9 @@ class WatchableMap<K, V>(
     /** Return an unmodifiable form of this [WatchableMap]. */
     fun readOnly(): ReadOnlyWatchableMap<K, V> = object : ReadOnlyWatchableMap<K, V> by this {
         override fun toString() =
-            "ReadOnlyWatchableMap(${super.toString()})"
+            "ReadOnlyWatchableMap($map)"
     }
 
     override fun toString() =
-        "WatchableMap(${super.toString()})"
+        "WatchableMap($map)"
 }

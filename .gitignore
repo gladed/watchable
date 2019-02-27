@@ -3,3 +3,4 @@ local.properties
 *.iml
 .*
 gradle.properties
+out/

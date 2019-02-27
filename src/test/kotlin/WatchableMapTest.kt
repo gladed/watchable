@@ -14,143 +14,80 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.MapChange
-import io.gladed.watchable.WatchableMap
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
-import kotlinx.coroutines.CancellationException
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.yield
-import org.hamcrest.CoreMatchers
-import org.junit.Assert
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertTrue
+import org.hamcrest.CoreMatchers.startsWith
+import org.junit.Assert.assertThat
 import org.junit.Assert.fail
 import org.junit.Test
 
 class WatchableMapTest {
-    private val changes = mutableListOf<MapChange<Int, String>>()
+    private val chooser = Chooser(0) // Seed of 0 makes this test repeatable
+    private val modifications = listOf<MutableMap<Int, String>.(Chooser) -> Unit>(
+        // Remove
+        { chooser -> chooser(keys)?.also { key: Int -> remove(key) } },
+        // Replace (by map)
+        { chooser -> chooser(keys)?.also { key: Int ->
+            replace(key, this[key]!! + key.toString()) } },
+        // Add or replace (maybe new)
+        { chooser -> val n = chooser(200); this[n] = n.toString() },
+        // Add or replace (maybe new)
+        { chooser -> val n = chooser(200); this[n] = n.toString() },
+        // Replace (by entry)
+        { chooser ->
+            chooser(entries)?.also { entry ->
+                entry.setValue(entry.value + entry.key.toString())
+            }
+        }
+    )
+    private fun randomModification() = chooser.invoke(modifications)!!
 
-    @Test fun add() {
+    @Test fun changeTest() {
         runThenCancel {
             val map = watchableMapOf<Int, String>()
-            watch(map) {
-                log("Receive $it")
-                changes += it
-            }
-            map.use {
-                putAll(mapOf(6 to "6", 5 to "5"))
-            }
-            map.use {
-                this[6] = "6" // No-op but now not really
-            }
-            Assert.assertThat(map.toString(), CoreMatchers.startsWith("WatchableMap("))
-            delay(50)
-            println(changes)
-            assertEquals(MapChange.Initial(emptyMap<Int, String>()), changes[0])
-            assertEquals(MapChange.Add(6, "6"), changes[1])
-            assertEquals(MapChange.Add(5, "5"), changes[2])
-            assertEquals(MapChange.Replace(6, "6", "6"), changes[3])
-            assertEquals(4, changes.size)
-        }
-    }
+            assertThat(map.toString(), startsWith("WatchableMap("))
 
-    @Test fun noEntryAdd() {
-        try {
-            runThenCancel {
-                val map = watchableMapOf<Int, String>()
-                log("Attempting add")
+            // Create a second map which is bound to the first map
+            val map2 = watchableMapOf<Int, String>()
+            map2.bind(map)
+
+            // Create a third map which is a read-only shell around the bound map
+            val map3 = map2.readOnly()
+            assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
+
+            // Make a bunch of random modifications
+            (0 until 250).forEach { _ ->
                 map.use {
-                    entries.add(object : MutableMap.MutableEntry<Int, String> {
-                        override var key: Int = 5
-                        override var value: String = "5"
-                        override fun setValue(newValue: String): String {
-                            return value.also { value = "6" }
-                        }
-                    })
+                    randomModification()(this, chooser)
                 }
-                fail("Shouldn't get here")
+                yield()
             }
-        } catch (e: UnsupportedOperationException) { }
-    }
 
-    @Test fun remove() {
-        runThenCancel {
-            val map = watchableMapOf(5 to "5")
-            watch(map) {
-                log("Receive $it")
-                changes += it
-            }
-            assertEquals("5", map.use { remove(5) })
-            yield()
-            yield()
-        }
-
-        assertEquals(MapChange.Initial(mapOf(5 to "5")), changes[0])
-        assertEquals(MapChange.Remove(5, "5"), changes[1])
-    }
-
-    @Test fun removeByEntry() {
-        runThenCancel {
-            val map = watchableMapOf(5 to "5")
-            watch(map) {
-                log("Receive $it")
-                changes += it
-            }
+            // Confirm a few things about the map
             map.use {
-                entries.remove(entries.first().also { println("Entry: $it, HashCode: ${it.hashCode()}") })
+                println("Map first entry is ${entries.first()} and its hashcode is ${entries.first().hashCode()}")
+                // Show that we can't add entries this way, only through "put"
+                try {
+                    entries.add(entries.first())
+                } catch (e: UnsupportedOperationException) {
+                    // Expected
+                }
             }
-            delay(50)
-            assertEquals(MapChange.Remove(5, "5"), changes[1])
-        }
-    }
 
-    @Test fun replace() {
-        runThenCancel {
-            val map = watchableMapOf(5 to "5")
-            watch(map) {
-                changes += it
+            // Watch the read-only map until it catches up the original map and cancel.
+            watch(map3) {
+                // Assert that map2 reaches equality with map1
+                if (map3.map == map.map && coroutineContext.isActive) {
+                    coroutineContext.cancel()
+                }
             }
-            map.use { this[5] = "55" }
-            yield()
-            yield()
-        }
 
-        assertEquals(MapChange.Initial(mapOf(5 to "5")), changes[0])
-        assertEquals(MapChange.Replace(5, "5", "55"), changes[1])
-        assertEquals(2, changes.size)
-    }
-
-    @Test fun replaceEntry() {
-        runThenCancel {
-            val map = watchableMapOf(5 to "5")
-            watch(map) {
-                log("Receive $it")
-                changes += it
-            }
-            map.use { entries.first().setValue("55") }
-            yield()
-            yield()
+            delay(2000) // Give the above time to wrap up
+            fail("Maps $map and $map3 never reached equality")
         }
-        assertEquals(MapChange.Replace(5, "5", "55"), changes[1])
-    }
-
-    @Test fun readOnly() {
-        runThenCancel {
-            val map = watchableMapOf(5 to "5")
-            val readOnly = map.readOnly().also {
-                watch(it) { change -> changes += change }
-            }
-            Assert.assertThat(readOnly.toString(), CoreMatchers.startsWith("ReadOnlyWatchableMap("))
-            map.use { this[5] = "55" }
-            assertEquals(1, readOnly.map.size)
-            assertEquals(1, readOnly.map.entries.size)
-            yield()
-        }
-        assertEquals(MapChange.Initial(mapOf(5 to "5")), changes[0])
-        assertEquals(MapChange.Replace(5, "5", "55"), changes[1])
     }
 }

@@ -27,15 +27,13 @@ import kotlin.coroutines.CoroutineContext
  * NOTE: IO or other blocking calls should be executed on a different dispatcher, e.g.:
  * `withContext(Dispatchers.IO)`.
  */
-class LocalScope(private val dispatcher: CoroutineDispatcher = Dispatchers.Main) : CoroutineScope, AutoCloseable {
+class LocalScope(dispatcher: CoroutineDispatcher = Dispatchers.Main) : CoroutineScope, AutoCloseable {
 
     /** Cancellable parent job for this context. */
-    private val job = Job()
-    override val coroutineContext: CoroutineContext
-        get() = dispatcher + job
+    override val coroutineContext = dispatcher + Job()
 
     /** Cancel all jobs launched in the scope. */
     override fun close() {
-        job.cancel()
+        coroutineContext[Job]!!.cancel()
     }
 }
