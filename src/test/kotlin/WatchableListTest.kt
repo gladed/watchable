@@ -36,7 +36,6 @@ import kotlin.system.measureTimeMillis
 
 @ExperimentalCoroutinesApi
 class WatchableListTest : CoroutineScope {
-
     @Rule @JvmField val scope = ScopeRule(Dispatchers.Default)
     override val coroutineContext = scope.coroutineContext
 
