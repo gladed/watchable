@@ -13,7 +13,7 @@
 | [io.gladed.watchable.MapChange](../io.gladed.watchable/-map-change/index.md) | Describes a change to a [Map](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-map/index.html). |
 | [io.gladed.watchable.ReadOnlyWatchableList](../io.gladed.watchable/-read-only-watchable-list/index.md) | A list which cannot be modified externally, but may be watched for changes. |
 | [io.gladed.watchable.ReadOnlyWatchableMap](../io.gladed.watchable/-read-only-watchable-map.md) | A map which cannot be modified externally, but may be watched for changes. |
-| [io.gladed.watchable.ReadOnlyWatchableSet](../io.gladed.watchable/-read-only-watchable-set.md) | An set which cannot be modified externally, but may be watched for changes. |
+| [io.gladed.watchable.ReadOnlyWatchableSet](../io.gladed.watchable/-read-only-watchable-set.md) | A set which cannot be modified externally, but may be watched for changes. |
 | [io.gladed.watchable.ReadOnlyWatchableValue](../io.gladed.watchable/-read-only-watchable-value/index.md) | A value which may not be modified externally but may still be watched for changes. |
 | [io.gladed.watchable.SetChange](../io.gladed.watchable/-set-change/index.md) | Describes a change to a [Set](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/-set/index.html). |
 | [io.gladed.watchable.ValueChange](../io.gladed.watchable/-value-change/index.md) | Describes a change to a value. |

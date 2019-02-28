@@ -4,6 +4,6 @@
 
 `open fun CoroutineScope.watch(block: (`[`C`](index.md#C)`) -> `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)`): Job`
 
-Deliver changes to [block](watch.md#io.gladed.watchable.Watchable$watch(kotlinx.coroutines.CoroutineScope, kotlin.Function1((io.gladed.watchable.Watchable.C, kotlin.Unit)))/block) using this [CoroutineScope](#) until it terminates, or until the returned
-[Job](#) is cancelled. The first change will represent the [Watchable](index.md)'s initial value.
+Receive individual changes in [block](watch.md#io.gladed.watchable.Watchable$watch(kotlinx.coroutines.CoroutineScope, kotlin.Function1((io.gladed.watchable.Watchable.C, kotlin.Unit)))/block) for all changes to the [watchable](#) (starting with its initial state)
+until the completion of this [Watchable](index.md)'s context, this [CoroutineScope](#), or the returned [Job](#) is cancelled.
 

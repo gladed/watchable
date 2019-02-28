@@ -6,6 +6,6 @@
 
 Overrides [Watchable.watchBatches](../-watchable/watch-batches.md)
 
-Deliver groups of changes to [block](../-watchable/watch-batches.md#io.gladed.watchable.Watchable$watchBatches(kotlinx.coroutines.CoroutineScope, kotlin.Function1((kotlin.collections.List((io.gladed.watchable.Watchable.C)), kotlin.Unit)))/block) using this [CoroutineScope](#) until it terminates, or until the returned
-[Job](#) is cancelled. The first change will represent the [Watchable](../-watchable/index.md)'s initial value.
+Receive lists of changes in [block](../-watchable/watch-batches.md#io.gladed.watchable.Watchable$watchBatches(kotlinx.coroutines.CoroutineScope, kotlin.Function1((kotlin.collections.List((io.gladed.watchable.Watchable.C)), kotlin.Unit)))/block) for all changes to the [watchable](#) (starting with its initial state) until
+the completion of this [Watchable](../-watchable/index.md)'s context, this [CoroutineScope](#), or the returned [Job](#) is cancelled.
 
