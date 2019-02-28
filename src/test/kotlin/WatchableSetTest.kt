@@ -54,7 +54,10 @@ class WatchableSetTest : CoroutineScope {
                 }
             }.joinAll()
             // Add something special
-            set.use { add(maxValue + 1) }
+            set.use {
+                add(maxValue + 1)
+                log("Set size: $size") // coverage
+            }
             watch(set3) {
                 if (set == set3) {
                     coroutineContext.cancel()

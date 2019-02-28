@@ -42,7 +42,7 @@ class WatchableValueTest {
         runThenCancel {
             intValue = watchableValueOf(5)
             watch(intValue) {
-                log("Updating received with $it")
+                log("Updating received with $it, was ${it.oldValue}")
                 received = it.newValue
             }
             delay(50)
