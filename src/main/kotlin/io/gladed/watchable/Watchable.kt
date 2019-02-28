@@ -26,8 +26,8 @@ import kotlinx.coroutines.newSingleThreadContext
  */
 interface Watchable<T, C : Change<T>> : CoroutineScope {
     /**
-     * Deliver groups of changes to [block] using this [CoroutineScope] until it terminates, or until the returned
-     * [Job] is cancelled. The first change will represent the [Watchable]'s initial value.
+     * Receive lists of changes in [block] for all changes to the [watchable] (starting with its initial state) until
+     * the completion of this [Watchable]'s context, this [CoroutineScope], or the returned [Job] is cancelled.
      */
     fun CoroutineScope.watchBatches(
         /** The block to invoke within this [CoroutineScope] whenever a change occurs. */
@@ -35,8 +35,8 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
     ): Job
 
     /**
-     * Deliver changes to [block] using this [CoroutineScope] until it terminates, or until the returned
-     * [Job] is cancelled. The first change will represent the [Watchable]'s initial value.
+     * Receive individual changes in [block] for all changes to the [watchable] (starting with its initial state)
+     * until the completion of this [Watchable]'s context, this [CoroutineScope], or the returned [Job] is cancelled.
      */
     fun CoroutineScope.watch(
         /** The block to invoke within this [CoroutineScope] whenever a change occurs. */

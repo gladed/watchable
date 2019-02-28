@@ -16,5 +16,5 @@
 
 package io.gladed.watchable
 
-/** An set which cannot be modified externally, but may be watched for changes. */
+/** A set which cannot be modified externally, but may be watched for changes. */
 interface ReadOnlyWatchableSet<T> : Watchable<Set<T>, SetChange<T>>, Set<T>
