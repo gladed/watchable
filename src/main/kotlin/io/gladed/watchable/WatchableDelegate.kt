@@ -30,7 +30,7 @@ import kotlin.coroutines.CoroutineContext
 /** Common internal implementations for watchable + bindable functions. */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-abstract class WatchableDelegate<T, C : Change<T>>(
+internal abstract class WatchableDelegate<T, C : Change<T>>(
     override val coroutineContext: CoroutineContext,
     private val owner: Watchable<T, C>
 ) : CoroutineScope {
@@ -72,10 +72,14 @@ abstract class WatchableDelegate<T, C : Change<T>>(
     }
 
     /** Deliver changes to watchers if possible. */
-    suspend fun send(changes: List<C>) {
-        // Send, if we can
+    fun send(changes: List<C>) {
+        // Send, if we can and it's necessary
         if (!channel.isClosedForSend) {
-            channel.send(changes)
+            // Make a copy here in case changes mutate
+            val changeList = changes.toList()
+            launch(Watchable.singleDispatcher) {
+                channel.send(changeList)
+            }
         }
     }
 

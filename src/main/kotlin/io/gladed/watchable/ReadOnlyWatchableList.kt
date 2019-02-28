@@ -16,8 +16,8 @@
 
 package io.gladed.watchable
 
-/** An set which cannot be modified externally, but may be watched for changes. */
+/** A list which cannot be modified externally, but may be watched for changes. */
 interface ReadOnlyWatchableList<T> : Watchable<List<T>, ListChange<T>> {
-    /** The current contents of the list (may change between accesses). */
+    /** The current state of the list. */
     val list: List<T>
 }

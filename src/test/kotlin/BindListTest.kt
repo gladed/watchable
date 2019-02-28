@@ -16,13 +16,11 @@
 
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
-import java.lang.IllegalStateException
 
 class BindListTest {
     @Test fun bind() {

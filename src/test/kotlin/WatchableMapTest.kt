@@ -16,39 +16,77 @@
 
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.joinAll
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import org.hamcrest.CoreMatchers.startsWith
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
+import org.junit.Rule
 import org.junit.Test
+import kotlin.coroutines.CoroutineContext
 
-class WatchableMapTest {
-    private val chooser = Chooser(0) // Seed of 0 makes this test repeatable
-    private val modifications = listOf<MutableMap<Int, String>.(Chooser) -> Unit>(
+class WatchableMapTest : CoroutineScope {
+
+    @Rule @JvmField val scope = ScopeRule(Dispatchers.Default)
+    override val coroutineContext = scope.coroutineContext
+
+    private val chooser = Chooser(0) // Stable seed makes tests repeatable
+    private val maxKey = 500
+
+    private val modifications = listOf<MutableMap<Int, String>.(Chooser) -> String>(
         // Remove
-        { chooser -> chooser(keys)?.also { key: Int -> remove(key) } },
+        { chooser -> chooser(keys)?.let { key: Int ->
+            val removed = remove(key)
+            "Remove(key=$key, removed=$removed)"
+        } ?: "none" },
+
         // Replace (by map)
-        { chooser -> chooser(keys)?.also { key: Int ->
-            replace(key, this[key]!! + key.toString()) } },
-        // Add or replace (maybe new)
-        { chooser -> val n = chooser(200); this[n] = n.toString() },
-        // Add or replace (maybe new)
-        { chooser -> val n = chooser(200); this[n] = n.toString() },
+        { chooser -> chooser(keys)?.let { key: Int ->
+            val current = this[key]!!
+            val value = current + key.toString()
+            replace(key, value)
+            "Replace(key=$key, removed=$current, added=$value)"
+        } ?: "none" },
+
+        // Add or replace
+        { chooser ->
+            val n = chooser(maxKey)
+            val removed = this[n]
+            this[n] = n.toString()
+            if (removed == null) "Add(key=$n, added=$n)" else "Replace(key=$n, removed=$removed, added=$n)"
+        },
+
+        // Add or replace (again, so we get a lot of insertions)
+        { chooser ->
+            val n = chooser(maxKey)
+            val removed = this[n]
+            this[n] = n.toString()
+            if (removed == null) "Add(key=$n, added=$n)" else "Replace(key=$n, removed=$removed, added=$n)"
+        },
+
         // Replace (by entry)
         { chooser ->
-            chooser(entries)?.also { entry ->
+            chooser(entries)?.let { entry ->
+                val removed = entry.value
+                val value = entry.value + entry.key.toString()
                 entry.setValue(entry.value + entry.key.toString())
-            }
+                "entry.Replace(key=${entry.key}, removed=$removed, added=$value)"
+            } ?: "none"
         }
     )
-    private fun randomModification() = chooser.invoke(modifications)!!
 
-    @Test fun changeTest() {
-        runThenCancel {
-            val map = watchableMapOf<Int, String>()
+    @Test fun changes() {
+        runToEnd {
+            val map = watchableMapOf(1 to "1")
             assertThat(map.toString(), startsWith("WatchableMap("))
 
             // Create a second map which is bound to the first map
@@ -58,14 +96,6 @@ class WatchableMapTest {
             // Create a third map which is a read-only shell around the bound map
             val map3 = map2.readOnly()
             assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
-
-            // Make a bunch of random modifications
-            (0 until 250).forEach { _ ->
-                map.use {
-                    randomModification()(this, chooser)
-                }
-                yield()
-            }
 
             // Confirm a few things about the map
             map.use {
@@ -78,16 +108,33 @@ class WatchableMapTest {
                 }
             }
 
+            // Make a bunch of random modifications
+            (0 until 5000).map {
+                launch {
+                    map.use {
+                        chooser.invoke(modifications)!!(this, chooser)
+                    }
+                }
+            }.joinAll()
+
+            // Write a special key at the end
+            map.use {
+                this[maxKey + 1] = "end"
+            }
+
             // Watch the read-only map until it catches up the original map and cancel.
             watch(map3) {
-                // Assert that map2 reaches equality with map1
-                if (map3.map == map.map && coroutineContext.isActive) {
+                // Wait for map3 to reach equality with map
+                if (map3 == map) {
+                    log("map=$map")
+                    log("map2=$map3")
                     coroutineContext.cancel()
                 }
             }
-
-            delay(2000) // Give the above time to wrap up
-            fail("Maps $map and $map3 never reached equality")
+            // Give the above time to wrap up, if it doesn't, assert on the reason:
+            delay(2000)
+            assertEquals(map, map3)
+            assertTrue(map3 == map)
         }
     }
 }

@@ -29,7 +29,7 @@ class BindSetTest {
             val dest = watchableSetOf(6)
             dest.bind(origin)
             delay(50)
-            assertEquals(setOf(5), dest.set)
+            assertEquals(setOf(5), dest)
         }
     }
 
@@ -48,9 +48,9 @@ class BindSetTest {
             }
             delay(50)
             // Order doesn't matter to sets
-            assertEquals(setOf(7, 8, 9), dest.set)
+            assertEquals(setOf(7, 8, 9), dest)
             // But it matters to iterators
-            assertEquals(8, dest.set.iterator().next())
+            assertEquals(8, dest.iterator().next())
         }
     }
 
@@ -101,7 +101,7 @@ class BindSetTest {
                 remove(5)
             }
             delay(50)
-            assertEquals(setOf(4, 5, 7, 8), dest.set)
+            assertEquals(setOf(4, 5, 7, 8), dest)
         }
     }
 }

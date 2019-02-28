@@ -19,12 +19,12 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 
 /**
- * An object whose contents can be "bound" to a different object.
+ * An object whose contents are updated automatically when another object changes.
  */
 interface Bindable<T, C : Change<T>> : CoroutineScope {
     /**
      * Binds this unbound object so that when [other] changes, it is updated accordingly. This object must not be
-     * modified while it is bound.
+     * modified while bound.
      */
     fun bind(other: Watchable<T, C>)
 

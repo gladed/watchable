@@ -17,12 +17,10 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A mutable list whose contents may be watched for changes and/or bound to other maps for the duration
- * of its [coroutineContext].
+ * A [List] whose contents may be watched for changes.
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class WatchableList<T>(
@@ -30,16 +28,16 @@ class WatchableList<T>(
     initialValues: Collection<T> = emptyList()
 ) : ReadOnlyWatchableList<T>, Bindable<List<T>, ListChange<T>> {
 
+    /** The internal mutable list representing the most current state. */
+    private val mutableList: MutableList<T> = initialValues.toMutableList()
+
     /** The most current list content. */
-    @Volatile private var current: List<T>? = initialValues.toList()
+    @Volatile private var current: List<T>? = null
 
     override val list
         get() = current ?: synchronized(mutableList) {
             mutableList.toList().also { current = it }
         }
-
-    /** The internal mutable list representing the most current state. */
-    private val mutableList: MutableList<T> = list.toMutableList()
 
     private val mutator = Mutator()
 
@@ -75,13 +73,7 @@ class WatchableList<T>(
             if (changes.isNotEmpty()) {
                 // Assign the local copy
                 current = null
-
-                // send() may suspend so we need to deliver changes all at once.
-                changes.toList().also {
-                    launch(coroutineContext) {
-                        delegate.send(it)
-                    }
-                }
+                delegate.send(changes)
                 changes.clear()
             }
         }
@@ -145,10 +137,8 @@ class WatchableList<T>(
 
     /** Return an unmodifiable form of this [WatchableList]. */
     fun readOnly(): ReadOnlyWatchableList<T> = object : ReadOnlyWatchableList<T> by this {
-        override fun toString() =
-            "ReadOnlyWatchableList($list})"
+        override fun toString() = "ReadOnlyWatchableList($list})"
     }
 
-    override fun toString() =
-        "WatchableList($list)"
+    override fun toString() = "WatchableList($list)"
 }
