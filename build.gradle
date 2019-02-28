@@ -5,7 +5,7 @@ buildscript {
         jvm_version = '1.8'
         detekt_version = '1.0.0-RC14'
         // Version to publish
-        watchable_version = '0.5.1'
+        watchable_version = '0.5.2'
     }
 
     repositories {
@@ -134,6 +134,11 @@ dokka {
     externalDocumentationLink {
         url = new URL("http://docs.oracle.com/javase/8/docs/api/")
     }
+}
+
+task dokkaGfm(type: org.jetbrains.dokka.gradle.DokkaTask){
+    outputDirectory = "$buildDir/gfm"
+    outputFormat = "gfm"
 }
 
 license {
