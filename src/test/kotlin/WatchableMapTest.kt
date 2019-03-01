@@ -14,25 +14,20 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.yield
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
-import kotlin.coroutines.CoroutineContext
+import kotlin.system.measureTimeMillis
 
 class WatchableMapTest : CoroutineScope {
 
@@ -85,56 +80,63 @@ class WatchableMapTest : CoroutineScope {
     )
 
     @Test fun changes() {
-        runToEnd {
-            val map = watchableMapOf(1 to "1")
-            assertThat(map.toString(), startsWith("WatchableMap("))
+        val count = 100000
+        val elapsed = measureTimeMillis {
+            runToEnd {
+                val map = watchableMapOf(1 to "1")
+                assertThat(map.toString(), startsWith("WatchableMap("))
 
-            // Create a second map which is bound to the first map
-            val map2 = watchableMapOf<Int, String>()
-            map2.bind(map)
+                // Create a second map which is bound to the first map
+                val map2 = watchableMapOf<Int, String>()
+                map2.bind(map)
 
-            // Create a third map which is a read-only shell around the bound map
-            val map3 = map2.readOnly()
-            assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
+                // Create a third map which is a read-only shell around the bound map
+                val map3 = map2.readOnly()
+                assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
 
-            // Confirm a few things about the map
-            map.use {
-                println("Map first entry is ${entries.first()} and its hashcode is ${entries.first().hashCode()}")
-                // Show that we can't add entries this way, only through "put"
-                try {
-                    entries.add(entries.first())
-                } catch (e: UnsupportedOperationException) {
-                    // Expected
-                }
-            }
-
-            // Make a bunch of random modifications
-            (0 until 5000).map {
-                launch {
-                    map.use {
-                        chooser.invoke(modifications)!!(this, chooser)
+                // Confirm a few things about the map
+                map.use {
+                    println("Map first entry is ${entries.first()} and its hashcode is ${entries.first().hashCode()}")
+                    // Show that we can't add entries this way, only through "put"
+                    try {
+                        entries.add(entries.first())
+                    } catch (e: UnsupportedOperationException) {
+                        // Expected
                     }
                 }
-            }.joinAll()
 
-            // Write a special key at the end
-            map.use {
-                this[maxKey + 1] = "end"
-            }
-
-            // Watch the read-only map until it catches up the original map and cancel.
-            watch(map3) {
-                // Wait for map3 to reach equality with map
-                if (map3 == map) {
-                    log("map=$map")
-                    log("map2=$map3")
-                    coroutineContext.cancel()
+                map.watch {
+                    // Every 10 changes, read
+                    if (0 == chooser(10)) map.toString()
                 }
+
+                // Make a bunch of random modifications
+                (0 until count).map {
+                    launch {
+                        map.use {
+                            chooser.invoke(modifications)!!(this, chooser)
+                        }
+                    }
+                }.joinAll()
+
+                // Write a special key at the end
+                map.use {
+                    this[maxKey + 1] = "end"
+                }
+
+                // Watch the read-only map until it catches up the original map and cancel.
+                map3.watch {
+                    // Wait for map3 to reach equality with map
+                    if (map3 == map) {
+                        coroutineContext.cancel()
+                    }
+                }
+                // Give the above time to wrap up, if it doesn't, assert on the reason:
+                delay(2000)
+                assertEquals(map, map3)
+                assertTrue(map3 == map)
             }
-            // Give the above time to wrap up, if it doesn't, assert on the reason:
-            delay(2000)
-            assertEquals(map, map3)
-            assertTrue(map3 == map)
         }
+        log("$count in $elapsed ms. ${elapsed * 1000 / count } μs per iteration.")
     }
 }

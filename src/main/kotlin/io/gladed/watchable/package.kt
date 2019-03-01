@@ -49,21 +49,3 @@ fun <K, V> Map<K, V>.toWatchableMap(scope: CoroutineScope) = toWatchableMap(scop
 
 /** Return a new [WatchableMap] containing a map of [values], living on this [CoroutineScope]. */
 fun <K, V> CoroutineScope.watchableMapOf(vararg values: Pair<K, V>) = values.toMap().toWatchableMap(this)
-
-/**
- * Receive individual changes in [block] for all changes to the [watchable] (starting with its initial state) until the
- * completion of [watchable]'s context, this [CoroutineScope], or the returned [Job] is cancelled.
- */
-fun <T, C : Change<T>> CoroutineScope.watch(watchable: Watchable<T, C>, block: (C) -> Unit): Job =
-    with(watchable) {
-        this@watch.watch(block)
-    }
-
-/**
- * Receive lists of changes in [block] for all changes to the [watchable] (starting with its initial state) until the
- * completion of [watchable]'s context, this [CoroutineScope], or the returned [Job] is cancelled.
- */
-fun <T, C : Change<T>> CoroutineScope.watchBatches(watchable: Watchable<T, C>, block: (List<C>) -> Unit): Job =
-    with(watchable) {
-        this@watchBatches.watchBatches(block)
-    }

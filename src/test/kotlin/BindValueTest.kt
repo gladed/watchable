@@ -30,7 +30,7 @@ class BindValueTest {
             val dest = watchableValueOf(6)
             dest.bind(origin)
             delay(50)
-            assertEquals(5, dest.value)
+            assertEquals(5, dest.get())
         }
     }
 
@@ -40,9 +40,9 @@ class BindValueTest {
             val dest = watchableValueOf(6)
             dest.bind(origin)
             delay(50)
-            origin.value = 7
+            origin.set(7)
             delay(50)
-            assertEquals(7, dest.value)
+            assertEquals(7, dest.get())
         }
     }
 
@@ -90,10 +90,10 @@ class BindValueTest {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
                 dest.bind(origin)
-                dest.value = 7
+                dest.set(7)
                 fail("Modification should not be permitted")
                 delay(50)
-                assertEquals(6, dest.value)
+                assertEquals(6, dest.get())
             }
         } catch (e: IllegalStateException) {
             // Expected
@@ -107,9 +107,9 @@ class BindValueTest {
             dest.bind(origin)
             delay(50)
             dest.unbind()
-            origin.value = 7
+            origin.set(7)
             delay(50)
-            assertEquals(5, dest.value)
+            assertEquals(5, dest.get())
         }
     }
 
@@ -128,16 +128,16 @@ class BindValueTest {
             val origin = scope1.watchableValueOf(5)
             val dest = scope2.watchableValueOf(6)
             dest.bind(origin)
-            origin.value = 7
+            origin.set(7)
             delay(50)
             println("Dest should get 7: $dest")
-            assertEquals(7, dest.value)
+            assertEquals(7, dest.get())
             scope2.close() // Kill the destination value's scope
             delay(50)
-            origin.value = 8
+            origin.set(8)
             delay(50)
             println("Dest should still have 7: $dest")
-            assertEquals(7, dest.value) // Because dest scope was killed it shouldn't receive any more updates
+            assertEquals(7, dest.get()) // Because dest scope was killed it shouldn't receive any more updates
         }
     }
 
@@ -146,14 +146,14 @@ class BindValueTest {
             val origin = scope1.watchableValueOf(5)
             val dest = scope2.watchableValueOf(6)
             dest.bind(origin)
-            origin.value = 7
+            origin.set(7)
             delay(50)
             scope1.close() // Kill the origin value's scope
             delay(50)
             // Because origin scope was killed it should not pass values on to dest
-            origin.value = 8
+            origin.set(8)
             delay(50)
-            assertEquals(7, dest.value)
+            assertEquals(7, dest.get())
         }
     }
 }

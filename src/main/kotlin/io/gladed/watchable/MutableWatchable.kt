@@ -16,5 +16,18 @@
 
 package io.gladed.watchable
 
-/** A list which cannot be modified externally, but may be watched for changes. */
-interface ReadOnlyWatchableList<T> : Watchable<List<T>, ListChange<T>>
+/**
+ * A [Watchable] wrapping type [T] which may also be mutated in the form of an [M].
+ */
+interface MutableWatchable<M: T, T, C : Change<T>> : Watchable<T, C>, Bindable<T, C> {
+    /**
+     * Suspend until [func] can safely execute, reading and/or writing data on [M] as desired and returning
+     * the result. Note: if currently bound ([isBound] returns true), attempts to modify [M] will throw.
+     */
+    suspend fun <U> use(func: suspend M.() -> U): U
+
+    /**
+     * Completely replace the contents of this watchable.
+     */
+    suspend fun set(value: T)
+}

@@ -50,7 +50,7 @@ class BindSetTest {
             // Order doesn't matter to sets
             assertEquals(setOf(7, 8, 9), dest)
             // But it matters to iterators
-            assertEquals(8, dest.iterator().next())
+            assertEquals(8, dest.get().iterator().next())
         }
     }
 

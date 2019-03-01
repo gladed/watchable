@@ -29,7 +29,7 @@ class BindListTest {
             val dest = watchableListOf(6)
             dest.bind(origin)
             delay(50)
-            assertEquals(listOf(5), dest.list)
+            assertEquals(listOf(5), dest.get())
         }
     }
 
@@ -51,7 +51,7 @@ class BindListTest {
                 this[1] = 11
             }
             delay(50)
-            assertEquals(listOf(8, 11, 9), dest.list)
+            assertEquals(listOf(8, 11, 9), dest.get())
         }
     }
 
@@ -82,7 +82,7 @@ class BindListTest {
             dest.unbind() // twice to show it works ok
             origin.use { remove(5) }
             delay(50)
-            assertEquals(listOf(4, 5, 8, 7), dest.list)
+            assertEquals(listOf(4, 5, 8, 7), dest.get())
         }
     }
 }

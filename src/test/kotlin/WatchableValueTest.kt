@@ -16,11 +16,11 @@
 
 import io.gladed.watchable.ValueChange
 import io.gladed.watchable.WatchableValue
-import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -41,19 +41,21 @@ class WatchableValueTest {
         var received = -1
         runThenCancel {
             intValue = watchableValueOf(5)
-            watch(intValue) {
+            intValue.watch {
                 log("Updating received with $it, was ${it.oldValue}")
                 received = it.newValue
             }
             delay(50)
             assertEquals(5, received)
-            intValue.value = 17
+            intValue.set(17)
             delay(50)
             assertTrue(intValue.isActive())
         }
         assertEquals(17, received)
 
-        intValue.value = 88
+        runBlocking {
+            intValue.set(88)
+        }
         assertFalse(intValue.isActive())
         runBlocking {
             delay(50)
@@ -65,7 +67,7 @@ class WatchableValueTest {
         try {
             runBlocking {
                 val value = watchableValueOf(5)
-                watch(value) { }
+                value.watch { }
                 // The only way out. If we don't throw, runBlocking halts forever waiting for the internal
                 // channel to close.
                 throw Error("must throw")
@@ -77,10 +79,10 @@ class WatchableValueTest {
         val received = mutableListOf<ValueChange<Int>>()
         runThenCancel {
             intValue = watchableValueOf(5)
-            watch(intValue) {
+            intValue.watch {
                 received.add(it)
             }
-            intValue.value = 5
+            intValue.set(5)
             delay(50)
             // Both announcements, value is NOT compared for equality
             assertEquals(listOf(5, 5), received.map { it.newValue })
@@ -94,11 +96,11 @@ class WatchableValueTest {
             intValue = watchableValueOf(5)
             val readOnly = intValue.readOnly()
             println("Object: $readOnly") // Coverage
-            watch(readOnly) {
+            readOnly.watch {
                 received.add(it)
             }
-            intValue.value = 6
-            assertEquals(6, readOnly.value)
+            intValue.set(6)
+            assertEquals(6, readOnly.get())
             delay(50)
         }
         println(received)
@@ -109,13 +111,13 @@ class WatchableValueTest {
         runBlocking {
             var received = -1
             intValue = scope.watchableValueOf(5)
-            watch(intValue) {
+            intValue.watch {
                 log("received $it")
                 received = it.newValue
             }
             delay(50)
             assertEquals(5, received)
-            intValue.value = 17
+            intValue.set(17)
             delay(50)
             assertEquals(17, received)
 
@@ -123,7 +125,7 @@ class WatchableValueTest {
             scope.coroutineContext.cancel()
             assertFalse(intValue.isActive())
             delay(50)
-            intValue.value = 88
+            intValue.set(88)
             delay(50)
 
             assertEquals(17, received) // Scope closed so no more updates
@@ -134,18 +136,20 @@ class WatchableValueTest {
         var received = -1
         runThenCancel {
             intValue = watchableValueOf(5)
-            scope.watch(intValue) {
-                received = it.newValue
+            scope.launch {
+                intValue.watch {
+                    received = it.newValue
+                }
             }
             delay(50)
             assertEquals(5, received)
-            intValue.value = 17
+            intValue.set(17)
             delay(50)
             assertEquals(17, received)
 
             // Shut down the other scope
             scope.coroutineContext.cancel()
-            intValue.value = 88
+            intValue.set(88)
             delay(50)
         }
         assertEquals(17, received) // Scope closed so there will have been no more updates

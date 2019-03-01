@@ -25,26 +25,32 @@ import kotlinx.coroutines.newSingleThreadContext
  * An object wrapping type [T] which can be watched for changes of type [C].
  */
 interface Watchable<T, C : Change<T>> : CoroutineScope {
+
+    /** Return the current value of [T]. */
+    suspend fun get(): T
+
     /**
-     * Receive lists of changes in [block] for all changes to the [watchable] (starting with its initial state) until
-     * the completion of this [Watchable]'s context, this [CoroutineScope], or the returned [Job] is cancelled.
+     * Receive lists of changes in [func] for all changes to this [Watchable] (starting with its initial state)
+     * until this [Watchable]'s scope completes OR the caller's watchable scope completes OR the returned [Job]
+     * is cancelled.
      */
-    fun CoroutineScope.watchBatches(
+    suspend fun watchBatches(
         /** The block to invoke within this [CoroutineScope] whenever a change occurs. */
-        block: (List<C>) -> Unit
+        func: suspend (List<C>) -> Unit
     ): Job
 
     /**
-     * Receive individual changes in [block] for all changes to the [watchable] (starting with its initial state)
-     * until the completion of this [Watchable]'s context, this [CoroutineScope], or the returned [Job] is cancelled.
+     * Receive individual changes in [func] for all changes to this [Watchable] (starting with its initial state)
+     * until this [Watchable]'s scope completes OR the caller's watchable scope completes OR the returned [Job]
+     * is cancelled.
      */
-    fun CoroutineScope.watch(
+    suspend fun watch(
         /** The block to invoke within this [CoroutineScope] whenever a change occurs. */
-        block: (C) -> Unit
+        func: suspend (C) -> Unit
     ): Job =
         watchBatches { changes ->
             for (change in changes) {
-                if (coroutineContext.isActive) block(change) else break
+                if (coroutineContext.isActive) func(change) else break
             }
         }
 
@@ -52,7 +58,9 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
     fun isActive() = coroutineContext.isActive
 
     companion object {
+        /** A dispatcher used to strictly serialize the order of changes. */
         @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class)
-        internal val singleDispatcher = newSingleThreadContext("watchable")
+        internal val singleDispatcher = newSingleThreadContext("watchable-change")
     }
 }
+

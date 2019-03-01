@@ -15,7 +15,6 @@
  */
 
 import io.gladed.watchable.ListChange
-import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -31,8 +30,6 @@ import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import java.util.Collections
-import kotlin.system.measureTimeMillis
 
 @ExperimentalCoroutinesApi
 class WatchableListTest : CoroutineScope {
@@ -63,7 +60,7 @@ class WatchableListTest : CoroutineScope {
                 launch {
                     when (chooser(3)) {
                         // Show that it's safe to access the list
-                        0 -> list3.list.apply { if (isNotEmpty()) last() }
+                        0 -> list3.get().apply { if (isNotEmpty()) last() }
                         else -> list.use { chooser(mods)!!(this) }
                     }
                 }
@@ -74,13 +71,13 @@ class WatchableListTest : CoroutineScope {
                 add(maxValue + 1)
             }
 
-            watch(list3) {
-                if (list3.list == list.list) {
+            list3.watch {
+                if (list3.get() == list.get()) {
                     coroutineContext.cancel()
                 }
             }
             delay(2000)
-            assertEquals(list.list, list3.list)
+            assertEquals(list.get(), list3.get())
         }
     }
 
@@ -88,18 +85,18 @@ class WatchableListTest : CoroutineScope {
     @Test fun equality() {
         runThenCancel {
             val list = watchableListOf(1, 2, 3)
-            assertEquals(list.list, list.list)
-            assertEquals(listOf(1, 2, 3), list.list)
-            assertEquals(list.list, listOf(1, 2, 3))
+            assertEquals(list.get(), list.get())
+            assertEquals(listOf(1, 2, 3), list.get())
+            assertEquals(list.get(), listOf(1, 2, 3))
             val list2 = watchableListOf(1, 2, 3)
-            assertEquals(list.list, list2.list)
+            assertEquals(list.get(), list2.get())
         }
     }
 
     @Test fun clear() {
         runThenCancel {
             val list = watchableListOf(3, 4)
-            watch(list) {
+            list.watch {
                 log("Receive $it")
                 launch {
                     changes.send(it)

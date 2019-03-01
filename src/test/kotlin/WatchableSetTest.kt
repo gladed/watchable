@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -58,7 +57,7 @@ class WatchableSetTest : CoroutineScope {
                 add(maxValue + 1)
                 log("Set size: $size") // coverage
             }
-            watch(set3) {
+            set3.watch {
                 if (set == set3) {
                     coroutineContext.cancel()
                 }
