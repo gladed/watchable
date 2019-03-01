@@ -58,12 +58,12 @@ class WatchableSetTest : CoroutineScope {
                 log("Set size: $size") // coverage
             }
             set3.watch {
-                if (set == set3) {
+                if (set.get() == set3.get()) {
                     coroutineContext.cancel()
                 }
             }
             delay(2000)
-            assertEquals(set, set3)
+            assertEquals(set.get(), set3.get())
         }
     }
 }

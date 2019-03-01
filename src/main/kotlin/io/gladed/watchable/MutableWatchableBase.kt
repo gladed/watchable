@@ -20,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -101,10 +102,11 @@ abstract class MutableWatchableBase<M: T, T, C : Change<T>> : MutableWatchable<M
             // Clear immutable because it's now wrong
             immutable = null
             // Deliver and clear out changes if the channel is open
-            if (!channel.isClosedForSend) {
-                channel.send(changes)
-            }
+            val changeList = changes.toList()
             changes.clear()
+            if (!channel.isClosedForSend) {
+                channel.send(changeList)
+            }
         }
     }
 
@@ -117,7 +119,8 @@ abstract class MutableWatchableBase<M: T, T, C : Change<T>> : MutableWatchable<M
 
         // TODO: There is probably a problem with scopes here, let's make sure tests detect it.
         // Create an entirely new child scope within which we can launch processing of changes.
-        return CoroutineScope(callerCoroutineContext()).launch {
+        // CoroutineScope(callerCoroutineContext()).
+        return launch {
             // Deliver initial NOW and follow up with all subsequent changes.
             func(listOf(initial))
             subscription.consumeBatched { changes ->
@@ -148,11 +151,14 @@ abstract class MutableWatchableBase<M: T, T, C : Change<T>> : MutableWatchable<M
         }
 
         binding = Binding(other, other.watchBatches {
-            isOnBoundChange = true
-            for (change in it) {
-                mutable.applyBoundChange(change)
+            mutableMutex.withLock {
+                isOnBoundChange = true
+                immutable = null
+                for (change in it) {
+                    mutable.applyBoundChange(change)
+                }
+                isOnBoundChange = false
             }
-            isOnBoundChange = false
         })
     }
 

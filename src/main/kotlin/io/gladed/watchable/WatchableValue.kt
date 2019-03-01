@@ -39,6 +39,7 @@ class WatchableValue<T>(
     }
 
     override fun replace(newValue: T) {
+        println("Changing to $newValue")
         val oldValue = mutable
         mutable = newValue
         changes += listOf(ValueChange(oldValue, newValue))

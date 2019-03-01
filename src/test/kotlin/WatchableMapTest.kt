@@ -24,7 +24,6 @@ import kotlinx.coroutines.launch
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 import kotlin.system.measureTimeMillis
@@ -90,9 +89,7 @@ class WatchableMapTest : CoroutineScope {
                 val map2 = watchableMapOf<Int, String>()
                 map2.bind(map)
 
-                // Create a third map which is a read-only shell around the bound map
-                val map3 = map2.readOnly()
-                assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
+                assertThat(map2.readOnly().toString(), startsWith("ReadOnlyWatchableMap("))
 
                 // Confirm a few things about the map
                 map.use {
@@ -105,10 +102,11 @@ class WatchableMapTest : CoroutineScope {
                     }
                 }
 
-                map.watch {
-                    // Every 10 changes, read
-                    if (0 == chooser(10)) map.toString()
+                map2.watch {
+                    // About every 10 changes, peek at the original map
+                    if (0 == chooser(10)) map.get()
                 }
+                // TODO: deadlock in map.watch { map.get() }!!! Invoke watch OUTSIDE of mutex please!
 
                 // Make a bunch of random modifications
                 (0 until count).map {
@@ -124,19 +122,19 @@ class WatchableMapTest : CoroutineScope {
                     this[maxKey + 1] = "end"
                 }
 
-                // Watch the read-only map until it catches up the original map and cancel.
-                map3.watch {
+                // Watch the bound map until it aligns with the original
+                map2.watch {
                     // Wait for map3 to reach equality with map
-                    if (map3 == map) {
+                    if (map2.get() == map.get()) {
                         coroutineContext.cancel()
                     }
                 }
                 // Give the above time to wrap up, if it doesn't, assert on the reason:
-                delay(2000)
-                assertEquals(map, map3)
-                assertTrue(map3 == map)
+                delay(3000)
+                assertEquals(map.get(), map2.get())
             }
         }
+        // With sync: 31 micros for 100k iters
         log("$count in $elapsed ms. ${elapsed * 1000 / count } μs per iteration.")
     }
 }

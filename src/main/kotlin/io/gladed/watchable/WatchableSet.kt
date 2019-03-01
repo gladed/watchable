@@ -80,7 +80,7 @@ class WatchableSet<T>(
 
     /** Return an unmodifiable form of this [WatchableSet]. */
     fun readOnly(): ReadOnlyWatchableSet<T> = object : ReadOnlyWatchableSet<T> by this {
-        override fun toString() = "ReadOnlyWatchableSet(})"
+        override fun toString() = "ReadOnlyWatchableSet()"
     }
 
     override fun toString() = "WatchableSet()"
