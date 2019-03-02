@@ -17,7 +17,6 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlin.coroutines.CoroutineContext
 
 /** Return a new [WatchableValue] wrapping [value], living on this [CoroutineScope]. */

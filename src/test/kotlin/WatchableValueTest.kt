@@ -143,7 +143,6 @@ class WatchableValueTest {
             }
             changes.expect(ValueChange(5, 5))
             intValue.set(17)
-            delay(50)
             changes.expect(ValueChange(5, 17))
 
             // Shut down the other scope

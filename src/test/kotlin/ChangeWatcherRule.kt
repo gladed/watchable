@@ -32,6 +32,13 @@ class ChangeWatcherRule<C> : TestRule, CoroutineScope {
         }
     }
 
+    operator fun plusAssign(changeList: List<C>) {
+        log("Changes: $changeList")
+        launch {
+            changeList.forEach { changes.send(it) }
+        }
+    }
+
     suspend fun expect(vararg expected: C, timeout: Long = 250) {
         val remaining = expected.toMutableList()
         val result = withTimeoutOrNull(timeout) {

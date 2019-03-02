@@ -18,6 +18,7 @@ import io.gladed.watchable.ListChange
 import io.gladed.watchable.MapChange
 import io.gladed.watchable.bind
 import io.gladed.watchable.watch
+import io.gladed.watchable.watchBatches
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -72,7 +73,7 @@ class WatchableListTest : CoroutineScope {
     @Test fun clear() {
         runThenCancel {
             val list = watchableListOf(3, 4)
-            watch(list) { changes += it }
+            watchBatches(list) { changes += it }
             changes.expect(ListChange.Initial(listOf(3, 4)))
             list.use { clear() }
             changes.expect(ListChange.Remove(0, 3), ListChange.Remove(0, 4))

@@ -37,15 +37,12 @@ class WatchableSetTest : CoroutineScope {
     //            assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
 
     @Test fun changes() {
-        (0..200).forEach { i ->
-            println("\n\nITERATION $i")
-            CoroutineScope(coroutineContext + Job()).apply {
-                runToEnd {
-                    iterateMutable(this@apply,
-                        watchableSetOf(1, 2),
-                        watchableSetOf<Int>(),
-                        mods, { add(maxValue + 1) }, chooser, count = 10)
-                }
+        CoroutineScope(coroutineContext + Job()).apply {
+            runToEnd {
+                iterateMutable(this@apply,
+                    watchableSetOf(1, 2),
+                    watchableSetOf<Int>(),
+                    mods, { add(maxValue + 1) }, chooser)
             }
         }
     }

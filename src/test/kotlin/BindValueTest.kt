@@ -29,7 +29,6 @@ import org.junit.Test
 import java.util.concurrent.Executors
 
 class BindValueTest {
-
     @Rule @JvmField val changes = ChangeWatcherRule<ValueChange<Int>>()
 
     @Test fun bindTest() {

@@ -38,6 +38,6 @@ interface Bindable<T, C : Change<T>> : CoroutineScope {
     val boundTo: Watchable<*, *>?
 }
 
-fun <T, C: Change<T>> CoroutineScope.bind(source: Watchable<T, C>, dest: Bindable<T, C>) {
+fun <T, C : Change<T>> CoroutineScope.bind(source: Watchable<T, C>, dest: Bindable<T, C>) {
     dest.bind(this, source)
 }

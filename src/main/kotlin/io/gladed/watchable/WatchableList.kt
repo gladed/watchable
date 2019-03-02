@@ -27,7 +27,7 @@ class WatchableList<T>(
     initial: Collection<T> = emptyList()
 ) : MutableWatchableBase<MutableList<T>, List<T>, ListChange<T>>(), ReadOnlyWatchableList<T> {
 
-    override val mutable = object: AbstractMutableList<T>() {
+    override val mutable = object : AbstractMutableList<T>() {
         val real = initial.toMutableList()
 
         override val size get() = real.size

@@ -19,8 +19,6 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.newSingleThreadContext
 
 /**
  * An object wrapping type [T] which can be watched for changes of type [C].
@@ -58,4 +56,7 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
 }
 
 fun <T, C : Change<T>> CoroutineScope.watch(watchable: Watchable<T, C>, func: (C) -> Unit): Job =
-   watchable.watch(this, func)
+    watchable.watch(this, func)
+
+fun <T, C : Change<T>> CoroutineScope.watchBatches(watchable: Watchable<T, C>, func: suspend (List<C>) -> Unit): Job =
+    watchable.watchBatches(this, func)

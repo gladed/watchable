@@ -19,9 +19,7 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
@@ -32,7 +30,7 @@ import kotlin.coroutines.coroutineContext
 /** Base for implementing a type that is watchable, mutable, and bindable. */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-abstract class MutableWatchableBase<M: T, T, C : Change<T>> : MutableWatchable<M, T, C> {
+abstract class MutableWatchableBase<M : T, T, C : Change<T>> : MutableWatchable<M, T, C> {
 
     /** The underlying mutable form of the data this object. When changes are applied, [changes] must be updated. */
     protected abstract val mutable: M
@@ -103,7 +101,7 @@ abstract class MutableWatchableBase<M: T, T, C : Change<T>> : MutableWatchable<M
     private suspend fun deliverChanges() {
         if (changes.isNotEmpty()) {
             // Clear immutable because it's now wrong
-            immutable = null
+            immutable = mutable.toImmutable() // What if we always set it
             // Deliver and clear out changes if the channel is open
             val changeList = changes.toList()
             changes.clear()
@@ -186,7 +184,6 @@ abstract class MutableWatchableBase<M: T, T, C : Change<T>> : MutableWatchable<M
                     poll()?.also { buffer.addAll(it) } ?: break
                 }
                 if (coroutineContext.isActive) {
-                    println("Handling $buffer")
                     handleItems(buffer.toList())
                 }
                 buffer.clear()

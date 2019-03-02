@@ -14,22 +14,25 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.SetChange
 import io.gladed.watchable.bind
+import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
+import org.junit.Rule
 import org.junit.Test
-import java.lang.IllegalStateException
 
 class BindSetTest {
+    @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
+
     @Test fun bind() {
         runThenCancel {
             val origin = watchableSetOf(5)
             val dest = watchableSetOf(6)
             bind(origin, dest)
-            delay(50)
+            watch(dest) { changes += it }
+            changes.expect(SetChange.Initial(setOf(5)))
             assertEquals(setOf(5), dest.get())
         }
     }
@@ -39,6 +42,8 @@ class BindSetTest {
             val origin = watchableSetOf(4, 5)
             val dest = watchableSetOf(6)
             bind(origin, dest)
+            watch(dest) { changes += it }
+            changes.expect(SetChange.Initial(setOf(4, 5)))
             origin.use {
                 addAll(listOf(8, 7))
                 remove(5)
@@ -47,7 +52,11 @@ class BindSetTest {
                 addAll(listOf(9))
                 remove(4)
             }
-            delay(50)
+            changes.expect(SetChange.Add(8),
+                SetChange.Add(7),
+                SetChange.Remove(5),
+                SetChange.Add(9),
+                SetChange.Remove(4))
             // Order doesn't matter to sets
             assertEquals(setOf(7, 8, 9), dest.get())
             // But it matters to iterators
@@ -77,7 +86,9 @@ class BindSetTest {
                 val origin = watchableSetOf(4, 5)
                 val dest = watchableSetOf(6)
                 bind(origin, dest)
-                delay(50) // allow 4, 5 to arrive
+                // Binding hasn't arrived so wait for it
+                watch(dest) { changes += it }
+                changes.expect(SetChange.Initial(setOf(4, 5)))
                 dest.use {
                     remove(5)
                 }
@@ -93,15 +104,17 @@ class BindSetTest {
             val origin = watchableSetOf(4, 5)
             val dest = watchableSetOf(6)
             bind(origin, dest)
+            watch(dest) { changes += it }
+            changes.expect(SetChange.Initial(setOf(4, 5)))
             origin.use {
                 addAll(listOf(8, 7))
             }
-            delay(50)
+            changes.expect(SetChange.Add(8), SetChange.Add(7))
             dest.unbind()
             origin.use {
                 remove(5)
             }
-            delay(50)
+            changes.expectNone()
             assertEquals(setOf(4, 5, 7, 8), dest.get())
         }
     }

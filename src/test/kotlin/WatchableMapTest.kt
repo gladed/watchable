@@ -14,23 +14,9 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.Change
-import io.gladed.watchable.MutableWatchable
-import io.gladed.watchable.WatchableMap
-import io.gladed.watchable.bind
-import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.yield
-import org.hamcrest.CoreMatchers.startsWith
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThat
 import org.junit.Rule
 import org.junit.Test
 import kotlin.system.measureTimeMillis
@@ -72,7 +58,7 @@ class WatchableMapTest : CoroutineScope {
 //    }
 
     @Test fun changes() {
-        val count = 1000
+        val count = 100000
         val elapsed = measureTimeMillis {
             runToEnd {
                 iterateMutable(
@@ -81,51 +67,12 @@ class WatchableMapTest : CoroutineScope {
                     watchableMapOf(),
                     modifications,
                     { this[maxKey + 1] = "end" },
-                    chooser
+                    chooser,
+                    count
                 )
             }
         }
         // With sync: 31 micros for 100k iters
         log("$count in $elapsed ms. ${elapsed * 1000 / count } μs per iteration.")
     }
-}
-
-suspend fun <M : T, T, C : Change<T>> iterateMutable(
-    scope: CoroutineScope,
-    one: MutableWatchable<M, T, C>,
-    two: MutableWatchable<M, T, C>,
-    mods: List<M.() -> Unit>,
-    closer: M.() -> Unit,
-    chooser: Chooser,
-    count: Int = 1000) {
-
-    scope.bind(one, two)
-    scope.watch(two) {
-        scope.launch {
-            if (0 == chooser(10)) two.get()
-        }
-    }
-
-    (0 until count).map {
-        scope.launch {
-            one.use {
-                chooser(mods)!!(this)
-            }
-        }
-    }.joinAll()
-
-    println("----sending closer----")
-    one.use { closer() }
-
-    scope.watch(two) {
-        scope.launch {
-            if (one.get() == two.get()) {
-                println("DONE, cancelling")
-                scope.coroutineContext.cancel()
-                yield()
-            }
-        }
-    }
-    delay(3000)
-    assertEquals(one.get(), two.get())
 }
