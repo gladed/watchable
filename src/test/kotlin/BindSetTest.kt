@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.bind
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.yield
@@ -27,7 +28,7 @@ class BindSetTest {
         runThenCancel {
             val origin = watchableSetOf(5)
             val dest = watchableSetOf(6)
-            dest.bind(origin)
+            bind(origin, dest)
             delay(50)
             assertEquals(setOf(5), dest.get())
         }
@@ -37,7 +38,7 @@ class BindSetTest {
         runThenCancel {
             val origin = watchableSetOf(4, 5)
             val dest = watchableSetOf(6)
-            dest.bind(origin)
+            bind(origin, dest)
             origin.use {
                 addAll(listOf(8, 7))
                 remove(5)
@@ -59,7 +60,7 @@ class BindSetTest {
             runThenCancel {
                 val origin = watchableSetOf(4, 5)
                 val dest = watchableSetOf(6)
-                dest.bind(origin)
+                bind(origin, dest)
                 dest.use {
                     add(7)
                 }
@@ -75,7 +76,7 @@ class BindSetTest {
             runThenCancel {
                 val origin = watchableSetOf(4, 5)
                 val dest = watchableSetOf(6)
-                dest.bind(origin)
+                bind(origin, dest)
                 delay(50) // allow 4, 5 to arrive
                 dest.use {
                     remove(5)
@@ -91,7 +92,7 @@ class BindSetTest {
         runThenCancel {
             val origin = watchableSetOf(4, 5)
             val dest = watchableSetOf(6)
-            dest.bind(origin)
+            bind(origin, dest)
             origin.use {
                 addAll(listOf(8, 7))
             }

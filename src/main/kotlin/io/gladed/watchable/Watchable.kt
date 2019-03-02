@@ -19,6 +19,7 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.newSingleThreadContext
 
 /**
@@ -31,36 +32,30 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
 
     /**
      * Receive lists of changes in [func] for all changes to this [Watchable] (starting with its initial state)
-     * until this [Watchable]'s scope completes OR the caller's watchable scope completes OR the returned [Job]
-     * is cancelled.
+     * until this [Watchable]'s scope completes OR [scope] completes OR the returned [Job] is cancelled.
      */
-    suspend fun watchBatches(
-        /** The block to invoke within this [CoroutineScope] whenever a change occurs. */
-        func: suspend (List<C>) -> Unit
+    fun watchBatches(
+        /** Scope to use while watching. */
+        scope: CoroutineScope,
+        /** The block to invoke within this [scope] whenever a change occurs. */
+        func: (List<C>) -> Unit
     ): Job
 
     /**
-     * Receive individual changes in [func] for all changes to this [Watchable] (starting with its initial state)
-     * until this [Watchable]'s scope completes OR the caller's watchable scope completes OR the returned [Job]
-     * is cancelled.
+     * Receive individual changes in [func] for all changes to this active [Watchable] (starting with its initial state)
+     * until this [Watchable]'s scope completes OR [scope] completes OR the returned [Job] is cancelled.
      */
-    suspend fun watch(
+    fun watch(
+        scope: CoroutineScope,
         /** The block to invoke within this [CoroutineScope] whenever a change occurs. */
-        func: suspend (C) -> Unit
+        func: (C) -> Unit
     ): Job =
-        watchBatches { changes ->
+        watchBatches(scope) { changes ->
             for (change in changes) {
                 if (coroutineContext.isActive) func(change) else break
             }
         }
-
-    /** Return true if this [Watchable]'s scope is still active, allowing new [watch] requests to succeed. */
-    fun isActive() = coroutineContext.isActive
-
-    companion object {
-        /** A dispatcher used to strictly serialize the order of changes. */
-        @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class)
-        internal val singleDispatcher = newSingleThreadContext("watchable-change")
-    }
 }
 
+fun <T, C : Change<T>> CoroutineScope.watch(watchable: Watchable<T, C>, func: (C) -> Unit): Job =
+   watchable.watch(this, func)

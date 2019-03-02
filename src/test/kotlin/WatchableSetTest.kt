@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.bind
+import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -43,7 +45,7 @@ class WatchableSetTest : CoroutineScope {
         runToEnd {
             val set = watchableSetOf(1, 2)
             val set2 = watchableSetOf<Int>()
-            set2.bind(set)
+            bind(set, set2)
             val set3 = set2.readOnly()
             assertThat(set.toString(), startsWith("WatchableSet("))
             assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
@@ -57,9 +59,11 @@ class WatchableSetTest : CoroutineScope {
                 add(maxValue + 1)
                 log("Set size: $size") // coverage
             }
-            set3.watch {
-                if (set.get() == set3.get()) {
-                    coroutineContext.cancel()
+            watch(set3) {
+                launch {
+                    if (set.get() == set3.get()) {
+                        coroutineContext.cancel()
+                    }
                 }
             }
             delay(2000)

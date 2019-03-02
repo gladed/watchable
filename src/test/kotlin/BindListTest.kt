@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.bind
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.delay
 import org.junit.Assert.assertEquals
@@ -27,7 +28,7 @@ class BindListTest {
         runThenCancel {
             val origin = watchableListOf(5)
             val dest = watchableListOf(6)
-            dest.bind(origin)
+            bind(origin, dest)
             delay(50)
             assertEquals(listOf(5), dest.get())
         }
@@ -38,7 +39,7 @@ class BindListTest {
             val origin = watchableListOf(4, 5)
             val dest = watchableListOf(6)
             assertFalse(dest.isBound())
-            dest.bind(origin)
+            bind(origin, dest)
             assertTrue(dest.isBound())
             origin.use {
                 addAll(listOf(8, 7))
@@ -60,7 +61,7 @@ class BindListTest {
             runThenCancel {
                 val origin = watchableListOf(4, 5)
                 val dest = watchableListOf(6)
-                dest.bind(origin)
+                bind(origin, dest)
                 dest.use { add(5) }
                 fail("Modification should not have been permitted")
             }
@@ -75,7 +76,7 @@ class BindListTest {
             val dest = watchableListOf(6)
 
             println("Binding $dest to $origin")
-            dest.bind(origin)
+            bind(origin, dest)
             origin.use { addAll(listOf(8, 7)) }
             delay(50)
             dest.unbind()

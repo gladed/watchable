@@ -15,6 +15,8 @@
  */
 
 import io.gladed.watchable.ListChange
+import io.gladed.watchable.bind
+import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -50,7 +52,7 @@ class WatchableListTest : CoroutineScope {
         runToEnd {
             val list = watchableListOf(1, 2, 3)
             val list2 = watchableListOf<Int>()
-            list2.bind(list)
+            bind(list, list2)
             val list3 = list2.readOnly()
 
             assertThat(list.toString(), startsWith("WatchableList("))
@@ -71,9 +73,11 @@ class WatchableListTest : CoroutineScope {
                 add(maxValue + 1)
             }
 
-            list3.watch {
-                if (list3.get() == list.get()) {
-                    coroutineContext.cancel()
+            watch(list3) {
+                launch {
+                    if (list3.get() == list.get()) {
+                        coroutineContext.cancel()
+                    }
                 }
             }
             delay(2000)
@@ -96,7 +100,7 @@ class WatchableListTest : CoroutineScope {
     @Test fun clear() {
         runThenCancel {
             val list = watchableListOf(3, 4)
-            list.watch {
+            watch(list) {
                 log("Receive $it")
                 launch {
                     changes.send(it)

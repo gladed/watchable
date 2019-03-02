@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.bind
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.yield
@@ -27,7 +28,7 @@ class BindMapTest {
         runThenCancel {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
-            dest.bind(origin)
+            bind(origin, dest)
             delay(50)
             assertEquals(mapOf(5 to "5"), dest)
         }
@@ -37,7 +38,7 @@ class BindMapTest {
         runThenCancel {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
-            dest.bind(origin)
+            bind(origin, dest)
             origin.use {
                 this[7] = "7"
                 this -= 5
@@ -57,7 +58,7 @@ class BindMapTest {
             runThenCancel {
                 val origin = watchableMapOf(5 to "5")
                 val dest = watchableMapOf(6 to "6")
-                dest.bind(origin)
+                bind(origin, dest)
                 dest.use { put(7, "7") }
                 fail("Modification should not have been permitted")
             }
@@ -71,7 +72,7 @@ class BindMapTest {
             runThenCancel {
                 val origin = watchableMapOf(5 to "5")
                 val dest = watchableMapOf(6 to "6")
-                dest.bind(origin)
+                bind(origin, dest)
                 delay(50)
                 dest.use {
                     remove(5)
@@ -87,7 +88,7 @@ class BindMapTest {
         runThenCancel {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
-            dest.bind(origin)
+            bind(origin, dest)
             origin.use {
                 putAll(listOf(8 to "8", 7 to "7"))
             }

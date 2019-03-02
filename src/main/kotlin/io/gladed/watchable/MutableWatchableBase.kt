@@ -22,6 +22,7 @@ import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -110,17 +111,15 @@ abstract class MutableWatchableBase<M: T, T, C : Change<T>> : MutableWatchable<M
         }
     }
 
-    override suspend fun watchBatches(func: suspend (List<C>) -> Unit): Job {
-        // Simultaneously open the subscription and get the initial change set.
-        val (initial, subscription) = mutableMutex.withLock {
-            (immutable ?: mutable.toImmutable().also { immutable = it }).toInitialChange() to
-                channel.openSubscription()
-        }
+    override fun watchBatches(scope: CoroutineScope, func: (List<C>) -> Unit): Job {
+        if (!isActive) throw IllegalStateException("Cannot watch an inactive watchable")
+        return scope.launch {
+            // Simultaneously open the subscription and get the initial change set.
+            val (initial, subscription) = mutableMutex.withLock {
+                (immutable ?: mutable.toImmutable().also { immutable = it }).toInitialChange() to
+                    channel.openSubscription()
+            }
 
-        // TODO: There is probably a problem with scopes here, let's make sure tests detect it.
-        // Create an entirely new child scope within which we can launch processing of changes.
-        // CoroutineScope(callerCoroutineContext()).
-        return launch {
             // Deliver initial NOW and follow up with all subsequent changes.
             func(listOf(initial))
             subscription.consumeBatched { changes ->
@@ -138,28 +137,36 @@ abstract class MutableWatchableBase<M: T, T, C : Change<T>> : MutableWatchable<M
     /** True if current processing a change from the watchable to which this object is bound. */
     private var isOnBoundChange: Boolean = false
 
-    override val boundTo: Watchable<*, *>? = binding?.other
+    override val boundTo get() = binding?.other
 
-    override suspend fun bind(other: Watchable<T, C>) {
+    override fun bind(scope: CoroutineScope, other: Watchable<T, C>) {
         if (binding != null) throw IllegalStateException("Object already bound")
 
-        // Chase up the parent stack
+        // Chase up the parent stack to make sure it's not circular
         var parent = other as? Bindable<*, *>
         while (parent != null) {
             if (parent === this) throw IllegalStateException("Circular binding not permitted")
             parent = parent.boundTo as? Bindable<*, *>
         }
 
-        binding = Binding(other, other.watchBatches {
-            mutableMutex.withLock {
-                isOnBoundChange = true
-                immutable = null
-                for (change in it) {
-                    mutable.applyBoundChange(change)
+        // Start watching
+        val job = other.watchBatches(scope) {
+            launch {
+                println("Receiving $it")
+                // TODO: RACE, two launches might run at once and then changes are out of order.
+                mutableMutex.withLock {
+                    isOnBoundChange = true
+                    for (change in it) {
+                        mutable.applyBoundChange(change)
+                    }
+                    deliverChanges()
+                    isOnBoundChange = false
                 }
-                isOnBoundChange = false
             }
-        })
+        }
+
+        // Store the binding
+        binding = Binding(other, job)
     }
 
     override fun unbind() {

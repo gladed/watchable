@@ -26,7 +26,7 @@ interface Bindable<T, C : Change<T>> : CoroutineScope {
      * Binds this unbound object so that when [other] changes, it is updated accordingly. This object must not be
      * modified while bound.
      */
-    suspend fun bind(other: Watchable<T, C>)
+    fun bind(scope: CoroutineScope, other: Watchable<T, C>)
 
     /** Cancel any existing binding that exists for this object. */
     fun unbind()
@@ -36,4 +36,8 @@ interface Bindable<T, C : Change<T>> : CoroutineScope {
 
     /** The current binding, if any. */
     val boundTo: Watchable<*, *>?
+}
+
+fun <T, C: Change<T>> CoroutineScope.bind(source: Watchable<T, C>, dest: Bindable<T, C>) {
+    dest.bind(this, source)
 }

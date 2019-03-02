@@ -35,11 +35,10 @@ class WatchableValue<T>(
     override fun T.toInitialChange() = ValueChange(this, this)
 
     override fun T.applyBoundChange(change: ValueChange<T>) {
-        mutable = change.newValue
+        replace(change.newValue)
     }
 
     override fun replace(newValue: T) {
-        println("Changing to $newValue")
         val oldValue = mutable
         mutable = newValue
         changes += listOf(ValueChange(oldValue, newValue))

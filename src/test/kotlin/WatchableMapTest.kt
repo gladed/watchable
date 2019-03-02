@@ -14,6 +14,8 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.bind
+import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -79,7 +81,7 @@ class WatchableMapTest : CoroutineScope {
     )
 
     @Test fun changes() {
-        val count = 100000
+        val count = 1000
         val elapsed = measureTimeMillis {
             runToEnd {
                 val map = watchableMapOf(1 to "1")
@@ -87,7 +89,7 @@ class WatchableMapTest : CoroutineScope {
 
                 // Create a second map which is bound to the first map
                 val map2 = watchableMapOf<Int, String>()
-                map2.bind(map)
+                bind(map, map2)
 
                 assertThat(map2.readOnly().toString(), startsWith("ReadOnlyWatchableMap("))
 
@@ -102,11 +104,12 @@ class WatchableMapTest : CoroutineScope {
                     }
                 }
 
-                map2.watch {
+                watch(map2) {
                     // About every 10 changes, peek at the original map
-                    if (0 == chooser(10)) map.get()
+                    launch {
+                        if (0 == chooser(10)) map.get()
+                    }
                 }
-                // TODO: deadlock in map.watch { map.get() }!!! Invoke watch OUTSIDE of mutex please!
 
                 // Make a bunch of random modifications
                 (0 until count).map {
@@ -123,10 +126,12 @@ class WatchableMapTest : CoroutineScope {
                 }
 
                 // Watch the bound map until it aligns with the original
-                map2.watch {
-                    // Wait for map3 to reach equality with map
-                    if (map2.get() == map.get()) {
-                        coroutineContext.cancel()
+                watch(map2) {
+                    launch {
+                        // Wait for map3 to reach equality with map
+                        if (map2.get() == map.get()) {
+                            coroutineContext.cancel()
+                        }
                     }
                 }
                 // Give the above time to wrap up, if it doesn't, assert on the reason:
