@@ -26,29 +26,22 @@ class ChangeWatcherRule<C> : TestRule, CoroutineScope {
     private val changes = Channel<C>(Channel.UNLIMITED)
 
     operator fun plusAssign(change: C) {
-        log("$change")
+        log("Change: $change")
         launch {
             changes.send(change)
         }
     }
 
-    suspend fun expect(change: C, timeout: Long = 250) {
+    suspend fun expect(vararg expected: C, timeout: Long = 250) {
+        val remaining = expected.toMutableList()
         val result = withTimeoutOrNull(timeout) {
-            assertEquals(change, changes.receive())
+            while (remaining.isNotEmpty()) {
+                assertEquals(remaining.first(), changes.receive())
+                remaining.removeAt(0)
+            }
         }
         if (result == null) {
-            fail("Never received $change in $timeout")
-        }
-    }
-
-    suspend fun expectAny(timeout: Long = 250): C {
-        val result = withTimeout(timeout) {
-            changes.receive()
-        }
-        if (result == null) {
-            throw AssertionError("Received nothing")
-        } else {
-            return result
+            fail("Never received ${remaining.first()} in ${timeout}ms")
         }
     }
 

@@ -38,7 +38,7 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
         /** Scope to use while watching. */
         scope: CoroutineScope,
         /** The block to invoke within this [scope] whenever a change occurs. */
-        func: (List<C>) -> Unit
+        func: suspend (List<C>) -> Unit
     ): Job
 
     /**

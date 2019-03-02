@@ -14,6 +14,9 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.Change
+import io.gladed.watchable.MutableWatchable
+import io.gladed.watchable.WatchableMap
 import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
@@ -23,6 +26,8 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
@@ -38,108 +43,89 @@ class WatchableMapTest : CoroutineScope {
     private val chooser = Chooser(0) // Stable seed makes tests repeatable
     private val maxKey = 500
 
-    private val modifications = listOf<MutableMap<Int, String>.(Chooser) -> String>(
+    private val modifications = listOf<MutableMap<Int, String>.() -> Unit>(
         // Remove
-        { chooser -> chooser(keys)?.let { key: Int ->
-            val removed = remove(key)
-            "Remove(key=$key, removed=$removed)"
-        } ?: "none" },
+        { chooser(keys)?.also { remove(it) } },
 
         // Replace (by map)
-        { chooser -> chooser(keys)?.let { key: Int ->
-            val current = this[key]!!
-            val value = current + key.toString()
-            replace(key, value)
-            "Replace(key=$key, removed=$current, added=$value)"
-        } ?: "none" },
+        { chooser(keys)?.also { key -> replace(key, this[key]!! + key) } },
 
-        // Add or replace
-        { chooser ->
-            val n = chooser(maxKey)
-            val removed = this[n]
-            this[n] = n.toString()
-            if (removed == null) "Add(key=$n, added=$n)" else "Replace(key=$n, removed=$removed, added=$n)"
-        },
+        // Add/replace
+        { chooser(maxKey).also { key -> this[key] = key.toString() } },
 
         // Add or replace (again, so we get a lot of insertions)
-        { chooser ->
-            val n = chooser(maxKey)
-            val removed = this[n]
-            this[n] = n.toString()
-            if (removed == null) "Add(key=$n, added=$n)" else "Replace(key=$n, removed=$removed, added=$n)"
-        },
+        { chooser(maxKey).also { key -> this[key] = key.toString() } },
 
         // Replace (by entry)
-        { chooser ->
-            chooser(entries)?.let { entry ->
-                val removed = entry.value
-                val value = entry.value + entry.key.toString()
-                entry.setValue(entry.value + entry.key.toString())
-                "entry.Replace(key=${entry.key}, removed=$removed, added=$value)"
-            } ?: "none"
-        }
+        { chooser(entries)?.apply { setValue("$value$key") } }
     )
+
+//    TODO: Confirm a few things about the map
+//    map.use {
+//        println("Map first entry is ${entries.first()} and its hashcode is ${entries.first().hashCode()}")
+//        // Show that we can't add entries this way, only through "put"
+//        try {
+//            entries.add(entries.first())
+//        } catch (e: UnsupportedOperationException) {
+//            // Expected
+//        }
+//    }
 
     @Test fun changes() {
         val count = 1000
         val elapsed = measureTimeMillis {
             runToEnd {
-                val map = watchableMapOf(1 to "1")
-                assertThat(map.toString(), startsWith("WatchableMap("))
-
-                // Create a second map which is bound to the first map
-                val map2 = watchableMapOf<Int, String>()
-                bind(map, map2)
-
-                assertThat(map2.readOnly().toString(), startsWith("ReadOnlyWatchableMap("))
-
-                // Confirm a few things about the map
-                map.use {
-                    println("Map first entry is ${entries.first()} and its hashcode is ${entries.first().hashCode()}")
-                    // Show that we can't add entries this way, only through "put"
-                    try {
-                        entries.add(entries.first())
-                    } catch (e: UnsupportedOperationException) {
-                        // Expected
-                    }
-                }
-
-                watch(map2) {
-                    // About every 10 changes, peek at the original map
-                    launch {
-                        if (0 == chooser(10)) map.get()
-                    }
-                }
-
-                // Make a bunch of random modifications
-                (0 until count).map {
-                    launch {
-                        map.use {
-                            chooser.invoke(modifications)!!(this, chooser)
-                        }
-                    }
-                }.joinAll()
-
-                // Write a special key at the end
-                map.use {
-                    this[maxKey + 1] = "end"
-                }
-
-                // Watch the bound map until it aligns with the original
-                watch(map2) {
-                    launch {
-                        // Wait for map3 to reach equality with map
-                        if (map2.get() == map.get()) {
-                            coroutineContext.cancel()
-                        }
-                    }
-                }
-                // Give the above time to wrap up, if it doesn't, assert on the reason:
-                delay(3000)
-                assertEquals(map.get(), map2.get())
+                iterateMutable(
+                    this,
+                    watchableMapOf(),
+                    watchableMapOf(),
+                    modifications,
+                    { this[maxKey + 1] = "end" },
+                    chooser
+                )
             }
         }
         // With sync: 31 micros for 100k iters
         log("$count in $elapsed ms. ${elapsed * 1000 / count } μs per iteration.")
     }
+}
+
+suspend fun <M : T, T, C : Change<T>> iterateMutable(
+    scope: CoroutineScope,
+    one: MutableWatchable<M, T, C>,
+    two: MutableWatchable<M, T, C>,
+    mods: List<M.() -> Unit>,
+    closer: M.() -> Unit,
+    chooser: Chooser,
+    count: Int = 1000) {
+
+    scope.bind(one, two)
+    scope.watch(two) {
+        scope.launch {
+            if (0 == chooser(10)) two.get()
+        }
+    }
+
+    (0 until count).map {
+        scope.launch {
+            one.use {
+                chooser(mods)!!(this)
+            }
+        }
+    }.joinAll()
+
+    println("----sending closer----")
+    one.use { closer() }
+
+    scope.watch(two) {
+        scope.launch {
+            if (one.get() == two.get()) {
+                println("DONE, cancelling")
+                scope.coroutineContext.cancel()
+                yield()
+            }
+        }
+    }
+    delay(3000)
+    assertEquals(one.get(), two.get())
 }

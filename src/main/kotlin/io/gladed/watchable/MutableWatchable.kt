@@ -19,7 +19,7 @@ package io.gladed.watchable
 /**
  * A [Watchable] wrapping type [T] which may also be mutated in the form of an [M].
  */
-interface MutableWatchable<M: T, T, C : Change<T>> : Watchable<T, C>, Bindable<T, C> {
+interface MutableWatchable<M : T, T, C : Change<T>> : Watchable<T, C>, Bindable<T, C> {
     /**
      * Suspend until [func] can safely execute, reading and/or writing data on [M] as desired and returning
      * the result. Note: if currently bound ([isBound] returns true), attempts to modify [M] will throw.

@@ -19,10 +19,10 @@ import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
-import org.hamcrest.CoreMatchers.any
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
@@ -38,8 +38,7 @@ class BindValueTest {
             val dest = watchableValueOf(6)
             bind(origin, dest)
             watch(dest) { changes += it }
-            changes.expect(ValueChange(6, 6))
-            changes.expect(ValueChange(6, 5))
+            changes.expect(ValueChange(5, 5))
             assertEquals(5, dest.get())
         }
     }
@@ -48,10 +47,10 @@ class BindValueTest {
         runThenCancel {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
-            bind(origin, dest)
             watch(dest) { changes += it }
-            origin.set(7)
             changes.expect(ValueChange(6, 6))
+            bind(origin, dest)
+            origin.set(7)
             changes.expect(ValueChange(6, 7))
             assertEquals(7, dest.get())
         }
@@ -116,8 +115,7 @@ class BindValueTest {
             val dest = watchableValueOf(6)
             bind(origin, dest)
             watch(dest) { changes += it }
-            changes.expect(ValueChange(6, 6))
-            changes.expect(ValueChange(6, 5))
+            changes.expect(ValueChange(5, 5))
             dest.unbind()
             origin.set(7)
             changes.expectNone()
@@ -141,14 +139,13 @@ class BindValueTest {
             val dest = scope2.watchableValueOf(6)
             watch(dest) { changes += it }
             changes.expect(ValueChange(6, 6))
-            bind(origin, dest)
+            scope2.bind(origin, dest)
             changes.expect(ValueChange(6, 5))
             origin.set(7)
             changes.expect(ValueChange(5, 7))
             assertEquals(7, dest.get())
             scope2.close() // Kill the destination value's scope
             origin.set(8)
-            println("Dest should still have 7: $dest")
             changes.expectNone()
             assertEquals(7, dest.get()) // Because dest scope was killed it shouldn't receive any more updates
         }
@@ -158,11 +155,16 @@ class BindValueTest {
         runThenCancel {
             val origin = scope1.watchableValueOf(5)
             val dest = scope2.watchableValueOf(6)
-            bind(dest, origin)
+            scope2.bind(origin, dest)
             origin.set(7)
+            scope2.watch(dest) { changes += it }
+            changes.expect(ValueChange(7, 7))
+
             scope1.close() // Kill the origin value's scope
-            // Because origin scope was killed it should not pass values on to dest
+            assertFalse(origin.isActive)
+            // Because origin scope was killed it should NOT pass further values on to dest
             origin.set(8)
+            changes.expectNone()
             assertEquals(7, dest.get())
         }
     }

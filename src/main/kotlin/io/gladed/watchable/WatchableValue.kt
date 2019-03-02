@@ -30,6 +30,8 @@ class WatchableValue<T>(
 
     override var mutable: T = initial
 
+    val value: T get() = mutable
+
     override fun T.toImmutable(): T = this
 
     override fun T.toInitialChange() = ValueChange(this, this)
@@ -43,9 +45,6 @@ class WatchableValue<T>(
         mutable = newValue
         changes += listOf(ValueChange(oldValue, newValue))
     }
-
-    override suspend fun <U> use(func: suspend T.() -> U) =
-        throw UnsupportedOperationException("Use set() instead")
 
     /** Return an unmodifiable form of this [WatchableSet]. */
     fun readOnly(): ReadOnlyWatchableValue<T> = object : ReadOnlyWatchableValue<T> by this {

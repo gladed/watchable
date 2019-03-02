@@ -14,18 +14,10 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.bind
-import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
-import org.hamcrest.CoreMatchers.startsWith
-import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThat
+import kotlinx.coroutines.Job
 import org.junit.Rule
 import org.junit.Test
 
@@ -41,33 +33,20 @@ class WatchableSetTest : CoroutineScope {
         { add(chooser(maxValue)) }
     )
 
+    //            assertThat(set.toString(), startsWith("WatchableSet("))
+    //            assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
+
     @Test fun changes() {
-        runToEnd {
-            val set = watchableSetOf(1, 2)
-            val set2 = watchableSetOf<Int>()
-            bind(set, set2)
-            val set3 = set2.readOnly()
-            assertThat(set.toString(), startsWith("WatchableSet("))
-            assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
-            (0 until 10000).map {
-                launch {
-                    set.use { chooser(mods)!!(this) }
-                }
-            }.joinAll()
-            // Add something special
-            set.use {
-                add(maxValue + 1)
-                log("Set size: $size") // coverage
-            }
-            watch(set3) {
-                launch {
-                    if (set.get() == set3.get()) {
-                        coroutineContext.cancel()
-                    }
+        (0..200).forEach { i ->
+            println("\n\nITERATION $i")
+            CoroutineScope(coroutineContext + Job()).apply {
+                runToEnd {
+                    iterateMutable(this@apply,
+                        watchableSetOf(1, 2),
+                        watchableSetOf<Int>(),
+                        mods, { add(maxValue + 1) }, chooser, count = 10)
                 }
             }
-            delay(2000)
-            assertEquals(set.get(), set3.get())
         }
     }
 }
