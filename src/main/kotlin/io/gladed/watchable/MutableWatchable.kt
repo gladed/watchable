@@ -24,7 +24,7 @@ interface MutableWatchable<M : T, T, C : Change<T>> : Watchable<T, C>, Bindable<
      * Suspend until [func] can safely execute, reading and/or writing data on [M] as desired and returning
      * the result. Note: if currently bound ([isBound] returns true), attempts to modify [M] will throw.
      */
-    suspend fun <U> use(func: suspend M.() -> U): U
+    suspend fun <U> use(func: M.() -> U): U
 
     /**
      * Completely replace the contents of this watchable.

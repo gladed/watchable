@@ -22,9 +22,9 @@ import kotlin.coroutines.CoroutineContext
  * A [List] whose contents may be watched for changes.
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-class WatchableList<T>(
+class WatchableList<T> internal constructor(
     override val coroutineContext: CoroutineContext,
-    initial: Collection<T> = emptyList()
+    initial: Collection<T>
 ) : MutableWatchableBase<MutableList<T>, List<T>, ListChange<T>>(), ReadOnlyWatchableList<T> {
 
     override val mutable = object : AbstractMutableList<T>() {

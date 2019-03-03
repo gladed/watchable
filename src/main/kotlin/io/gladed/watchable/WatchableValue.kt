@@ -23,14 +23,15 @@ import kotlin.coroutines.CoroutineContext
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-class WatchableValue<T>(
+class WatchableValue<T> internal constructor(
     override val coroutineContext: CoroutineContext,
     initial: T
 ) : MutableWatchableBase<T, T, ValueChange<T>>(), ReadOnlyWatchableValue<T> {
 
     override var mutable: T = initial
 
-    val value: T get() = mutable
+    /** Direct access to the current object. */
+    override val value: T get() = mutable
 
     override fun T.toImmutable(): T = this
 
@@ -48,9 +49,8 @@ class WatchableValue<T>(
 
     /** Return an unmodifiable form of this [WatchableSet]. */
     fun readOnly(): ReadOnlyWatchableValue<T> = object : ReadOnlyWatchableValue<T> by this {
-        override fun toString() = "WatchableValue()"
+        override fun toString() = "ReadOnlyWatchableValue()"
     }
 
-    override fun toString() =
-        "WatchableValue()"
+    override fun toString() = "WatchableValue()"
 }

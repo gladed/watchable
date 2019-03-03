@@ -15,7 +15,6 @@
  */
 
 import io.gladed.watchable.ListChange
-import io.gladed.watchable.MapChange
 import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchBatches
@@ -23,15 +22,9 @@ import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
@@ -78,6 +71,21 @@ class WatchableListTest : CoroutineScope {
             list.use { clear() }
             changes.expect(ListChange.Remove(0, 3), ListChange.Remove(0, 4))
             changes.expectNone()
+        }
+    }
+
+    @Test fun replace() {
+        runToEnd {
+            val list = watchableListOf(1)
+            val list2 = watchableListOf(2)
+            bind(list, list2)
+            val list3 = list2.readOnly()
+            watch(list3) { changes += it}
+            assertThat(list.toString(), startsWith("WatchableList("))
+            assertThat(list3.toString(), startsWith("ReadOnlyWatchableList("))
+            changes.expect(ListChange.Initial(listOf(1)))
+            list.set(listOf(3))
+            changes.expect(ListChange.Remove(0, 1), ListChange.Add(0, 3))
         }
     }
 }

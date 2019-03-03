@@ -23,8 +23,10 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
+import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -103,7 +105,8 @@ class WatchableValueTest {
         runThenCancel {
             intValue = watchableValueOf(4)
             val readOnly = intValue.readOnly()
-            println("Object: $readOnly") // Coverage
+            assertThat(readOnly.toString(), startsWith("ReadOnlyWatchableValue("))
+            assertThat(intValue.toString(), startsWith("WatchableValue("))
             watch(readOnly) {
                 changes += it
             }
@@ -114,6 +117,7 @@ class WatchableValueTest {
             assertEquals(6, readOnly.get())
             changes.expect(ValueChange(4, 5))
             changes.expect(ValueChange(5, 6))
+            assertEquals(6, readOnly.value)
         }
     }
 

@@ -23,7 +23,7 @@ import kotlin.coroutines.CoroutineContext
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-class WatchableMap<K, V>(
+class WatchableMap<K, V> internal constructor(
     override val coroutineContext: CoroutineContext,
     initial: Map<K, V>
 ) : MutableWatchableBase<MutableMap<K, V>, Map<K, V>, MapChange<K, V>>(), ReadOnlyWatchableMap<K, V> {

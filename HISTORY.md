@@ -1,8 +1,10 @@
 # Version History
 
+## 0.5.3
+* Removed java synchronization and added suspending `get()` for performance and portability.
+
 ## 0.5.2
-* Make `WatchableSet` and `WatchableMap` implement `Set` and `Map`
-* Test and improve concurrent behavior.
+* Test and improve concurrent behaviors.
 
 ## 0.5.1
 

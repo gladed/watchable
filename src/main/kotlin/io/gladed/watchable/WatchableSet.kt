@@ -22,9 +22,9 @@ import kotlin.coroutines.CoroutineContext
  * A [Set] whose contents may be watched for changes.
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-class WatchableSet<T>(
+class WatchableSet<T> internal constructor(
     override val coroutineContext: CoroutineContext,
-    initial: Collection<T> = emptyList()
+    initial: Collection<T>
 ) : MutableWatchableBase<MutableSet<T>, Set<T>, SetChange<T>>(), ReadOnlyWatchableSet<T> {
 
     override val mutable = object : AbstractMutableSet<T>() {

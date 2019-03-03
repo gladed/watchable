@@ -19,17 +19,17 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlin.coroutines.coroutineContext
 
 /** Base for implementing a type that is watchable, mutable, and bindable. */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@Suppress("TooManyFunctions") // Useful
 abstract class MutableWatchableBase<M : T, T, C : Change<T>> : MutableWatchable<M, T, C> {
 
     /** The underlying mutable form of the data this object. When changes are applied, [changes] must be updated. */
@@ -68,6 +68,31 @@ abstract class MutableWatchableBase<M : T, T, C : Change<T>> : MutableWatchable<
     /** The mutex protecting to [mutable]. */
     private val mutableMutex = Mutex()
 
+    /** The current binding if any. */
+    private var binding: Binding? = null
+
+    /** True if current processing a change from the watchable to which this object is bound. */
+    private var isOnBoundChange: Boolean = false
+
+    override val boundTo get() = binding?.other
+
+    override fun watchBatches(scope: CoroutineScope, func: suspend (List<C>) -> Unit): Job {
+        if (!isActive) throw IllegalStateException("Cannot watch an inactive watchable")
+        return scope.launch {
+            // Simultaneously open the subscription and get the initial change set.
+            val (initial, subscription) = mutableMutex.withLock {
+                (immutable ?: mutable.toImmutable().also { immutable = it }).toInitialChange() to
+                    channel.openSubscription()
+            }
+
+            // Deliver initial NOW and follow up with all subsequent changes.
+            func(listOf(initial))
+            subscription.consumeEach {
+                func(it)
+            }
+        }
+    }
+
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
     protected fun <U> doChange(func: () -> U): U =
         if (boundTo != null && !isOnBoundChange) {
@@ -81,7 +106,7 @@ abstract class MutableWatchableBase<M : T, T, C : Change<T>> : MutableWatchable<
         }
     }
 
-    override suspend fun <U> use(func: suspend M.() -> U): U =
+    override suspend fun <U> use(func: M.() -> U): U =
         mutableMutex.withLock {
             // Apply mutations
             mutable.func().also {
@@ -101,7 +126,9 @@ abstract class MutableWatchableBase<M : T, T, C : Change<T>> : MutableWatchable<
     private suspend fun deliverChanges() {
         if (changes.isNotEmpty()) {
             // Clear immutable because it's now wrong
-            immutable = mutable.toImmutable() // What if we always set it
+            // There's a massive performance benefit here because we don't have
+            // to make and throw away a lot of near-identical copies.
+            immutable = null
             // Deliver and clear out changes if the channel is open
             val changeList = changes.toList()
             changes.clear()
@@ -111,31 +138,8 @@ abstract class MutableWatchableBase<M : T, T, C : Change<T>> : MutableWatchable<
         }
     }
 
-    override fun watchBatches(scope: CoroutineScope, func: suspend (List<C>) -> Unit): Job {
-        if (!isActive) throw IllegalStateException("Cannot watch an inactive watchable")
-        return scope.launch {
-            // Simultaneously open the subscription and get the initial change set.
-            val (initial, subscription) = mutableMutex.withLock {
-                (immutable ?: mutable.toImmutable().also { immutable = it }).toInitialChange() to
-                    channel.openSubscription()
-            }
-
-            // Deliver initial NOW and follow up with all subsequent changes.
-            func(listOf(initial))
-            subscription.consumeBatched(func)
-        }
-    }
-
-    /** The current binding if any. */
-    private var binding: Binding? = null
-
     /** Wrapper for a binding. */
     private class Binding(val other: Watchable<*, *>, val job: Job)
-
-    /** True if current processing a change from the watchable to which this object is bound. */
-    private var isOnBoundChange: Boolean = false
-
-    override val boundTo get() = binding?.other
 
     override fun bind(scope: CoroutineScope, other: Watchable<T, C>) {
         if (binding != null) throw IllegalStateException("Object already bound")
@@ -171,23 +175,6 @@ abstract class MutableWatchableBase<M : T, T, C : Change<T>> : MutableWatchable<
     }
 
     companion object {
-        private const val CAPACITY = 20
-
-        /** Like consumeEach, but instead of handling each item, try to get a bunch of them and pass them along. */
-        private suspend fun <T : Any> ReceiveChannel<List<T>>.consumeBatched(
-            handleItems: suspend (List<T>) -> Unit
-        ) {
-            val buffer = mutableListOf<T>()
-            while (coroutineContext.isActive) {
-                receiveOrNull()?.also { buffer.addAll(it) } ?: break
-                for (x in 2..CAPACITY) {
-                    poll()?.also { buffer.addAll(it) } ?: break
-                }
-                if (coroutineContext.isActive) {
-                    handleItems(buffer.toList())
-                }
-                buffer.clear()
-            }
-        }
+        private const val CAPACITY = 10
     }
 }

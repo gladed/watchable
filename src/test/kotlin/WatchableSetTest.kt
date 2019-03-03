@@ -14,18 +14,24 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.SetChange
+import io.gladed.watchable.bind
+import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import org.hamcrest.CoreMatchers.startsWith
+import org.junit.Assert.assertThat
 import org.junit.Rule
 import org.junit.Test
 
 class WatchableSetTest : CoroutineScope {
+    @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
 
     @Rule @JvmField val scope = ScopeRule(Dispatchers.Default)
     override val coroutineContext = scope.coroutineContext
-    private val chooser = Chooser(0) // Stable seed makes tests repeatable
+    private val chooser = Chooser(0)
     private val maxValue = 100
 
     private val mods = listOf<MutableSet<Int>.() -> Unit>(
@@ -44,6 +50,21 @@ class WatchableSetTest : CoroutineScope {
                     watchableSetOf<Int>(),
                     mods, { add(maxValue + 1) }, chooser)
             }
+        }
+    }
+
+    @Test fun replace() {
+        runToEnd {
+            val set = watchableSetOf(1)
+            val set2 = watchableSetOf(2)
+            bind(set, set2)
+            val set3 = set2.readOnly()
+            watch(set3) { changes += it}
+            assertThat(set.toString(), startsWith("WatchableSet("))
+            assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
+            changes.expect(SetChange.Initial(setOf(1)))
+            set.set(setOf(3))
+            changes.expect(SetChange.Remove(1), SetChange.Add(3))
         }
     }
 }
