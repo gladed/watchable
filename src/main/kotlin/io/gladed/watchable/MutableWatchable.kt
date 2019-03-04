@@ -46,7 +46,7 @@ interface MutableWatchable<T, M : T, C : Change<T>> : Watchable<T, C> {
      * object is updated with [apply]. This object may not be otherwise modified while bound. When this object's
      * [CoroutineScope] completes, apply is no longer invoked. Bindings may not be circular.
      */
-    fun <T2, C2: Change<T2>> bind(source: Watchable<T2, C2>, apply: M.(C2) -> Unit)
+    fun <T2, C2 : Change<T2>> bind(source: Watchable<T2, C2>, apply: M.(C2) -> Unit)
 
     /** Cancel any existing binding that exists for this object. */
     fun unbind()
