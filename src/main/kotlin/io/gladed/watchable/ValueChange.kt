@@ -18,8 +18,8 @@ package io.gladed.watchable
 
 /** Describes a change to a value. */
 data class ValueChange<T>(
-    /** The new object value. */
-    val newValue: T,
     /** The old value, or the same as [newValue] if this is the initial notification. */
-    val oldValue: T
+    val oldValue: T,
+    /** The new object value. */
+    val newValue: T
 ) : Change<T>

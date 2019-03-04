@@ -14,27 +14,20 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.MapChange
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.yield
 import org.hamcrest.CoreMatchers.startsWith
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
-import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
-import kotlin.coroutines.CoroutineContext
+import kotlin.system.measureTimeMillis
 
 class WatchableMapTest : CoroutineScope {
+    @Rule @JvmField val changes = ChangeWatcherRule<MapChange<Int, String>>()
 
     @Rule @JvmField val scope = ScopeRule(Dispatchers.Default)
     override val coroutineContext = scope.coroutineContext
@@ -42,99 +35,66 @@ class WatchableMapTest : CoroutineScope {
     private val chooser = Chooser(0) // Stable seed makes tests repeatable
     private val maxKey = 500
 
-    private val modifications = listOf<MutableMap<Int, String>.(Chooser) -> String>(
+    private val modifications = listOf<MutableMap<Int, String>.() -> Unit>(
         // Remove
-        { chooser -> chooser(keys)?.let { key: Int ->
-            val removed = remove(key)
-            "Remove(key=$key, removed=$removed)"
-        } ?: "none" },
+        { chooser(keys)?.also { remove(it) } },
 
         // Replace (by map)
-        { chooser -> chooser(keys)?.let { key: Int ->
-            val current = this[key]!!
-            val value = current + key.toString()
-            replace(key, value)
-            "Replace(key=$key, removed=$current, added=$value)"
-        } ?: "none" },
+        { chooser(keys)?.also { key -> replace(key, this[key]!! + key) } },
 
-        // Add or replace
-        { chooser ->
-            val n = chooser(maxKey)
-            val removed = this[n]
-            this[n] = n.toString()
-            if (removed == null) "Add(key=$n, added=$n)" else "Replace(key=$n, removed=$removed, added=$n)"
-        },
+        // Add/replace
+        { chooser(maxKey).also { key -> this[key] = key.toString() } },
 
         // Add or replace (again, so we get a lot of insertions)
-        { chooser ->
-            val n = chooser(maxKey)
-            val removed = this[n]
-            this[n] = n.toString()
-            if (removed == null) "Add(key=$n, added=$n)" else "Replace(key=$n, removed=$removed, added=$n)"
-        },
+        { chooser(maxKey).also { key -> this[key] = key.toString() } },
 
         // Replace (by entry)
-        { chooser ->
-            chooser(entries)?.let { entry ->
-                val removed = entry.value
-                val value = entry.value + entry.key.toString()
-                entry.setValue(entry.value + entry.key.toString())
-                "entry.Replace(key=${entry.key}, removed=$removed, added=$value)"
-            } ?: "none"
-        }
+        { chooser(entries)?.apply { setValue("$value$key") } }
     )
 
     @Test fun changes() {
+        val count = 1000
+        val elapsed = measureTimeMillis {
+            runToEnd {
+                iterateMutable(
+                    this,
+                    watchableMapOf(),
+                    watchableMapOf(),
+                    modifications,
+                    { this[maxKey + 1] = "end" },
+                    chooser,
+                    count
+                )
+            }
+        }
+        // With sync: 31 micros for 100k iters
+        log("$count in $elapsed ms. ${elapsed * 1000 / count } μs per iteration.")
+    }
+
+    @Test fun replace() {
         runToEnd {
             val map = watchableMapOf(1 to "1")
-            assertThat(map.toString(), startsWith("WatchableMap("))
-
-            // Create a second map which is bound to the first map
-            val map2 = watchableMapOf<Int, String>()
+            val map2 = watchableMapOf(2 to "2")
             map2.bind(map)
-
-            // Create a third map which is a read-only shell around the bound map
             val map3 = map2.readOnly()
+            watch(map3) { changes += it }
+            assertThat(map.toString(), startsWith("WatchableMap("))
             assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
-
-            // Confirm a few things about the map
-            map.use {
-                println("Map first entry is ${entries.first()} and its hashcode is ${entries.first().hashCode()}")
-                // Show that we can't add entries this way, only through "put"
-                try {
-                    entries.add(entries.first())
-                } catch (e: UnsupportedOperationException) {
-                    // Expected
-                }
-            }
-
-            // Make a bunch of random modifications
-            (0 until 5000).map {
-                launch {
-                    map.use {
-                        chooser.invoke(modifications)!!(this, chooser)
-                    }
-                }
-            }.joinAll()
-
-            // Write a special key at the end
-            map.use {
-                this[maxKey + 1] = "end"
-            }
-
-            // Watch the read-only map until it catches up the original map and cancel.
-            watch(map3) {
-                // Wait for map3 to reach equality with map
-                if (map3 == map) {
-                    log("map=$map")
-                    log("map2=$map3")
-                    coroutineContext.cancel()
-                }
-            }
-            // Give the above time to wrap up, if it doesn't, assert on the reason:
-            delay(2000)
-            assertEquals(map, map3)
-            assertTrue(map3 == map)
+            changes.expect(MapChange.Initial(mapOf(1 to "1")))
+            map.set(mapOf(3 to "3"))
+            changes.expect(MapChange.Remove(1, "1"), MapChange.Add(3, "3"))
         }
+    }
+
+    @Test fun noEntryMod() {
+        try {
+            runToEnd {
+                val map = watchableMapOf(1 to "1")
+                map.use {
+                    entries.add(entries.first())
+                }
+                fail("Shouldn't be able to add by entry")
+            }
+        } catch (e: UnsupportedOperationException) { }
     }
 }

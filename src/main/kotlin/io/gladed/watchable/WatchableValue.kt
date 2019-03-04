@@ -16,7 +16,6 @@
 
 package io.gladed.watchable
 
-import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -24,50 +23,34 @@ import kotlin.coroutines.CoroutineContext
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-class WatchableValue<T>(
+class WatchableValue<T> internal constructor(
     override val coroutineContext: CoroutineContext,
-    initialValue: T
-) : ReadOnlyWatchableValue<T>, Bindable<T, ValueChange<T>>, CoroutineScope {
+    initial: T
+) : MutableWatchableBase<T, T, ValueChange<T>>(), ReadOnlyWatchableValue<T> {
 
-    /** The current value of the underlying object. */
-    @Volatile override var value: T = initialValue
-        set(value) {
-            delegate.checkChange()
-            val old = field
-            field = value
-            delegate.send(listOf(ValueChange(value, old)))
-        }
+    override var mutable: T = initial
 
-    /** A delegate implementing common functions. */
-    private val delegate = object : WatchableDelegate<T, ValueChange<T>>(coroutineContext, this@WatchableValue) {
-        override val initialChange
-            get() = ValueChange(value, value)
+    /** Direct access to the current object. */
+    override val value: T get() = mutable
 
-        override fun onBoundChanges(changes: List<ValueChange<T>>) {
-            changes.forEach { change ->
-                value = change.newValue
-            }
-        }
+    override fun T.toImmutable(): T = this
+
+    override fun T.toInitialChange() = ValueChange(this, this)
+
+    override fun T.applyBoundChange(change: ValueChange<T>) {
+        replace(change.newValue)
     }
 
-    override fun CoroutineScope.watchBatches(block: (List<ValueChange<T>>) -> Unit) =
-        delegate.watchOwnerBatch(this@watchBatches, block)
+    override fun replace(newValue: T) {
+        val oldValue = mutable
+        mutable = newValue
+        changes += listOf(ValueChange(oldValue, newValue))
+    }
 
-    /** Return an unmodifiable form of this [WatchableValue]. */
+    /** Return an unmodifiable form of this [WatchableSet]. */
     fun readOnly(): ReadOnlyWatchableValue<T> = object : ReadOnlyWatchableValue<T> by this {
-        override fun toString() =
-            "ReadOnlyWatchableValue($value)"
+        override fun toString() = "ReadOnlyWatchableValue()"
     }
 
-    override val boundTo: Watchable<T, ValueChange<T>>?
-        get() = delegate.boundTo
-
-    override fun bind(other: Watchable<T, ValueChange<T>>) =
-        delegate.bind(other)
-
-    override fun unbind() =
-        delegate.unbind()
-
-    override fun toString() =
-        "WatchableValue($value)"
+    override fun toString() = "WatchableValue()"
 }

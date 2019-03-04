@@ -14,25 +14,23 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.SetChange
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.joinAll
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
 import org.hamcrest.CoreMatchers.startsWith
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
 import org.junit.Rule
 import org.junit.Test
 
 class WatchableSetTest : CoroutineScope {
+    @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
 
     @Rule @JvmField val scope = ScopeRule(Dispatchers.Default)
     override val coroutineContext = scope.coroutineContext
-    private val chooser = Chooser(0) // Stable seed makes tests repeatable
+    private val chooser = Chooser(0)
     private val maxValue = 100
 
     private val mods = listOf<MutableSet<Int>.() -> Unit>(
@@ -41,30 +39,28 @@ class WatchableSetTest : CoroutineScope {
     )
 
     @Test fun changes() {
+        CoroutineScope(coroutineContext + Job()).apply {
+            runToEnd {
+                iterateMutable(this@apply,
+                    watchableSetOf(1, 2),
+                    watchableSetOf<Int>(),
+                    mods, { add(maxValue + 1) }, chooser)
+            }
+        }
+    }
+
+    @Test fun replace() {
         runToEnd {
-            val set = watchableSetOf(1, 2)
-            val set2 = watchableSetOf<Int>()
+            val set = watchableSetOf(1)
+            val set2 = watchableSetOf(2)
             set2.bind(set)
             val set3 = set2.readOnly()
+            watch(set3) { changes += it}
             assertThat(set.toString(), startsWith("WatchableSet("))
             assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
-            (0 until 10000).map {
-                launch {
-                    set.use { chooser(mods)!!(this) }
-                }
-            }.joinAll()
-            // Add something special
-            set.use {
-                add(maxValue + 1)
-                log("Set size: $size") // coverage
-            }
-            watch(set3) {
-                if (set == set3) {
-                    coroutineContext.cancel()
-                }
-            }
-            delay(2000)
-            assertEquals(set, set3)
+            changes.expect(SetChange.Initial(setOf(1)))
+            set.set(setOf(3))
+            changes.expect(SetChange.Remove(1), SetChange.Add(3))
         }
     }
 }

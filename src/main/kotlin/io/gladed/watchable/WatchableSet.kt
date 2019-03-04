@@ -16,141 +16,72 @@
 
 package io.gladed.watchable
 
-import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 
 /**
  * A [Set] whose contents may be watched for changes.
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-class WatchableSet<T>(
+class WatchableSet<T> internal constructor(
     override val coroutineContext: CoroutineContext,
-    elements: Collection<T> = emptyList()
-) : AbstractSet<T>(), ReadOnlyWatchableSet<T>, Bindable<Set<T>, SetChange<T>> {
-    private val mutableSet = elements.toMutableSet()
+    initial: Collection<T>
+) : MutableWatchableBase<Set<T>, MutableSet<T>, SetChange<T>>(), ReadOnlyWatchableSet<T> {
 
-    /** The actual set to be used; must not be modified except through this object's accessors. */
-    @Volatile private var current: Set<T>? = elements.toMutableSet()
+    override val mutable = object : AbstractMutableSet<T>() {
+        private val real = initial.toMutableSet()
 
-    private val set: Set<T>
-        get() = current ?: synchronized(mutableSet) {
-            mutableSet.toSet().also { current = it }
-        }
+        override val size get() = real.size
 
-    private val mutator = Mutator()
-
-    override val size: Int
-        get() = set.size
-
-    override fun iterator(): Iterator<T> = set.iterator()
-
-    /**
-     * Suspend until [func] can safely execute, reading and/or writing data within the set as desired
-     * and returning [func]'s result. This [WatchableSet] must not be bound ([isBound] must return false).
-     * [func] should not itself block but simply apply changes and return.
-     */
-    fun <U> use(func: MutableSet<T>.() -> U): U =
-    // Async, execute block on the single-threaded context, join, and return result.
-        synchronized(mutableSet) {
-            useWhileSynced(func)
-        }
-
-    /** Handles a change. MUST be synchronized on mutableSet. */
-    private fun <U> useWhileSynced(block: MutableSet<T>.() -> U): U =
-        mutator.block().also {
-            mutator.deliver()
-        }
-
-    /**
-     * A mutable set which duplicates [set] into [mutableSet] if a change is made, and delivers changes
-     * made to the delegate.
-     */
-    private inner class Mutator : AbstractMutableSet<T>() {
-        val changes = mutableListOf<SetChange<T>>()
-
-        override val size: Int
-            get() = mutableSet.size
-
-        fun deliver() {
-            // If there was a change swap it into set
-            if (changes.isNotEmpty()) {
-                // Assign the local copy
-                current = null
-                delegate.send(changes)
-                changes.clear()
+        override fun add(element: T) = doChange {
+            real.add(element).also { success ->
+                if (success) changes.add(SetChange.Add(element))
             }
         }
 
-        override fun add(element: T): Boolean {
-            delegate.checkChange()
-            return mutableSet.add(element).also {
-                if (it) {
-                    changes.add(SetChange.Add(element))
-                }
-            }
-        }
+        override fun iterator() = object : MutableIterator<T> {
+            val realIterator: MutableIterator<T> = real.iterator()
 
-        override fun iterator(): MutableIterator<T> {
-            return object : MutableIterator<T> {
-                val underlying: MutableIterator<T> = mutableSet.iterator()
+            /** A cache of the prior return from [next]. */
+            var last: T? = null
 
-                /** A cache of the prior return from [next]. */
-                var last: T? = null
+            override fun hasNext() = realIterator.hasNext()
 
-                override fun hasNext() = underlying.hasNext()
+            override fun next() = realIterator.next().also { last = it }
 
-                override fun next() = underlying.next().also { last = it }
-
-                override fun remove() {
-                    delegate.checkChange()
-                    underlying.remove()
-                    changes.add(SetChange.Remove(last ?: throw IllegalStateException("No last element")))
+            override fun remove() {
+                doChange {
+                    realIterator.remove()
+                    // Last cannot be null if remove() succeeded
+                    changes.add(SetChange.Remove(last!!))
                 }
             }
         }
     }
 
-    /** A delegate implementing common functions. */
-    private val delegate = object : WatchableDelegate<Set<T>, SetChange<T>>(coroutineContext, this@WatchableSet) {
-        override val initialChange
-            get() = SetChange.Initial(set.toSet())
+    override fun MutableSet<T>.toImmutable() = toSet()
 
-        override fun onBoundChanges(changes: List<SetChange<T>>) {
-            synchronized(mutableSet) {
-                useWhileSynced {
-                    changes.forEach { change ->
-                        when (change) {
-                            is SetChange.Initial -> {
-                                clear()
-                                addAll(change.initial)
-                            }
-                            is SetChange.Add -> add(change.added)
-                            is SetChange.Remove -> remove(change.removed)
-                        }
-                    }
-                }
+    override fun Set<T>.toInitialChange() = SetChange.Initial(this)
+
+    override fun MutableSet<T>.applyBoundChange(change: SetChange<T>) {
+        when (change) {
+            is SetChange.Initial -> {
+                clear()
+                addAll(change.initial)
             }
+            is SetChange.Add -> add(change.added)
+            is SetChange.Remove -> remove(change.removed)
         }
     }
 
-    override val boundTo: Watchable<Set<T>, SetChange<T>>?
-        get() = delegate.boundTo
-
-    override fun CoroutineScope.watchBatches(block: (List<SetChange<T>>) -> Unit) =
-        delegate.watchOwnerBatch(this@watchBatches, block)
-
-    override fun bind(other: Watchable<Set<T>, SetChange<T>>) = delegate.bind(other)
-
-    override fun unbind() = delegate.unbind()
+    override fun replace(newValue: Set<T>) {
+        mutable.clear()
+        mutable.addAll(newValue)
+    }
 
     /** Return an unmodifiable form of this [WatchableSet]. */
     fun readOnly(): ReadOnlyWatchableSet<T> = object : ReadOnlyWatchableSet<T> by this {
-        override fun equals(other: Any?) = set == other
-        override fun hashCode() = set.hashCode()
-        override fun toString() = "ReadOnlyWatchableSet($set})"
+        override fun toString() = "ReadOnlyWatchableSet()"
     }
 
-    override fun equals(other: Any?) = set == other
-    override fun hashCode() = set.hashCode()
-    override fun toString() = "WatchableSet($set})"
+    override fun toString() = "WatchableSet()"
 }

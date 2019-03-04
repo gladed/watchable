@@ -21,10 +21,14 @@ import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
+import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.Executors
 
@@ -36,120 +40,121 @@ class WatchableValueTest {
     private val scope = LocalScope(dispatcher)
 
     private lateinit var intValue: WatchableValue<Int>
+    @Rule @JvmField val changes = ChangeWatcherRule<ValueChange<Int>>()
 
-    @Test fun watchTest() {
-        var received = -1
+    @Test fun simple() {
         runThenCancel {
             intValue = watchableValueOf(5)
             watch(intValue) {
                 log("Updating received with $it, was ${it.oldValue}")
-                received = it.newValue
+                changes += it
             }
-            delay(50)
-            assertEquals(5, received)
-            intValue.value = 17
-            delay(50)
-            assertTrue(intValue.isActive())
-        }
-        assertEquals(17, received)
-
-        intValue.value = 88
-        assertFalse(intValue.isActive())
-        runBlocking {
-            delay(50)
-            assertEquals(17, received) // Scope closed so no more updates
+            changes.expect(ValueChange(5, 5))
+            intValue.set(17)
+            assertTrue(intValue.isActive)
+            changes.expect(ValueChange(5, 17))
         }
     }
 
-    @Test fun noFreeze() {
-        try {
-            runBlocking {
-                val value = watchableValueOf(5)
-                watch(value) { }
-                // The only way out. If we don't throw, runBlocking halts forever waiting for the internal
-                // channel to close.
-                throw Error("must throw")
-            }
-        } catch (e: Error) { }
-    }
-
-    @Test fun setSameValue() {
-        val received = mutableListOf<ValueChange<Int>>()
+    @Test fun noCallbackAfterScopeClose() {
         runThenCancel {
             intValue = watchableValueOf(5)
             watch(intValue) {
-                received.add(it)
+                changes += it
             }
-            intValue.value = 5
-            delay(50)
-            // Both announcements, value is NOT compared for equality
-            assertEquals(listOf(5, 5), received.map { it.newValue })
+            changes.expect(ValueChange(5, 5))
         }
-        println(intValue)
+
+        runThenCancel {
+            // intValue can still be set
+            intValue.set(88)
+            assertEquals(88, intValue.get())
+            // But, it's not active
+            assertFalse(intValue.isActive)
+            // And it generates no changes
+            changes.expectNone()
+        }
+    }
+
+    @Test fun noWatchAfterScopeClose() {
+        runThenCancel {
+            intValue = watchableValueOf(5)
+        }
+
+        try {
+            runThenCancel {
+                watch(intValue) { }
+            }
+        } catch (e: IllegalStateException) { }
+    }
+
+    @Test fun setSameValue() {
+        runThenCancel {
+            intValue = watchableValueOf(5)
+            watch(intValue) {
+                changes += it
+            }
+            changes.expect(ValueChange(5, 5))
+            intValue.set(5)
+            // Both announcements because value is NOT compared for equality
+            changes.expect(ValueChange(5, 5))
+        }
     }
 
     @Test fun watchUnmodifiable() {
-        val received = mutableListOf<ValueChange<Int>>()
         runThenCancel {
-            intValue = watchableValueOf(5)
+            intValue = watchableValueOf(4)
             val readOnly = intValue.readOnly()
-            println("Object: $readOnly") // Coverage
+            assertThat(readOnly.toString(), startsWith("ReadOnlyWatchableValue("))
+            assertThat(intValue.toString(), startsWith("WatchableValue("))
             watch(readOnly) {
-                received.add(it)
+                changes += it
             }
-            intValue.value = 6
+            changes.expect(ValueChange(4, 4))
+            intValue.set(5)
+            assertEquals(5, readOnly.get())
+            intValue.set(6)
+            assertEquals(6, readOnly.get())
+            changes.expect(ValueChange(4, 5))
+            changes.expect(ValueChange(5, 6))
             assertEquals(6, readOnly.value)
-            delay(50)
         }
-        println(received)
-        assertEquals(listOf(5, 6), received.map { it.newValue })
     }
 
     @Test fun watchFromOtherScope() {
         runBlocking {
-            var received = -1
             intValue = scope.watchableValueOf(5)
             watch(intValue) {
-                log("received $it")
-                received = it.newValue
+                changes += it
             }
-            delay(50)
-            assertEquals(5, received)
-            intValue.value = 17
-            delay(50)
-            assertEquals(17, received)
+            changes.expect(ValueChange(5, 5))
+            intValue.set(17)
+            changes.expect(ValueChange(5, 17))
 
             // Shut down the other scope
             scope.coroutineContext.cancel()
-            assertFalse(intValue.isActive())
-            delay(50)
-            intValue.value = 88
-            delay(50)
-
-            assertEquals(17, received) // Scope closed so no more updates
+            assertFalse(intValue.isActive)
+            intValue.set(88)
+            changes.expectNone()
         }
     }
 
     @Test fun watchOnOtherScope() {
-        var received = -1
         runThenCancel {
             intValue = watchableValueOf(5)
             scope.watch(intValue) {
-                received = it.newValue
+                changes += it
             }
-            delay(50)
-            assertEquals(5, received)
-            intValue.value = 17
-            delay(50)
-            assertEquals(17, received)
+            changes.expect(ValueChange(5, 5))
+            intValue.set(17)
+            changes.expect(ValueChange(5, 17))
 
             // Shut down the other scope
             scope.coroutineContext.cancel()
-            intValue.value = 88
-            delay(50)
+            assertTrue(intValue.isActive) // Active, but we will not receive stuff
+            intValue.set(88)
+            changes.expectNone()
         }
-        assertEquals(17, received) // Scope closed so there will have been no more updates
-        assertFalse(intValue.isActive())
     }
 
     companion object {

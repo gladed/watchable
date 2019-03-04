@@ -1,10 +1,10 @@
-[ ![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.5.2) ](https://bintray.com/gladed/watchable/watchable/0.5.2/link)
+[ ![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.5.3) ](https://bintray.com/gladed/watchable/watchable/0.5.3/link)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=gladed_watchable&metric=alert_status)](https://sonarcloud.io/dashboard?id=gladed_watchable)
 [![CircleCI](https://circleci.com/gh/gladed/watchable.svg?style=svg)](https://circleci.com/gh/gladed/watchable)
 [![CodeCov](https://codecov.io/github/gladed/watchable/coverage.svg?branch=master)](https://codecov.io/github/gladed/watchable)
 [![detekt](https://img.shields.io/badge/code%20style-%E2%9D%A4-FF4081.svg)](https://arturbosch.github.io/detekt/)
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.3.21-blue.svg)](https://kotlinlang.org/)
-[![API Docs](https://img.shields.io/badge/API_Docs-0.5.2-purple.svg)](https://gladed.github.io/watchable/0.5.2/io.gladed.watchable/)
+[![API Docs](https://img.shields.io/badge/API_Docs-0.5.3-purple.svg)](https://gladed.github.io/watchable/0.5.3/io.gladed.watchable/)
 
 # Watchable
 
@@ -15,16 +15,14 @@ This library provides listenable data structures using [Kotlin coroutines](https
 val set = watchableSetOf(1, 2)
 
 // Start watching the set for changes
-watch(set) {
-    println("Got $it")
-}
+watch(set) { println("Got $it") }
 
-// Make a modification which will notify watchers
+// ...Later, make a modification which will notify watchers
 set.use { add(3) }
 
 // Output:
-//   Got Initial(initial=[1, 2])
-//   Got Add(added=3)
+//   Got SetChange.Initial(initial=[1, 2])"
+//   Got SetChange.Add(added=3)
 ```
 
 ## Why?
@@ -45,65 +43,86 @@ repositories {
 }
 
 dependencies {
-    compile 'io.gladed:watchable:0.5.2'
+    compile 'io.gladed:watchable:0.5.3'
 }
 ```
 
 # Features
 
-## Watch
+## Data Types
 
-`WatchableList`, `WatchableSet`, `WatchableMap` wrap the associated types. `WatchableValue` wraps single object values of any type.
+`WatchableList`, `WatchableSet`, `WatchableMap` allow access to wrapped List, Set, and Map data. `WatchableValue` wraps a single object value of any type.
 
-You can watch for changes on these objects from the same or a different CoroutineScope with `CoroutineScope.watch(watchable) { ... }`. The supplied block will receive changes according to the watchable's type, starting with an initial state and followed by any changes that occur to the original object.
+These types are created on a CoroutineScope with `watchable___Of(...)`. For example: 
 
-Every Watchable object requires a `CoroutineContext`. When the context cancels, the Watchable object will stop notifying changes and all watchers will be released.
+```kotlin
+class MyClass : CoroutineScope {
+    val list = watchableListOf(1, 2, 3)
+    val map = watchableMapOf(4 to "four")
+    val set = watchableSetOf(5.0, 6.0)
+    val value = watchableValueOf(URI.create("https://github.com"))
+```
 
-## Reading
+Each data type can be accessed, modified, watched, and bound. 
 
-`WatchableSet`, and `WatchableMap` implement Set and Map respectively and are safe to access from multiple threads. But their contents may change at any moment.
+## Accessing Data
 
-The current state of `WatchableList` may be accessed with `WatchableList.list`.
+You can obtain a read-only copy of the underlying data using `get()`. Note that `get()` may suspend for a short time while other coroutines complete modifications of the data.
 
-The current content of `WatchableValue` is accessible with `WatchableValue.value`.
+For `WatchableSet`, `WatchableList`, and `WatchableMap` the returned data is guaranteed not to change, so you can safely iterate and access it normally.
 
-## Writing
+```kotlin
+val list = watchableListOf(1, 2, 3)
+val listCopy: List<Int> = list.get()
+for (value in listCopy) {
+    println("$value")
+} // Prints "1, 2, 3"
+```
 
-Watchable objects may be modified within a special "use" block, which takes a modifiable form as its receiver:
+## Modifying Contents
+
+A `MutableWatchable` can be modified with `use`, which takes a modifiable form of the underlying data as the receiver:
+
+```kotlin
+val list = watchableListOf(1, 2)
+list.use { add(3) }
+println("${list.get()}") // Prints "1, 2, 3" 
+```  
+
+`use` always suspends until any other coroutines are done modifying the object.
+
+## Watching for Changes
+
+You can watch any `Watchable` for changes from any `CoroutineScope`.
 
 ```kotlin
 val set = watchableSetOf(1, 2)
-set.use {
-    addAll(setOf(2, 3, 4))
-    remove(1)
+set.watch { change -> 
+    println("$change") // Prints "SetChange.Initial(1, 2)"
 }
+set.use { add(3) } // Prints "SetChange.Add(3)"
 ```
-
-The `use` block is synchronized to prevent concurrent modification, so it's safe to call from any thread or scope as long as its implementation does not block. Changes are complete when `use` returns.
 
 ## Read-Only Watchable
 
-If you need pass a Watchable that can be watched, but should not be altered, call its `.readOnly()` accessor. This will return a form of the original object that does not have the `.use` method.
+You can use a `MutableWatchable`'s `.readOnly()` function to return a copy indicating it must not be changed externally. The copy may still be watched normally.
 
-## Bind
+## Binding
 
-A `bind` is just a `watch` that connects one watchable to another, so that the receiver automatically gets and applies all changes.
+A `bind` is just a `watch` that connects one watchable to another, so that the destination automatically receives all changes from an origin.
 
 ```kotlin
 val origin = listOf(4, 5).toWatchableList()
-
 val destination = watchableListOf<Int>()
 destination.bind(origin)
 watch(destination) {
-    println("Got $it")
+    println("Change: $it") // Prints "ListChange.Initial(4, 5)"
 }
-origin.use { add(6) }
-// Output:
-//   Got Initial(initial=[4, 5])
-//   Got Add(added=6)
 ```
 
-Objects can't be modified after they are bound (but they can be unbound).
+## Object Lifetime
+
+`CoroutineScope` lifetime is respected. This means a `watch` or `bind` automatically stops operating when the related scope(s) complete. No cleanup code is required.
 
 # Version History
 

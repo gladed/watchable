@@ -14,23 +14,30 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.ValueChange
+import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.fail
+import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.Executors
 
 class BindValueTest {
-    @Test fun bind() {
+    @Rule @JvmField val changes = ChangeWatcherRule<ValueChange<Int>>()
+
+    @Test fun bindTest() {
         runThenCancel {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             dest.bind(origin)
-            delay(50)
-            assertEquals(5, dest.value)
+            watch(dest) { changes += it }
+            changes.expect(ValueChange(5, 5))
+            assertEquals(5, dest.get())
         }
     }
 
@@ -38,11 +45,12 @@ class BindValueTest {
         runThenCancel {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
+            watch(dest) { changes += it }
+            changes.expect(ValueChange(6, 6))
             dest.bind(origin)
-            delay(50)
-            origin.value = 7
-            delay(50)
-            assertEquals(7, dest.value)
+            origin.set(7)
+            changes.expect(ValueChange(6, 7))
+            assertEquals(7, dest.get())
         }
     }
 
@@ -76,7 +84,7 @@ class BindValueTest {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
                 dest.bind(origin)
-                origin.bind(dest) // Circular binding
+                origin.bind(dest)
                 fail("Second bind should have thrown")
             }
         } catch (e: IllegalStateException) {
@@ -90,10 +98,9 @@ class BindValueTest {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
                 dest.bind(origin)
-                dest.value = 7
+                dest.set(7)
                 fail("Modification should not be permitted")
-                delay(50)
-                assertEquals(6, dest.value)
+                assertEquals(6, dest.get())
             }
         } catch (e: IllegalStateException) {
             // Expected
@@ -105,11 +112,12 @@ class BindValueTest {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             dest.bind(origin)
-            delay(50)
+            watch(dest) { changes += it }
+            changes.expect(ValueChange(5, 5))
             dest.unbind()
-            origin.value = 7
-            delay(50)
-            assertEquals(5, dest.value)
+            origin.set(7)
+            changes.expectNone()
+            assertEquals(5, dest.get())
         }
     }
 
@@ -124,36 +132,38 @@ class BindValueTest {
     private val scope2 = LocalScope(dispatcher2)
 
     @Test fun killDestScope() {
-        runBlocking {
+        runThenCancel {
             val origin = scope1.watchableValueOf(5)
             val dest = scope2.watchableValueOf(6)
+            watch(dest) { changes += it }
+            changes.expect(ValueChange(6, 6))
             dest.bind(origin)
-            origin.value = 7
-            delay(50)
-            println("Dest should get 7: $dest")
-            assertEquals(7, dest.value)
+            changes.expect(ValueChange(6, 5))
+            origin.set(7)
+            changes.expect(ValueChange(5, 7))
+            assertEquals(7, dest.get())
             scope2.close() // Kill the destination value's scope
-            delay(50)
-            origin.value = 8
-            delay(50)
-            println("Dest should still have 7: $dest")
-            assertEquals(7, dest.value) // Because dest scope was killed it shouldn't receive any more updates
+            origin.set(8)
+            changes.expectNone()
+            assertEquals(7, dest.get()) // Because dest scope was killed it shouldn't receive any more updates
         }
     }
 
     @Test fun killOriginScope() {
-        runBlocking {
+        runThenCancel {
             val origin = scope1.watchableValueOf(5)
             val dest = scope2.watchableValueOf(6)
             dest.bind(origin)
-            origin.value = 7
-            delay(50)
+            origin.set(7)
+            scope2.watch(dest) { changes += it }
+            changes.expect(ValueChange(7, 7))
+
             scope1.close() // Kill the origin value's scope
-            delay(50)
-            // Because origin scope was killed it should not pass values on to dest
-            origin.value = 8
-            delay(50)
-            assertEquals(7, dest.value)
+            assertFalse(origin.isActive)
+            // Because origin scope was killed it should NOT pass further values on to dest
+            origin.set(8)
+            changes.expectNone()
+            assertEquals(7, dest.get())
         }
     }
 }

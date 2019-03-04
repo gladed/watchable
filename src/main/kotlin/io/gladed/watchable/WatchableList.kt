@@ -16,129 +16,70 @@
 
 package io.gladed.watchable
 
-import kotlinx.coroutines.CoroutineScope
 import kotlin.coroutines.CoroutineContext
 
 /**
  * A [List] whose contents may be watched for changes.
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-class WatchableList<T>(
+class WatchableList<T> internal constructor(
     override val coroutineContext: CoroutineContext,
-    initialValues: Collection<T> = emptyList()
-) : ReadOnlyWatchableList<T>, Bindable<List<T>, ListChange<T>> {
+    initial: Collection<T>
+) : MutableWatchableBase<List<T>, MutableList<T>, ListChange<T>>(), ReadOnlyWatchableList<T> {
 
-    /** The internal mutable list representing the most current state. */
-    private val mutableList: MutableList<T> = initialValues.toMutableList()
+    override val mutable = object : AbstractMutableList<T>() {
+        val real = initial.toMutableList()
 
-    /** The most current list content. */
-    @Volatile private var current: List<T>? = null
+        override val size get() = real.size
 
-    override val list
-        get() = current ?: synchronized(mutableList) {
-            mutableList.toList().also { current = it }
-        }
-
-    private val mutator = Mutator()
-
-    /**
-     * Suspend until [func] can safely execute, reading and/or writing data within the list as desired
-     * and returning [func]'s result. This [WatchableList] must not be bound ([isBound] must return false).
-     * [func] should not itself block but simply apply changes and return.
-     */
-    fun <U> use(func: MutableList<T>.() -> U): U =
-        // Async, execute block on the single-threaded context, join, and return result.
-        synchronized(mutableList) {
-            useWhileSynced(func)
-        }
-
-    /** Handles a change. MUST be synchronized on mutableList. */
-    private fun <U> useWhileSynced(block: MutableList<T>.() -> U): U =
-        mutator.block().also {
-            mutator.deliver()
-        }
-
-    /**
-     * A mutable list which duplicates [list] into [mutableList] if a change is made, and delivers changes
-     * made to the delegate.
-     */
-    private inner class Mutator : AbstractMutableList<T>() {
-        val changes = mutableListOf<ListChange<T>>()
-
-        override val size: Int
-            get() = mutableList.size
-
-        fun deliver() {
-            // If there was a change swap it into list
-            if (changes.isNotEmpty()) {
-                // Assign the local copy
-                current = null
-                delegate.send(changes)
-                changes.clear()
-            }
-        }
-
-        override fun get(index: Int) = mutableList[index]
+        override fun get(index: Int) = real[index]
 
         override fun add(index: Int, element: T) {
-            delegate.checkChange()
-            mutableList.add(index, element).also {
-                changes.add(ListChange.Add(index, element))
+            doChange {
+                real.add(index, element).also {
+                    changes.add(ListChange.Add(index, element))
+                }
             }
         }
 
-        override fun removeAt(index: Int): T {
-            delegate.checkChange()
-            return mutableList.removeAt(index).also {
+        override fun removeAt(index: Int) = doChange {
+            real.removeAt(index).also {
                 changes.add(ListChange.Remove(index, it))
             }
         }
 
-        override fun set(index: Int, element: T): T {
-            delegate.checkChange()
-            return mutableList.set(index, element).also {
+        override fun set(index: Int, element: T) = doChange {
+            real.set(index, element).also {
                 changes.add(ListChange.Replace(index, it, element))
             }
         }
     }
 
-    /** A delegate implementing common functions. */
-    private val delegate = object : WatchableDelegate<List<T>, ListChange<T>>(coroutineContext, this@WatchableList) {
-        override val initialChange
-            get() = ListChange.Initial(list)
+    override fun MutableList<T>.toImmutable() = toList()
 
-        override fun onBoundChanges(changes: List<ListChange<T>>) {
-            synchronized(mutableList) {
-                useWhileSynced {
-                    changes.forEach { change ->
-                        when (change) {
-                            is ListChange.Initial<T> -> clear().also { addAll(change.initial) }
-                            is ListChange.Add<T> -> add(change.index, change.added)
-                            is ListChange.Remove<T> -> removeAt(change.index)
-                            is ListChange.Replace<T> -> set(change.index, change.added)
-                        }
-                    }
-                }
+    override fun List<T>.toInitialChange() = ListChange.Initial(this)
+
+    override fun MutableList<T>.applyBoundChange(change: ListChange<T>) {
+        when (change) {
+            is ListChange.Initial -> {
+                clear()
+                addAll(change.initial)
             }
+            is ListChange.Add -> add(change.index, change.added)
+            is ListChange.Remove -> removeAt(change.index)
+            is ListChange.Replace -> set(change.index, change.added)
         }
     }
 
-    override val boundTo: Watchable<List<T>, ListChange<T>>?
-        get() = delegate.boundTo
-
-    override fun CoroutineScope.watchBatches(block: (List<ListChange<T>>) -> Unit) =
-        delegate.watchOwnerBatch(this@watchBatches, block)
-
-    override fun bind(other: Watchable<List<T>, ListChange<T>>) =
-        delegate.bind(other)
-
-    override fun unbind() =
-        delegate.unbind()
+    override fun replace(newValue: List<T>) {
+        mutable.clear()
+        mutable.addAll(newValue)
+    }
 
     /** Return an unmodifiable form of this [WatchableList]. */
     fun readOnly(): ReadOnlyWatchableList<T> = object : ReadOnlyWatchableList<T> by this {
-        override fun toString() = "ReadOnlyWatchableList($list})"
+        override fun toString() = "ReadOnlyWatchableList(})"
     }
 
-    override fun toString() = "WatchableList($list)"
+    override fun toString() = "WatchableList()"
 }
