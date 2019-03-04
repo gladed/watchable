@@ -26,7 +26,7 @@ import kotlin.coroutines.CoroutineContext
 class WatchableMap<K, V> internal constructor(
     override val coroutineContext: CoroutineContext,
     initial: Map<K, V>
-) : MutableWatchableBase<MutableMap<K, V>, Map<K, V>, MapChange<K, V>>(), ReadOnlyWatchableMap<K, V> {
+) : MutableWatchableBase<Map<K, V>, MutableMap<K, V>, MapChange<K, V>>(), ReadOnlyWatchableMap<K, V> {
 
     /** A map that checks and reports all change attempts. */
     override val mutable = object : AbstractMutableMap<K, V>() {

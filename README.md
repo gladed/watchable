@@ -109,7 +109,7 @@ You can use a `MutableWatchable`'s `.readOnly()` function to return a copy indic
 
 ## Binding
 
-A `bind` is just a `watch` that connects one watchable to another, so that the destination automatically gets and applies all changes.
+A `bind` is just a `watch` that connects one watchable to another, so that the destination automatically receives all changes from an origin.
 
 ```kotlin
 val origin = listOf(4, 5).toWatchableList()
@@ -120,11 +120,9 @@ watch(destination) {
 }
 ```
 
-Objects cannot be modified while bound to another object.
-
 ## Object Lifetime
 
-`CoroutineScope` lifetime is respected. This means a `watch` or `bind` automatically stops when either the watched object's scope completes, or if the initiating scope completes.
+`CoroutineScope` lifetime is respected. This means a `watch` or `bind` automatically stops operating when the related scope(s) complete. No cleanup code is required.
 
 # Version History
 

@@ -25,7 +25,7 @@ import kotlin.coroutines.CoroutineContext
 class WatchableList<T> internal constructor(
     override val coroutineContext: CoroutineContext,
     initial: Collection<T>
-) : MutableWatchableBase<MutableList<T>, List<T>, ListChange<T>>(), ReadOnlyWatchableList<T> {
+) : MutableWatchableBase<List<T>, MutableList<T>, ListChange<T>>(), ReadOnlyWatchableList<T> {
 
     override val mutable = object : AbstractMutableList<T>() {
         val real = initial.toMutableList()

@@ -15,7 +15,6 @@
  */
 
 import io.gladed.watchable.SetChange
-import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import org.junit.Assert.assertEquals
@@ -30,7 +29,7 @@ class BindSetTest {
         runThenCancel {
             val origin = watchableSetOf(5)
             val dest = watchableSetOf(6)
-            bind(origin, dest)
+            dest.bind(origin)
             watch(dest) { changes += it }
             changes.expect(SetChange.Initial(setOf(5)))
             assertEquals(setOf(5), dest.get())
@@ -41,7 +40,7 @@ class BindSetTest {
         runThenCancel {
             val origin = watchableSetOf(4, 5)
             val dest = watchableSetOf(6)
-            bind(origin, dest)
+            dest.bind(origin)
             watch(dest) { changes += it }
             changes.expect(SetChange.Initial(setOf(4, 5)))
             origin.use {
@@ -69,7 +68,7 @@ class BindSetTest {
             runThenCancel {
                 val origin = watchableSetOf(4, 5)
                 val dest = watchableSetOf(6)
-                bind(origin, dest)
+                dest.bind(origin)
                 dest.use {
                     add(7)
                 }
@@ -85,7 +84,7 @@ class BindSetTest {
             runThenCancel {
                 val origin = watchableSetOf(4, 5)
                 val dest = watchableSetOf(6)
-                bind(origin, dest)
+                dest.bind(origin)
                 // Binding hasn't arrived so wait for it
                 watch(dest) { changes += it }
                 changes.expect(SetChange.Initial(setOf(4, 5)))
@@ -103,7 +102,7 @@ class BindSetTest {
         runThenCancel {
             val origin = watchableSetOf(4, 5)
             val dest = watchableSetOf(6)
-            bind(origin, dest)
+            dest.bind(origin)
             watch(dest) { changes += it }
             changes.expect(SetChange.Initial(setOf(4, 5)))
             origin.use {

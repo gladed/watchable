@@ -30,7 +30,7 @@ import kotlinx.coroutines.sync.withLock
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Suppress("TooManyFunctions") // Useful
-abstract class MutableWatchableBase<M : T, T, C : Change<T>> : MutableWatchable<M, T, C> {
+abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<T, M, C> {
 
     /** The underlying mutable form of the data this object. When changes are applied, [changes] must be updated. */
     protected abstract val mutable: M
@@ -71,10 +71,10 @@ abstract class MutableWatchableBase<M : T, T, C : Change<T>> : MutableWatchable<
     /** The current binding if any. */
     private var binding: Binding? = null
 
+    override val boundTo get() = binding?.other
+
     /** True if current processing a change from the watchable to which this object is bound. */
     private var isOnBoundChange: Boolean = false
-
-    override val boundTo get() = binding?.other
 
     override fun watchBatches(scope: CoroutineScope, func: suspend (List<C>) -> Unit): Job {
         if (!isActive) throw IllegalStateException("Cannot watch an inactive watchable")
@@ -141,22 +141,28 @@ abstract class MutableWatchableBase<M : T, T, C : Change<T>> : MutableWatchable<
     /** Wrapper for a binding. */
     private class Binding(val other: Watchable<*, *>, val job: Job)
 
-    override fun bind(scope: CoroutineScope, other: Watchable<T, C>) {
+    override fun bind(source: Watchable<T, C>) {
+        bind(source) {
+            applyBoundChange(it)
+        }
+    }
+
+    override fun <T2, C2 : Change<T2>> bind(source: Watchable<T2, C2>, apply: M.(C2) -> Unit) {
         if (binding != null) throw IllegalStateException("Object already bound")
 
         // Chase up the parent stack to make sure it's not circular
-        var parent = other as? Bindable<*, *>
+        var parent = source as? MutableWatchable<*, *, *>
         while (parent != null) {
             if (parent === this) throw IllegalStateException("Circular binding not permitted")
-            parent = parent.boundTo as? Bindable<*, *>
+            parent = parent.boundTo as? MutableWatchable<*, *, *>
         }
 
         // Start watching
-        val job = other.watchBatches(scope) {
+        val job = source.watchBatches(this) {
             use {
                 isOnBoundChange = true
                 for (change in it) {
-                    applyBoundChange(change)
+                    apply(change)
                     if (!isActive) break
                 }
                 isOnBoundChange = false
@@ -164,7 +170,7 @@ abstract class MutableWatchableBase<M : T, T, C : Change<T>> : MutableWatchable<
         }
 
         // Store the binding
-        binding = Binding(other, job)
+        binding = Binding(source, job)
     }
 
     override fun unbind() {

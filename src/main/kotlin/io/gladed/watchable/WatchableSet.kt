@@ -25,7 +25,7 @@ import kotlin.coroutines.CoroutineContext
 class WatchableSet<T> internal constructor(
     override val coroutineContext: CoroutineContext,
     initial: Collection<T>
-) : MutableWatchableBase<MutableSet<T>, Set<T>, SetChange<T>>(), ReadOnlyWatchableSet<T> {
+) : MutableWatchableBase<Set<T>, MutableSet<T>, SetChange<T>>(), ReadOnlyWatchableSet<T> {
 
     override val mutable = object : AbstractMutableSet<T>() {
         private val real = initial.toMutableSet()

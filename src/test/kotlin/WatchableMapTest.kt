@@ -14,22 +14,16 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.ListChange
 import io.gladed.watchable.MapChange
-import io.gladed.watchable.bind
 import io.gladed.watchable.watch
-import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import org.hamcrest.CoreMatchers
 import org.hamcrest.CoreMatchers.startsWith
-import org.junit.Assert
 import org.junit.Assert.assertThat
 import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
-import java.lang.UnsupportedOperationException
 import kotlin.system.measureTimeMillis
 
 class WatchableMapTest : CoroutineScope {
@@ -81,7 +75,7 @@ class WatchableMapTest : CoroutineScope {
         runToEnd {
             val map = watchableMapOf(1 to "1")
             val map2 = watchableMapOf(2 to "2")
-            bind(map, map2)
+            map2.bind(map)
             val map3 = map2.readOnly()
             watch(map3) { changes += it }
             assertThat(map.toString(), startsWith("WatchableMap("))

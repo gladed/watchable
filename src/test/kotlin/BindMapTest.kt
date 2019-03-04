@@ -15,17 +15,12 @@
  */
 
 import io.gladed.watchable.MapChange
-import io.gladed.watchable.ValueChange
-import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
-import java.lang.IllegalStateException
 
 class BindMapTest {
     @Rule @JvmField val changes = ChangeWatcherRule<MapChange<Int, String>>()
@@ -34,7 +29,7 @@ class BindMapTest {
         runThenCancel {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
-            bind(origin, dest)
+            dest.bind(origin)
             watch(dest) { changes += it }
             changes.expect(MapChange.Initial(mapOf(5 to "5")))
             assertEquals(mapOf(5 to "5"), dest.get())
@@ -46,7 +41,7 @@ class BindMapTest {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
             watch(dest) { changes += it }
-            bind(origin, dest)
+            dest.bind(origin)
             changes.expect(MapChange.Initial(mapOf(6 to "6")))
             changes.expect(MapChange.Remove(6, "6"))
             changes.expect(MapChange.Add(5, "5"))
@@ -72,7 +67,7 @@ class BindMapTest {
             runThenCancel {
                 val origin = watchableMapOf(5 to "5")
                 val dest = watchableMapOf(6 to "6")
-                bind(origin, dest)
+                dest.bind(origin)
                 dest.use { put(7, "7") }
                 fail("Modification should not have been permitted")
             }
@@ -86,7 +81,7 @@ class BindMapTest {
             runThenCancel {
                 val origin = watchableMapOf(5 to "5")
                 val dest = watchableMapOf(6 to "6")
-                bind(origin, dest)
+                dest.bind(origin)
                 dest.use {
                     remove(6)
                     remove(5)
@@ -102,7 +97,7 @@ class BindMapTest {
         runThenCancel {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
-            bind(origin, dest)
+            dest.bind(origin)
             watch(dest) { changes += it }
             changes.expect(MapChange.Initial(mapOf(5 to "5")))
             origin.use {

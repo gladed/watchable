@@ -15,7 +15,6 @@
  */
 
 import io.gladed.watchable.SetChange
-import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.CoroutineScope
@@ -39,9 +38,6 @@ class WatchableSetTest : CoroutineScope {
         { add(chooser(maxValue)) }
     )
 
-    //            assertThat(set.toString(), startsWith("WatchableSet("))
-    //            assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
-
     @Test fun changes() {
         CoroutineScope(coroutineContext + Job()).apply {
             runToEnd {
@@ -57,7 +53,7 @@ class WatchableSetTest : CoroutineScope {
         runToEnd {
             val set = watchableSetOf(1)
             val set2 = watchableSetOf(2)
-            bind(set, set2)
+            set2.bind(set)
             val set3 = set2.readOnly()
             watch(set3) { changes += it}
             assertThat(set.toString(), startsWith("WatchableSet("))

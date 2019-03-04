@@ -16,7 +16,6 @@
 
 import io.gladed.watchable.Change
 import io.gladed.watchable.MutableWatchable
-import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -56,16 +55,16 @@ fun CoroutineScope.runToEnd(block: suspend () -> Unit) {
     }
 }
 
-suspend fun <M : T, T, C : Change<T>> iterateMutable(
+suspend fun <T, M : T, C : Change<T>> iterateMutable(
     scope: CoroutineScope,
-    one: MutableWatchable<M, T, C>,
-    two: MutableWatchable<M, T, C>,
+    one: MutableWatchable<T, M, C>,
+    two: MutableWatchable<T, M, C>,
     mods: List<M.() -> Unit>,
     closer: M.() -> Unit,
     chooser: Chooser,
     count: Int = 1000) {
 
-    scope.bind(one, two)
+    two.bind(one)
     scope.watch(two) {
         scope.launch {
             if (0 == chooser(10)) two.get()

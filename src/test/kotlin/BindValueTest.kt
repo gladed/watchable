@@ -15,7 +15,6 @@
  */
 
 import io.gladed.watchable.ValueChange
-import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -35,7 +34,7 @@ class BindValueTest {
         runThenCancel {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
-            bind(origin, dest)
+            dest.bind(origin)
             watch(dest) { changes += it }
             changes.expect(ValueChange(5, 5))
             assertEquals(5, dest.get())
@@ -48,7 +47,7 @@ class BindValueTest {
             val dest = watchableValueOf(6)
             watch(dest) { changes += it }
             changes.expect(ValueChange(6, 6))
-            bind(origin, dest)
+            dest.bind(origin)
             origin.set(7)
             changes.expect(ValueChange(6, 7))
             assertEquals(7, dest.get())
@@ -59,7 +58,7 @@ class BindValueTest {
         try {
             runThenCancel {
                 val origin = watchableValueOf(5)
-                bind(origin, origin)
+                origin.bind(origin)
                 fail("Shouldn't get here")
             }
         } catch (e: IllegalStateException) { }
@@ -70,8 +69,8 @@ class BindValueTest {
             runThenCancel {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
-                bind(origin, dest)
-                bind(origin, dest)
+                dest.bind(origin)
+                dest.bind(origin)
                 fail("Second bind should have thrown")
             }
         } catch (e: IllegalStateException) {
@@ -84,8 +83,8 @@ class BindValueTest {
             runThenCancel {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
-                bind(origin, dest)
-                bind(dest, origin) // Circle
+                dest.bind(origin)
+                origin.bind(dest)
                 fail("Second bind should have thrown")
             }
         } catch (e: IllegalStateException) {
@@ -98,7 +97,7 @@ class BindValueTest {
             runBlocking {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
-                bind(origin, dest)
+                dest.bind(origin)
                 dest.set(7)
                 fail("Modification should not be permitted")
                 assertEquals(6, dest.get())
@@ -112,7 +111,7 @@ class BindValueTest {
         runThenCancel {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
-            bind(origin, dest)
+            dest.bind(origin)
             watch(dest) { changes += it }
             changes.expect(ValueChange(5, 5))
             dest.unbind()
@@ -138,7 +137,7 @@ class BindValueTest {
             val dest = scope2.watchableValueOf(6)
             watch(dest) { changes += it }
             changes.expect(ValueChange(6, 6))
-            scope2.bind(origin, dest)
+            dest.bind(origin)
             changes.expect(ValueChange(6, 5))
             origin.set(7)
             changes.expect(ValueChange(5, 7))
@@ -154,7 +153,7 @@ class BindValueTest {
         runThenCancel {
             val origin = scope1.watchableValueOf(5)
             val dest = scope2.watchableValueOf(6)
-            scope2.bind(origin, dest)
+            dest.bind(origin)
             origin.set(7)
             scope2.watch(dest) { changes += it }
             changes.expect(ValueChange(7, 7))

@@ -15,7 +15,6 @@
  */
 
 import io.gladed.watchable.ListChange
-import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchBatches
 import io.gladed.watchable.watchableListOf
@@ -78,7 +77,7 @@ class WatchableListTest : CoroutineScope {
         runToEnd {
             val list = watchableListOf(1)
             val list2 = watchableListOf(2)
-            bind(list, list2)
+            list2.bind(list)
             val list3 = list2.readOnly()
             watch(list3) { changes += it}
             assertThat(list.toString(), startsWith("WatchableList("))

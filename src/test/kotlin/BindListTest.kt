@@ -15,11 +15,11 @@
  */
 
 import io.gladed.watchable.ListChange
-import io.gladed.watchable.ValueChange
-import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
+import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
@@ -34,7 +34,7 @@ class BindListTest {
         runThenCancel {
             val origin = watchableListOf(5)
             val dest = watchableListOf(6)
-            bind(origin, dest)
+            dest.bind(origin)
             watch(dest) { changes += it }
             changes.expect(ListChange.Initial(listOf(5)))
             assertEquals(listOf(5), dest.get())
@@ -46,7 +46,7 @@ class BindListTest {
             val origin = watchableListOf(4, 5)
             val dest = watchableListOf(6)
             assertFalse(dest.isBound())
-            bind(origin, dest)
+            dest.bind(origin)
             assertTrue(dest.isBound())
             watch(dest) { changes += it }
             changes.expect(ListChange.Initial(listOf(4, 5)))
@@ -77,7 +77,7 @@ class BindListTest {
             runThenCancel {
                 val origin = watchableListOf(4, 5)
                 val dest = watchableListOf(6)
-                bind(origin, dest)
+                dest.bind(origin)
                 dest.use { add(5) }
                 fail("Modification should not have been permitted")
             }
@@ -90,7 +90,7 @@ class BindListTest {
         runThenCancel {
             val origin = watchableListOf(4, 5)
             val dest = watchableListOf(6)
-            bind(origin, dest)
+            dest.bind(origin)
             watch(dest) { changes += it }
             changes.expect(ListChange.Initial(listOf(4, 5)))
             origin.use { addAll(listOf(8, 7)) }
@@ -100,6 +100,60 @@ class BindListTest {
             origin.use { remove(5) }
             changes.expectNone()
             assertEquals(listOf(4, 5, 8, 7), dest.get())
+        }
+    }
+
+    @Test fun specialBinding() {
+        runThenCancel {
+            // Show how we can transform data types into each other
+            val origin = watchableListOf(4, 5)
+            val dest = watchableMapOf(0 to 0)
+
+            fun MutableMap<Int, Int>.increment(key: Int) {
+                val addCount = this[key]
+                when(addCount) {
+                    null -> this[key] = 1
+                    else -> this[key] = addCount + 1
+                }
+            }
+
+            fun MutableMap<Int, Int>.decrement(key: Int) {
+                val removeCount = this[key]
+                when(removeCount) {
+                    null -> remove(key) // Shouldn't happen really
+                    1 -> remove(key)
+                    else -> this[key] = removeCount - 1
+                }
+            }
+
+            dest.bind(origin) {
+                println("Handling $it")
+                when(it) {
+                    is ListChange.Initial -> {
+                        clear()
+                        for (key in it.initial) {
+                            increment(key)
+                        }
+                    }
+                    is ListChange.Add -> increment(it.added)
+                    is ListChange.Remove -> decrement(it.removed)
+                    is ListChange.Replace -> {
+                        increment(it.added)
+                        decrement(it.removed)
+                    }
+                }
+            }
+
+            yield()
+
+            origin.use {
+                add(4)
+                set(1, 6)
+            }
+
+            yield()
+
+            assertEquals(mapOf(4 to 2, 6 to 1), dest.get())
         }
     }
 }
