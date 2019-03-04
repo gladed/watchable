@@ -1,9 +1,12 @@
 # Version History
 
 ## 0.5.3
-* Removed java synchronization and added suspending `get()` for performance and portability.
+
+* Removed java synchronization and added suspending `get()` for performance and portability (#16).
+* Allow more complex `bind` cases (#17).
 
 ## 0.5.2
+
 * Test and improve concurrent behaviors.
 
 ## 0.5.1
