@@ -21,6 +21,7 @@ import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
@@ -45,14 +46,13 @@ class WatchableListTest : CoroutineScope {
 
     @Test fun changes() {
         runToEnd {
-            iterateMutable(this, watchableListOf(1, 2, 3), watchableListOf(4), mods, { add(maxValue + 1) },
-                chooser)
+            iterateMutable(watchableListOf(1, 2, 3), watchableListOf(4), mods, { add(maxValue + 1) }, chooser)
         }
     }
 
 
     @Test fun equality() {
-        runThenCancel {
+        runBlocking {
             val list = watchableListOf(1, 2, 3)
             assertEquals(list.get(), list.get())
             assertEquals(listOf(1, 2, 3), list.get())
@@ -63,7 +63,7 @@ class WatchableListTest : CoroutineScope {
     }
 
     @Test fun clear() {
-        runThenCancel {
+        runBlocking {
             val list = watchableListOf(3, 4)
             watchBatches(list) { changes += it }
             changes.expect(ListChange.Initial(listOf(3, 4)))
@@ -74,17 +74,13 @@ class WatchableListTest : CoroutineScope {
     }
 
     @Test fun replace() {
-        runToEnd {
+        runBlocking {
             val list = watchableListOf(1)
-            val list2 = watchableListOf(2)
+            val list2 = watchableListOf<Int>()
             list2.bind(list)
             val list3 = list2.readOnly()
-            watch(list3) { changes += it}
-            assertThat(list.toString(), startsWith("WatchableList("))
-            assertThat(list3.toString(), startsWith("ReadOnlyWatchableList("))
-            changes.expect(ListChange.Initial(listOf(1)))
             list.set(listOf(3))
-            changes.expect(ListChange.Remove(0, 1), ListChange.Add(0, 3))
+            eventually { assertEquals(listOf(3), list3.get()) }
         }
     }
 }

@@ -18,9 +18,7 @@ package io.gladed.watchable
 
 import kotlin.coroutines.CoroutineContext
 
-/**
- * A [Map] whose contents may be watched for changes.
- */
+/** A [Watchable] wrapper for a [Map] which may also be modified or bound. */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class WatchableMap<K, V> internal constructor(

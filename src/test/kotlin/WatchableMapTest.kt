@@ -19,6 +19,7 @@ import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertThat
 import org.junit.Assert.fail
@@ -57,22 +58,22 @@ class WatchableMapTest : CoroutineScope {
         val elapsed = measureTimeMillis {
             runToEnd {
                 iterateMutable(
-                    this,
                     watchableMapOf(),
                     watchableMapOf(),
                     modifications,
                     { this[maxKey + 1] = "end" },
                     chooser,
                     count
-                )
+                ).join()
             }
         }
         // With sync: 31 micros for 100k iters
+        // Without sync: 26
         log("$count in $elapsed ms. ${elapsed * 1000 / count } μs per iteration.")
     }
 
     @Test fun replace() {
-        runToEnd {
+        runBlocking {
             val map = watchableMapOf(1 to "1")
             val map2 = watchableMapOf(2 to "2")
             map2.bind(map)

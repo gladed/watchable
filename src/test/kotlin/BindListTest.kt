@@ -18,7 +18,8 @@ import io.gladed.watchable.ListChange
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -31,50 +32,41 @@ class BindListTest {
     @Rule @JvmField val changes = ChangeWatcherRule<ListChange<Int>>()
 
     @Test fun bind() {
-        runThenCancel {
+        runBlocking {
             val origin = watchableListOf(5)
-            val dest = watchableListOf(6)
+            val dest = watchableListOf<Int>()
             dest.bind(origin)
-            watch(dest) { changes += it }
-            changes.expect(ListChange.Initial(listOf(5)))
-            assertEquals(listOf(5), dest.get())
+            eventually { assertEquals(listOf(5), dest.get()) }
         }
     }
 
     @Test fun bindThenChange() {
-        runThenCancel {
+        runBlocking {
             val origin = watchableListOf(4, 5)
-            val dest = watchableListOf(6)
+            val dest = watchableListOf<Int>()
             assertFalse(dest.isBound())
             dest.bind(origin)
             assertTrue(dest.isBound())
             watch(dest) { changes += it }
-            changes.expect(ListChange.Initial(listOf(4, 5)))
 
             origin.use {
                 addAll(listOf(8, 7))
                 remove(5)
             }
+
             origin.use {
                 add(9)
                 remove(4)
                 this[1] = 11
             }
-            changes.expect(
-                ListChange.Add(2, 8),
-                ListChange.Add(3, 7),
-                ListChange.Remove(1, 5),
-                ListChange.Add(3, 9),
-                ListChange.Remove(0, 4),
-                ListChange.Replace(1, 7, 11))
 
-            assertEquals(listOf(8, 11, 9), dest.get())
+            eventually { assertEquals(listOf(8, 11, 9), dest.get()) }
         }
     }
 
     @Test fun badWrite() {
         try {
-            runThenCancel {
+            runBlocking {
                 val origin = watchableListOf(4, 5)
                 val dest = watchableListOf(6)
                 dest.bind(origin)
@@ -87,24 +79,21 @@ class BindListTest {
     }
 
     @Test fun unbindThenChange() {
-        runThenCancel {
-            val origin = watchableListOf(4, 5)
-            val dest = watchableListOf(6)
+        runBlocking {
+            val origin = watchableListOf(4)
+            val dest = watchableListOf<Int>()
             dest.bind(origin)
-            watch(dest) { changes += it }
-            changes.expect(ListChange.Initial(listOf(4, 5)))
             origin.use { addAll(listOf(8, 7)) }
-            changes.expect(ListChange.Add(2, 8), ListChange.Add(3, 7))
+            eventually { assertEquals(listOf(4, 8, 7), dest.get()) }
             dest.unbind()
             dest.unbind() // twice to show it works ok
-            origin.use { remove(5) }
-            changes.expectNone()
-            assertEquals(listOf(4, 5, 8, 7), dest.get())
+            origin.use { remove(4) }
+            always { assertEquals(listOf(4, 8, 7), dest.get()) }
         }
     }
 
     @Test fun specialBinding() {
-        runThenCancel {
+        runBlocking {
             // Show how we can transform data types into each other
             val origin = watchableListOf(4, 5)
             val dest = watchableMapOf(0 to 0)
@@ -144,16 +133,14 @@ class BindListTest {
                 }
             }
 
-            yield()
-
             origin.use {
                 add(4)
                 set(1, 6)
             }
 
-            yield()
-
-            assertEquals(mapOf(4 to 2, 6 to 1), dest.get())
+            eventually {
+                dest.get() == mapOf(4 to 2, 6 to 1)
+            }
         }
     }
 }

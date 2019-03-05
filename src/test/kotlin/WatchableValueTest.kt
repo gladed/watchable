@@ -20,9 +20,9 @@ import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
+import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -33,31 +33,28 @@ import org.junit.Test
 import java.util.concurrent.Executors
 
 class WatchableValueTest {
-    private val dispatcher = Executors.newSingleThreadExecutor {
-        task -> Thread(task, "single-threaded")
-    }.asCoroutineDispatcher()
-
-    private val scope = LocalScope(dispatcher)
 
     private lateinit var intValue: WatchableValue<Int>
     @Rule @JvmField val changes = ChangeWatcherRule<ValueChange<Int>>()
 
     @Test fun simple() {
-        runThenCancel {
+        runBlocking {
             intValue = watchableValueOf(5)
             watch(intValue) {
                 log("Updating received with $it, was ${it.oldValue}")
                 changes += it
             }
+            log("Waiting for value change")
             changes.expect(ValueChange(5, 5))
             intValue.set(17)
             assertTrue(intValue.isActive)
             changes.expect(ValueChange(5, 17))
+            log("At end, shutting down")
         }
     }
 
     @Test fun noCallbackAfterScopeClose() {
-        runThenCancel {
+        runBlocking {
             intValue = watchableValueOf(5)
             watch(intValue) {
                 changes += it
@@ -65,7 +62,7 @@ class WatchableValueTest {
             changes.expect(ValueChange(5, 5))
         }
 
-        runThenCancel {
+        runBlocking {
             // intValue can still be set
             intValue.set(88)
             assertEquals(88, intValue.get())
@@ -77,19 +74,19 @@ class WatchableValueTest {
     }
 
     @Test fun noWatchAfterScopeClose() {
-        runThenCancel {
+        runBlocking {
             intValue = watchableValueOf(5)
         }
 
         try {
-            runThenCancel {
+            runBlocking {
                 watch(intValue) { }
             }
         } catch (e: IllegalStateException) { }
     }
 
     @Test fun setSameValue() {
-        runThenCancel {
+        runBlocking {
             intValue = watchableValueOf(5)
             watch(intValue) {
                 changes += it
@@ -102,7 +99,7 @@ class WatchableValueTest {
     }
 
     @Test fun watchUnmodifiable() {
-        runThenCancel {
+        runBlocking {
             intValue = watchableValueOf(4)
             val readOnly = intValue.readOnly()
             assertThat(readOnly.toString(), startsWith("ReadOnlyWatchableValue("))
@@ -121,9 +118,15 @@ class WatchableValueTest {
         }
     }
 
+    private val dispatcher = Executors.newSingleThreadExecutor {
+        task -> Thread(task, "scope1")
+    }.asCoroutineDispatcher()
+
+    private val scope1 = LocalScope(dispatcher)
+
     @Test fun watchFromOtherScope() {
         runBlocking {
-            intValue = scope.watchableValueOf(5)
+            intValue = scope1.watchableValueOf(5)
             watch(intValue) {
                 changes += it
             }
@@ -132,7 +135,7 @@ class WatchableValueTest {
             changes.expect(ValueChange(5, 17))
 
             // Shut down the other scope
-            scope.coroutineContext.cancel()
+            scope1.coroutineContext.cancel()
             assertFalse(intValue.isActive)
             intValue.set(88)
             changes.expectNone()
@@ -140,20 +143,70 @@ class WatchableValueTest {
     }
 
     @Test fun watchOnOtherScope() {
-        runThenCancel {
+        runBlocking {
             intValue = watchableValueOf(5)
-            scope.watch(intValue) {
+            scope1.watch(intValue) {
+                log("Handling $it")
+                assertThat(Thread.currentThread().name, containsString("scope1"))
+                // Because we're watching from this scope it should be named here
                 changes += it
             }
+
             changes.expect(ValueChange(5, 5))
             intValue.set(17)
             changes.expect(ValueChange(5, 17))
 
             // Shut down the other scope
-            scope.coroutineContext.cancel()
+            scope1.coroutineContext.cancel()
             assertTrue(intValue.isActive) // Active, but we will not receive stuff
             intValue.set(88)
             changes.expectNone()
+        }
+    }
+
+    @Test fun cancelJob() {
+        runBlocking {
+            intValue = watchableValueOf(5)
+            val job = scope1.watch(intValue) {
+                log("Handling $it")
+                assertThat(Thread.currentThread().name, containsString("scope1"))
+                // Because we're watching from this scope it should be named here
+                changes += it
+            }
+
+            changes.expect(ValueChange(5, 5))
+            intValue.set(17)
+            changes.expect(ValueChange(5, 17))
+
+            // Shut down the job
+            job.cancel()
+            assertTrue(intValue.isActive) // Active, but we will not receive stuff
+            intValue.set(88)
+            changes.expectNone()
+        }
+    }
+
+    @Test fun noBlock() {
+        runBlocking {
+            intValue = watchableValueOf(5)
+            watch(intValue) {
+                changes += it
+            }
+            changes.expect(ValueChange(5, 5))
+        }
+    }
+
+    @Test fun throwDuringWatch() {
+        runBlocking {
+            intValue = watchableValueOf(5)
+            val watchJob = watch(intValue) {
+                changes += it
+                throw IllegalStateException("Whoops!")
+            }
+            changes.expect(ValueChange(5, 5))
+            intValue.set(7)
+            changes.expectNone()
+            assertTrue(watchJob.isCancelled)
         }
     }
 

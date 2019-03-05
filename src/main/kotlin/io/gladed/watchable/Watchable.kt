@@ -21,7 +21,7 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
 
 /**
- * An object wrapping type [T] which can be watched for changes of type [C].
+ * Wraps type [T] so that it may be watched for changes of type [C].
  */
 interface Watchable<T, C : Change<T>> : CoroutineScope {
 
@@ -29,34 +29,41 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
     suspend fun get(): T
 
     /**
-     * Receive lists of changes in [func] for all changes to this [Watchable] (starting with its initial state)
-     * until this [Watchable]'s scope completes OR [scope] completes OR the returned [Job] is cancelled.
+     * On this [CoroutineScope], deliver every change on this [Watchable] to [func], starting with its initial
+     * state. Changes will stop arriving when this scope completes, when the [Watchable]'s scope completes, when
+     * the returned [Job] is cancelled, or if [func] throws.
      */
-    fun watchBatches(
-        /** Scope to use while watching. */
-        scope: CoroutineScope,
-        /** The block to invoke within this [scope] whenever a change occurs. */
-        func: suspend (List<C>) -> Unit
-    ): Job
-
-    /**
-     * Receive individual changes in [func] for all changes to this active [Watchable] (starting with its initial state)
-     * until this [Watchable]'s scope completes OR [scope] completes OR the returned [Job] is cancelled.
-     */
-    fun watch(
-        scope: CoroutineScope,
-        /** The block to invoke within this [CoroutineScope] whenever a change occurs. */
+    fun CoroutineScope.watch(
         func: (C) -> Unit
-    ): Job =
-        watchBatches(scope) { changes ->
+    ) =
+        watchBatches { changes ->
             for (change in changes) {
                 if (coroutineContext.isActive) func(change) else break
             }
         }
+
+    /**
+     * On this [CoroutineScope], deliver lists changes on this [Watchable] to [func], starting with its initial
+     * state. Changes will stop arriving when this scope completes, when the [Watchable]'s scope completes, when
+     * the returned [Job] is cancelled, or if [func] throws.
+     */
+    fun CoroutineScope.watchBatches(
+        func: suspend (List<C>) -> Unit
+    ): Job
 }
 
+/**
+ * On this [CoroutineScope], deliver changes on [watchable] to [func], starting with its initial
+ * state. Changes will stop arriving when this scope completes, when the [watchable]'s scope completes, when
+ * the returned [Job] is cancelled, or if [func] throws.
+ */
 fun <T, C : Change<T>> CoroutineScope.watch(watchable: Watchable<T, C>, func: (C) -> Unit): Job =
-    watchable.watch(this, func)
+    with(watchable) { this@watch.watch(func) }
 
-fun <T, C : Change<T>> CoroutineScope.watchBatches(watchable: Watchable<T, C>, func: suspend (List<C>) -> Unit): Job =
-    watchable.watchBatches(this, func)
+/**
+ * On this [CoroutineScope], deliver lists of changes on [watchable] to [func], starting with its initial
+ * state. Changes will stop arriving when this scope completes, when the [watchable]'s scope completes, when
+ * the returned [Job] is cancelled, or if [func] throws.
+ */
+fun <T, C : Change<T>> CoroutineScope.watchBatches(watchable: Watchable<T, C>, func: suspend (List<C>) -> Unit) =
+    with(watchable) { this@watchBatches.watchBatches(func) }

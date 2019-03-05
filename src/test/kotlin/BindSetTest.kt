@@ -17,7 +17,9 @@
 import io.gladed.watchable.SetChange
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
@@ -26,46 +28,33 @@ class BindSetTest {
     @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
 
     @Test fun bind() {
-        runThenCancel {
+        runBlocking {
             val origin = watchableSetOf(5)
             val dest = watchableSetOf(6)
             dest.bind(origin)
-            watch(dest) { changes += it }
-            changes.expect(SetChange.Initial(setOf(5)))
-            assertEquals(setOf(5), dest.get())
+            eventually { assertEquals(setOf(5), dest.get()) }
         }
     }
 
     @Test fun bindThenChange() {
-        runThenCancel {
-            val origin = watchableSetOf(4, 5)
-            val dest = watchableSetOf(6)
+        runBlocking {
+            val origin = watchableSetOf(4)
+            val dest = watchableSetOf<Int>()
             dest.bind(origin)
-            watch(dest) { changes += it }
-            changes.expect(SetChange.Initial(setOf(4, 5)))
             origin.use {
-                addAll(listOf(8, 7))
-                remove(5)
-            }
-            origin.use {
-                addAll(listOf(9))
+                add(6)
+                add(5)
                 remove(4)
             }
-            changes.expect(SetChange.Add(8),
-                SetChange.Add(7),
-                SetChange.Remove(5),
-                SetChange.Add(9),
-                SetChange.Remove(4))
-            // Order doesn't matter to sets
-            assertEquals(setOf(7, 8, 9), dest.get())
-            // But it matters to iterators
-            assertEquals(8, dest.get().iterator().next())
+            eventually { assertEquals(setOf(5, 6), dest.get()) }
+            // Order matters to iterators
+            assertEquals(6, dest.get().iterator().next())
         }
     }
 
     @Test fun badAdd() {
         try {
-            runThenCancel {
+            runBlocking {
                 val origin = watchableSetOf(4, 5)
                 val dest = watchableSetOf(6)
                 dest.bind(origin)
@@ -81,13 +70,10 @@ class BindSetTest {
 
     @Test fun badRemove() {
         try {
-            runThenCancel {
+            runBlocking {
                 val origin = watchableSetOf(4, 5)
-                val dest = watchableSetOf(6)
+                val dest = watchableSetOf(5)
                 dest.bind(origin)
-                // Binding hasn't arrived so wait for it
-                watch(dest) { changes += it }
-                changes.expect(SetChange.Initial(setOf(4, 5)))
                 dest.use {
                     remove(5)
                 }
@@ -99,22 +85,19 @@ class BindSetTest {
     }
 
     @Test fun unbindThenChange() {
-        runThenCancel {
+        runBlocking {
             val origin = watchableSetOf(4, 5)
             val dest = watchableSetOf(6)
             dest.bind(origin)
-            watch(dest) { changes += it }
-            changes.expect(SetChange.Initial(setOf(4, 5)))
             origin.use {
                 addAll(listOf(8, 7))
             }
-            changes.expect(SetChange.Add(8), SetChange.Add(7))
+            eventually { assertEquals(setOf(4, 5, 8, 7), dest.get() ) }
             dest.unbind()
             origin.use {
                 remove(5)
             }
-            changes.expectNone()
-            assertEquals(setOf(4, 5, 7, 8), dest.get())
+            always { assertTrue(dest.get().contains(5)) }
         }
     }
 }

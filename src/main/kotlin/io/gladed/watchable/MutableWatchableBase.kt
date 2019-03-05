@@ -18,9 +18,10 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
@@ -31,6 +32,15 @@ import kotlinx.coroutines.sync.withLock
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Suppress("TooManyFunctions") // Useful
 abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<T, M, C> {
+
+    /** The scope used to monitor this [Watchable] for changes. */
+    private val channelScope by lazy {
+        CoroutineScope(coroutineContext + SupervisorJob()).also { supervisorScope ->
+            coroutineContext[Job]?.invokeOnCompletion {
+                supervisorScope.coroutineContext[Job]?.cancel()
+            }
+        }
+    }
 
     /** The underlying mutable form of the data this object. When changes are applied, [changes] must be updated. */
     protected abstract val mutable: M
@@ -49,12 +59,9 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
 
     /** The internal channel used to broadcast changes to watchers. */
     private val channel: BroadcastChannel<List<C>> by lazy {
-        BroadcastChannel<List<C>>(CAPACITY).also {
-            launch {
-                // Keep channel open until the enclosing scope completes
-                delay(Long.MAX_VALUE)
-            }.invokeOnCompletion {
-                channel.close()
+        BroadcastChannel<List<C>>(CAPACITY).apply {
+            coroutineContext[Job]?.invokeOnCompletion {
+                close()
             }
         }
     }
@@ -76,9 +83,13 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     /** True if current processing a change from the watchable to which this object is bound. */
     private var isOnBoundChange: Boolean = false
 
-    override fun watchBatches(scope: CoroutineScope, func: suspend (List<C>) -> Unit): Job {
+    override fun CoroutineScope.watchBatches(func: suspend (List<C>) -> Unit): Job {
         if (!isActive) throw IllegalStateException("Cannot watch an inactive watchable")
-        return scope.launch {
+
+        // Create our own job handle so we can manage cancellation independently of the caller
+        val batchJob = Job()
+        val childScope = CoroutineScope(coroutineContext + batchJob)
+        childScope.launch {
             // Simultaneously open the subscription and get the initial change set.
             val (initial, subscription) = mutableMutex.withLock {
                 (immutable ?: mutable.toImmutable().also { immutable = it }).toInitialChange() to
@@ -87,10 +98,25 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
 
             // Deliver initial NOW and follow up with all subsequent changes.
             func(listOf(initial))
-            subscription.consumeEach {
-                func(it)
+            // Launch a new job into the caller's coroutine context, but don't block it up forever.
+            val consumerJob = CoroutineScope(coroutineContext + SupervisorJob()).launch {
+                subscription.consumeEach {
+                    if (this@MutableWatchableBase.isActive && this@watchBatches.isActive) {
+                        func(it)
+                    } else {
+                        // Ignore any leftovers and cancel
+                        cancel()
+                    }
+                }
+            }
+
+            // If the batchJob dies then kill the consumer job.
+            batchJob.invokeOnCompletion { consumerJob.cancel() }
+            this@MutableWatchableBase.coroutineContext[Job]!!.invokeOnCompletion {
+                consumerJob.cancel()
             }
         }
+        return batchJob
     }
 
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
@@ -141,24 +167,24 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     /** Wrapper for a binding. */
     private class Binding(val other: Watchable<*, *>, val job: Job)
 
-    override fun bind(source: Watchable<T, C>) {
-        bind(source) {
+    override fun bind(origin: Watchable<T, C>) {
+        bind(origin) {
             applyBoundChange(it)
         }
     }
 
-    override fun <T2, C2 : Change<T2>> bind(source: Watchable<T2, C2>, apply: M.(C2) -> Unit) {
+    override fun <T2, C2 : Change<T2>> bind(origin: Watchable<T2, C2>, apply: M.(C2) -> Unit) {
         if (binding != null) throw IllegalStateException("Object already bound")
 
         // Chase up the parent stack to make sure it's not circular
-        var parent = source as? MutableWatchable<*, *, *>
+        var parent = origin as? MutableWatchable<*, *, *>
         while (parent != null) {
             if (parent === this) throw IllegalStateException("Circular binding not permitted")
             parent = parent.boundTo as? MutableWatchable<*, *, *>
         }
 
         // Start watching
-        val job = source.watchBatches(this) {
+        val job = watchBatches(origin) {
             use {
                 isOnBoundChange = true
                 for (change in it) {
@@ -170,7 +196,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
         }
 
         // Store the binding
-        binding = Binding(source, job)
+        binding = Binding(origin, job)
     }
 
     override fun unbind() {

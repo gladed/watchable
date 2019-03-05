@@ -1,5 +1,10 @@
 # Version History
 
+## 0.5.4
+
+* `runBlocking { ... }` no longer hangs forever when containing a watch or bind (#10).
+* Improved scope management.
+
 ## 0.5.3
 
 * Removed java synchronization and added suspending `get()` for performance and portability (#16).

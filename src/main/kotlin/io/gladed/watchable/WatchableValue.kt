@@ -18,9 +18,7 @@ package io.gladed.watchable
 
 import kotlin.coroutines.CoroutineContext
 
-/**
- * A wrapper for a value which may be watched for changes.
- */
+/** A [Watchable] value of [T] which may also be replaced or bound. */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class WatchableValue<T> internal constructor(

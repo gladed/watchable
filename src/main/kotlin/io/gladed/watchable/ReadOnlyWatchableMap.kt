@@ -16,5 +16,5 @@
 
 package io.gladed.watchable
 
-/** A map which cannot be modified externally, but may be watched for changes. */
+/** A [Watchable] [Map] which may not be modified by the reference holder. */
 interface ReadOnlyWatchableMap<K, V> : Watchable<Map<K, V>, MapChange<K, V>>

@@ -20,8 +20,10 @@ import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
+import org.hamcrest.CoreMatchers.containsString
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertThat
 import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
@@ -31,18 +33,16 @@ class BindValueTest {
     @Rule @JvmField val changes = ChangeWatcherRule<ValueChange<Int>>()
 
     @Test fun bindTest() {
-        runThenCancel {
+        runBlocking {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             dest.bind(origin)
-            watch(dest) { changes += it }
-            changes.expect(ValueChange(5, 5))
-            assertEquals(5, dest.get())
+            eventually { assertEquals(5, dest.get()) }
         }
     }
 
     @Test fun bindThenChange() {
-        runThenCancel {
+        runBlocking {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             watch(dest) { changes += it }
@@ -56,7 +56,7 @@ class BindValueTest {
 
     @Test fun badBind() {
         try {
-            runThenCancel {
+            runBlocking {
                 val origin = watchableValueOf(5)
                 origin.bind(origin)
                 fail("Shouldn't get here")
@@ -66,7 +66,7 @@ class BindValueTest {
 
     @Test fun badRebind() {
         try {
-            runThenCancel {
+            runBlocking {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
                 dest.bind(origin)
@@ -80,7 +80,7 @@ class BindValueTest {
 
     @Test fun badCircle() {
         try {
-            runThenCancel {
+            runBlocking {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
                 dest.bind(origin)
@@ -108,55 +108,67 @@ class BindValueTest {
     }
 
     @Test fun unbind() {
-        runThenCancel {
+        runBlocking {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             dest.bind(origin)
-            watch(dest) { changes += it }
-            changes.expect(ValueChange(5, 5))
+            eventually { assertEquals(5, dest.get()) }
             dest.unbind()
             origin.set(7)
-            changes.expectNone()
-            assertEquals(5, dest.get())
+            always { assertEquals(5, dest.get()) }
         }
     }
 
     private val dispatcher1 = Executors.newSingleThreadExecutor {
-        task -> Thread(task, "dispatcher1")
+        task -> Thread(task, "scope1")
     }.asCoroutineDispatcher()
     private val scope1 = LocalScope(dispatcher1)
 
     private val dispatcher2 = Executors.newSingleThreadExecutor {
-        task -> Thread(task, "dispatcher2")
+        task -> Thread(task, "scope2")
     }.asCoroutineDispatcher()
     private val scope2 = LocalScope(dispatcher2)
 
+    @Test fun watchOnScope() {
+        runBlocking {
+            val origin = scope1.watchableValueOf(5)
+            scope2.watch(origin) {
+                assertThat(Thread.currentThread().name, containsString("scope2"))
+                changes += it
+            }
+            changes.expect(ValueChange(5, 5))
+            origin.set(6)
+            changes.expect(ValueChange(5, 6))
+        }
+    }
+
     @Test fun killDestScope() {
-        runThenCancel {
+        runBlocking {
             val origin = scope1.watchableValueOf(5)
             val dest = scope2.watchableValueOf(6)
-            watch(dest) { changes += it }
+            scope2.watch(dest) { changes += it }
+            dest.bind(origin)
+            origin.set(7)
+            eventually { assertEquals(7, dest.get()) }
+            scope2.close() // Kill the destination value's scope
+
+            origin.set(8)
+            always { assertEquals(7, dest.get()) }
+        }
+    }
+
+    @Test fun killOriginScope() {
+        runBlocking {
+            val origin = scope1.watchableValueOf(5)
+            val dest = scope2.watchableValueOf(6)
+            watch(dest) {
+                changes += it
+            }
             changes.expect(ValueChange(6, 6))
             dest.bind(origin)
             changes.expect(ValueChange(6, 5))
             origin.set(7)
             changes.expect(ValueChange(5, 7))
-            assertEquals(7, dest.get())
-            scope2.close() // Kill the destination value's scope
-            origin.set(8)
-            changes.expectNone()
-            assertEquals(7, dest.get()) // Because dest scope was killed it shouldn't receive any more updates
-        }
-    }
-
-    @Test fun killOriginScope() {
-        runThenCancel {
-            val origin = scope1.watchableValueOf(5)
-            val dest = scope2.watchableValueOf(6)
-            dest.bind(origin)
-            origin.set(7)
-            scope2.watch(dest) { changes += it }
-            changes.expect(ValueChange(7, 7))
 
             scope1.close() // Kill the origin value's scope
             assertFalse(origin.isActive)

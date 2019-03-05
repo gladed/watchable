@@ -19,26 +19,18 @@ import io.gladed.watchable.MutableWatchable
 import io.gladed.watchable.watch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assert
-
-/** Create a scope, run the block() in it, then cancel the scope. */
-fun <T> runThenCancel(block: suspend CoroutineScope.() -> T) {
-    try {
-        runBlocking {
-            block().also {
-                coroutineContext.cancel()
-            }
-        }
-    } catch (e: CancellationException) {
-        // As expected
-    }
-}
+import org.junit.Assert.fail
 
 fun log(message: Any?) {
     println(Thread.currentThread().name + ": $message")
@@ -55,42 +47,76 @@ fun CoroutineScope.runToEnd(block: suspend () -> Unit) {
     }
 }
 
-suspend fun <T, M : T, C : Change<T>> iterateMutable(
-    scope: CoroutineScope,
+fun <T, M : T, C : Change<T>> CoroutineScope.iterateMutable(
     one: MutableWatchable<T, M, C>,
     two: MutableWatchable<T, M, C>,
     mods: List<M.() -> Unit>,
     closer: M.() -> Unit,
     chooser: Chooser,
-    count: Int = 1000) {
+    count: Int = 1000
+): Job = launch {
 
+    log("iterateMutable: bind")
     two.bind(one)
-    scope.watch(two) {
-        scope.launch {
+    log("iterateMutable: watch")
+    watch(two) {
+        launch {
             if (0 == chooser(10)) two.get()
         }
     }
+    log("Launching $count")
 
     (0 until count).map {
-        scope.launch {
+        launch {
             one.use {
                 chooser(mods)!!(this)
             }
         }
     }.joinAll()
 
-    println("----sending closer----")
+    log("Closing")
     one.use { closer() }
 
-    scope.watch(two) {
-        scope.launch {
+    watch(two) {
+        launch {
             if (one.get() == two.get()) {
                 println("DONE, cancelling")
-                scope.coroutineContext.cancel()
+                this@iterateMutable.coroutineContext.cancel()
                 yield()
             }
         }
     }
     delay(3000)
     Assert.assertEquals(one.get(), two.get())
+}
+
+suspend fun eventually(timeout: Int = 250, delay: Int = 10, test: suspend () -> Unit) {
+    try {
+        withTimeout(timeout.toLong()) {
+            while (true) {
+                try {
+                    test()
+                    break
+                } catch (e: Error) {
+                    delay(delay.toLong())
+                    continue
+                }
+            }
+        }
+    } catch (e: TimeoutCancellationException) {
+        // Do a final test to quietly return (happy) or throw (sad)
+        test()
+    }
+}
+
+suspend fun always(timeout: Int = 100, delay: Int = 10, test: suspend () -> Unit) {
+    try {
+        withTimeout(timeout.toLong()) {
+            // Yield until it gets to what we want
+            while (isActive) {
+                test()
+                delay(delay.toLong())
+            }
+        }
+    } catch (e: TimeoutCancellationException) {  } // expected
 }

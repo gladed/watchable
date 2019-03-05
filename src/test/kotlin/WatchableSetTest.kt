@@ -20,7 +20,9 @@ import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -41,26 +43,21 @@ class WatchableSetTest : CoroutineScope {
     @Test fun changes() {
         CoroutineScope(coroutineContext + Job()).apply {
             runToEnd {
-                iterateMutable(this@apply,
-                    watchableSetOf(1, 2),
-                    watchableSetOf<Int>(),
-                    mods, { add(maxValue + 1) }, chooser)
+                iterateMutable(watchableSetOf(1, 2), watchableSetOf<Int>(), mods, { add(maxValue + 1) }, chooser)
             }
         }
     }
 
     @Test fun replace() {
-        runToEnd {
+        runBlocking {
             val set = watchableSetOf(1)
-            val set2 = watchableSetOf(2)
+            val set2 = watchableSetOf<Int>()
             set2.bind(set)
             val set3 = set2.readOnly()
-            watch(set3) { changes += it}
             assertThat(set.toString(), startsWith("WatchableSet("))
             assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
-            changes.expect(SetChange.Initial(setOf(1)))
             set.set(setOf(3))
-            changes.expect(SetChange.Remove(1), SetChange.Add(3))
+            eventually { assertEquals(setOf(3), set3.get()) }
         }
     }
 }

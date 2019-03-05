@@ -19,15 +19,18 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 
 /**
- * A [Watchable] wrapping type [T] which may also be mutated in the form of an [M], and bound to other [Watchable]
- * sources.
+ * A [Watchable] which may be mutated in the form of an [M] and bound to other [Watchable] sources.
  */
 interface MutableWatchable<T, M : T, C : Change<T>> : Watchable<T, C> {
     /**
      * Suspend until [func] can safely execute, reading and/or writing data on [M] as desired and returning
      * the result. Note: if currently bound ([isBound] returns true), attempts to modify [M] will throw.
      */
-    suspend fun <U> use(func: M.() -> U): U
+    suspend fun <U> use(
+        /** A function to quickly inspect and/or return data on the mutable form of this object. Do not block,
+         * [use] other [MutableWatchable] objects, or return the mutable form outside of this routine. */
+        func: M.() -> U
+    ): U
 
     /**
      * Completely replace the contents of this watchable.
@@ -35,18 +38,18 @@ interface MutableWatchable<T, M : T, C : Change<T>> : Watchable<T, C> {
     suspend fun set(value: T)
 
     /**
-     * Binds this unbound object to [source], such that when [source] changes, this object is updated to match
-     * [source] exactly. This object may not be modified while bound. When this object's [CoroutineScope] completes,
+     * Binds this unbound object to [origin], such that when [origin] changes, this object is updated to match
+     * [origin] exactly. This object may not be modified while bound. When this object's [CoroutineScope] completes,
      * no further binding related changes are applied. Bindings may not be circular.
      */
-    fun bind(source: Watchable<T, C>)
+    fun bind(origin: Watchable<T, C>)
 
     /**
-     * Binds this unbound object to [source], such that for every change to [source], the mutable form of this
+     * Binds this unbound object to [origin], such that for every change to [origin], the mutable form of this
      * object is updated with [apply]. This object may not be otherwise modified while bound. When this object's
      * [CoroutineScope] completes, apply is no longer invoked. Bindings may not be circular.
      */
-    fun <T2, C2 : Change<T2>> bind(source: Watchable<T2, C2>, apply: M.(C2) -> Unit)
+    fun <T2, C2 : Change<T2>> bind(origin: Watchable<T2, C2>, apply: M.(C2) -> Unit)
 
     /** Cancel any existing binding that exists for this object. */
     fun unbind()

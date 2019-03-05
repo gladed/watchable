@@ -16,5 +16,5 @@
 
 package io.gladed.watchable
 
-/** A list which cannot be modified externally, but may be watched for changes. */
+/** A [Watchable] [List] which may not be modified by the reference holder. */
 interface ReadOnlyWatchableList<T> : Watchable<List<T>, ListChange<T>>
