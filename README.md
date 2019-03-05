@@ -88,7 +88,7 @@ list.use { add(3) }
 println("${list.get()}") // Prints "1, 2, 3" 
 ```  
 
-If other coroutines are already in `use` the object, `use` will suspend, execute your code, and return when they are done. In this way, all modifications run safely and consistently no matter where they are from.
+If other coroutines are already in `use` on the object, `use` will suspend until they are done, then execute your code. In this way, all modifications run sequentially.
 
 ## Watching for Changes
 
