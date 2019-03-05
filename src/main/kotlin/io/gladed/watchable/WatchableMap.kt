@@ -56,11 +56,9 @@ class WatchableMap<K, V> internal constructor(
                                         }
                                     }
 
-                                    // Override equals to compare with the original object
+                                    // Override equals/hash to compare with the original object
                                     override fun equals(other: Any?) = original == other
-
                                     override fun hashCode() = original.hashCode()
-                                    // Print nicely
                                     override fun toString() = "($key, $value)"
                                 }
                             }

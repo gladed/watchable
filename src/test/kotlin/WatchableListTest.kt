@@ -80,6 +80,9 @@ class WatchableListTest : CoroutineScope {
             list2.bind(list)
             val list3 = list2.readOnly()
             list.set(listOf(3))
+            assertThat(list.toString(), startsWith("WatchableList("))
+            assertThat(list3.toString(), startsWith("ReadOnlyWatchableList("))
+
             eventually { assertEquals(listOf(3), list3.get()) }
         }
     }

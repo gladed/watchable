@@ -33,15 +33,6 @@ import kotlinx.coroutines.sync.withLock
 @Suppress("TooManyFunctions") // Useful
 abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<T, M, C> {
 
-    /** The scope used to monitor this [Watchable] for changes. */
-    private val channelScope by lazy {
-        CoroutineScope(coroutineContext + SupervisorJob()).also { supervisorScope ->
-            coroutineContext[Job]?.invokeOnCompletion {
-                supervisorScope.coroutineContext[Job]?.cancel()
-            }
-        }
-    }
-
     /** The underlying mutable form of the data this object. When changes are applied, [changes] must be updated. */
     protected abstract val mutable: M
 
