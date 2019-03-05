@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertThat
 import org.junit.Assert.fail
 import org.junit.Rule
@@ -72,6 +73,16 @@ class WatchableMapTest : CoroutineScope {
         log("$count in $elapsed ms. ${elapsed * 1000 / count } μs per iteration.")
     }
 
+    @Test fun entries() {
+        runBlocking {
+            val map = watchableMapOf(1 to "1")
+            map.use {
+                val first = entries.first()
+                assertEquals(first, first)
+                log("Entry: $entries has hash ${entries.hashCode()}") // Coverage
+            }
+        }
+    }
     @Test fun replace() {
         runBlocking {
             val map = watchableMapOf(1 to "1")

@@ -73,8 +73,7 @@ For `WatchableSet`, `WatchableList`, and `WatchableMap` the returned data is gua
 
 ```kotlin
 val list = watchableListOf(1, 2, 3)
-val listCopy: List<Int> = list.get()
-for (value in listCopy) {
+for (value in list.get()) {
     println("$value")
 } // Prints "1, 2, 3"
 ```
@@ -89,7 +88,7 @@ list.use { add(3) }
 println("${list.get()}") // Prints "1, 2, 3" 
 ```  
 
-`use` always suspends until any other coroutines are done modifying the object.
+If other coroutines are already in `use` on the object, `use` will suspend until they are done, then execute your code. In this way, all modifications run sequentially.
 
 ## Watching for Changes
 
@@ -97,9 +96,7 @@ You can watch any `Watchable` for changes from any `CoroutineScope`.
 
 ```kotlin
 val set = watchableSetOf(1, 2)
-set.watch { change -> 
-    println("$change") // Prints "SetChange.Initial(1, 2)"
-}
+set.watch { println("$it") } // Prints "SetChange.Initial(1, 2)"
 set.use { add(3) } // Prints "SetChange.Add(3)"
 ```
 
@@ -115,14 +112,14 @@ A `bind` is just a `watch` that connects one watchable to another, so that the d
 val origin = listOf(4, 5).toWatchableList()
 val destination = watchableListOf<Int>()
 destination.bind(origin)
-watch(destination) {
-    println("Change: $it") // Prints "ListChange.Initial(4, 5)"
-}
+// Eventually, destination will match origin, and stay in sync with any further changes to origin.
 ```
+
+While bound, a watchable cannot be independently modified, and attempts to do so in `use` will throw.
 
 ## Object Lifetime
 
-`CoroutineScope` lifetime is respected. This means a `watch` or `bind` automatically stops operating when the related scope(s) complete. No cleanup code is required.
+`CoroutineScope` lifetime is respected. This means a `watch` or `bind` automatically stops operating when the related scope(s) complete. No additional cleanup code is required.
 
 # Version History
 
