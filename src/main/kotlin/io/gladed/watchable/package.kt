@@ -17,6 +17,10 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.channels.ClosedReceiveChannelException
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.produce
+import kotlinx.coroutines.delay
 import kotlin.coroutines.CoroutineContext
 
 /** Return a new [WatchableValue] wrapping [value], living on this [CoroutineScope]. */
@@ -48,3 +52,39 @@ fun <K, V> Map<K, V>.toWatchableMap(scope: CoroutineScope) = toWatchableMap(scop
 
 /** Return a new [WatchableMap] containing a map of [values], living on this [CoroutineScope]. */
 fun <K, V> CoroutineScope.watchableMapOf(vararg values: Pair<K, V>) = values.toMap().toWatchableMap(this)
+
+/**
+ * For a given receive channel of lists of items, emit combined lists of items no more frequently than every
+ * periodMillis, starting now.
+ */
+@UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
+    kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+fun <U> CoroutineScope.batch(input: ReceiveChannel<List<U>>, periodMillis: Long): ReceiveChannel<List<U>> =
+    produce {
+        try {
+            var lastSend = System.currentTimeMillis()
+            val buffer = mutableListOf<U>()
+            while (true) {
+                val received = input.receive()
+                val toDelay = periodMillis - (System.currentTimeMillis() - lastSend)
+                val toDeliver: List<U> = if (toDelay <= 0) received else {
+                    // Delay until min period is reached
+                    delay(toDelay)
+                    if (input.isEmpty) {
+                        // No further changes so send the original list as-is
+                        received
+                    } else {
+                        // Other changes, so combine into temporary buffer
+                        buffer.addAll(received)
+                        while (!input.isEmpty) {
+                            buffer.addAll(input.poll()!!)
+                        }
+                        buffer.toList().also { buffer.clear() }
+                    }
+                }
+                lastSend = System.currentTimeMillis()
+                send(toDeliver)
+            }
+        } catch (e: ClosedReceiveChannelException) { } // Ignore
+    }
+

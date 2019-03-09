@@ -117,6 +117,10 @@ destination.bind(origin)
 
 While bound, a watchable cannot be independently modified, and attempts to do so in `use` will throw.
 
+## Batching
+
+While watching it's possible to batch lists of changes to be handled by watchBatches on a less frequent basis.
+
 ## Object Lifetime
 
 `CoroutineScope` lifetime is respected. This means a `watch` or `bind` automatically stops operating when the related scope(s) complete. No additional cleanup code is required.

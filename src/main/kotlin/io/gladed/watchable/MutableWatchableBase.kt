@@ -21,11 +21,14 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BroadcastChannel
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.time.Duration
 
 /** Base for implementing a type that is watchable, mutable, and bindable. */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
@@ -49,7 +52,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     protected abstract fun replace(newValue: T)
 
     /** The internal channel used to broadcast changes to watchers. */
-    private val channel: BroadcastChannel<List<C>> by lazy {
+    private val broadcaster: BroadcastChannel<List<C>> by lazy {
         BroadcastChannel<List<C>>(CAPACITY).apply {
             coroutineContext[Job]?.invokeOnCompletion {
                 close()
@@ -74,7 +77,39 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     /** True if current processing a change from the watchable to which this object is bound. */
     private var isOnBoundChange: Boolean = false
 
-    override fun CoroutineScope.watchBatches(func: suspend (List<C>) -> Unit): Job {
+    fun CoroutineScope.subscribe(): ReceiveChannel<List<C>> {
+        if (!isActive) throw IllegalStateException("Cannot watch an inactive watchable")
+
+        val channel = Channel<List<C>>(CAPACITY)
+        // Create a child scope unrelated to the caller's
+        val childScope = CoroutineScope(coroutineContext)
+        childScope.launch {
+            // Simultaneously open the subscription and get the initial change set.
+            val (initial, subscription) = mutableMutex.withLock {
+                (immutable ?: mutable.toImmutable().also { immutable = it }).toInitialChange() to
+                    broadcaster.openSubscription()
+            }
+            channel.send(listOf(initial))
+
+            // Launch a new job into the caller's coroutine context, but don't block it up forever.
+            val consumerJob = CoroutineScope(coroutineContext + SupervisorJob()).launch {
+                subscription.consumeEach {
+                    if (this@MutableWatchableBase.isActive && this@subscribe.isActive) {
+                        channel.send(it)
+                    } else {
+                        // Ignore any leftovers and cancel
+                        cancel()
+                    }
+                }
+            }
+            this@MutableWatchableBase.coroutineContext[Job]!!.invokeOnCompletion {
+                consumerJob.cancel()
+            }
+        }
+        return channel
+    }
+
+    override fun CoroutineScope.watchBatches(minPeriod: Duration, func: suspend (List<C>) -> Unit): Job {
         if (!isActive) throw IllegalStateException("Cannot watch an inactive watchable")
 
         // Create our own job handle so we can manage cancellation independently of the caller
@@ -84,14 +119,16 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
             // Simultaneously open the subscription and get the initial change set.
             val (initial, subscription) = mutableMutex.withLock {
                 (immutable ?: mutable.toImmutable().also { immutable = it }).toInitialChange() to
-                    channel.openSubscription()
+                    broadcaster.openSubscription()
             }
 
             // Deliver initial NOW and follow up with all subsequent changes.
             func(listOf(initial))
+
             // Launch a new job into the caller's coroutine context, but don't block it up forever.
             val consumerJob = CoroutineScope(coroutineContext + SupervisorJob()).launch {
-                subscription.consumeEach {
+                val batchedSubscription = batch(subscription, minPeriod.toMillis())
+                batchedSubscription.consumeEach {
                     if (this@MutableWatchableBase.isActive && this@watchBatches.isActive) {
                         func(it)
                     } else {
@@ -150,7 +187,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
             val changeList = changes.toList()
             changes.clear()
             if (isActive) {
-                channel.send(changeList)
+                broadcaster.send(changeList)
             }
         }
     }

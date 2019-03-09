@@ -19,6 +19,7 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.isActive
+import java.time.Duration
 
 /**
  * Wraps type [T] so that it may be watched for changes of type [C].
@@ -33,10 +34,8 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
      * state. Changes will stop arriving when this scope completes, when the [Watchable]'s scope completes, when
      * the returned [Job] is cancelled, or if [func] throws.
      */
-    fun CoroutineScope.watch(
-        func: (C) -> Unit
-    ) =
-        watchBatches { changes ->
+    fun CoroutineScope.watch(func: (C) -> Unit) =
+        watchBatches(Duration.ZERO) { changes ->
             for (change in changes) {
                 if (coroutineContext.isActive) func(change) else break
             }
@@ -48,6 +47,8 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
      * the returned [Job] is cancelled, or if [func] throws.
      */
     fun CoroutineScope.watchBatches(
+        /** The minimum time between change notifications, or [Duration.ZERO] for no delay. */
+        minPeriod: Duration,
         func: suspend (List<C>) -> Unit
     ): Job
 }
@@ -65,5 +66,9 @@ fun <T, C : Change<T>> CoroutineScope.watch(watchable: Watchable<T, C>, func: (C
  * state. Changes will stop arriving when this scope completes, when the [watchable]'s scope completes, when
  * the returned [Job] is cancelled, or if [func] throws.
  */
-fun <T, C : Change<T>> CoroutineScope.watchBatches(watchable: Watchable<T, C>, func: suspend (List<C>) -> Unit) =
-    with(watchable) { this@watchBatches.watchBatches(func) }
+fun <T, C : Change<T>> CoroutineScope.watchBatches(
+    watchable: Watchable<T, C>,
+    /** The minimum time between change notifications, or [Duration.ZERO] for no delay. */
+    minPeriod: Duration = Duration.ZERO,
+    func: suspend (List<C>) -> Unit
+) = with(watchable) { this@watchBatches.watchBatches(minPeriod, func) }
