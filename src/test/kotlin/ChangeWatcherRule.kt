@@ -38,11 +38,14 @@ class ChangeWatcherRule<C> : TestRule, CoroutineScope {
     override val coroutineContext = dispatcher + Job() + CoroutineExceptionHandler { _, cause -> log(cause.toString())}
 
     private val changes = Channel<C>(Channel.UNLIMITED)
+    private val changeLists = Channel<List<C>>(Channel.UNLIMITED)
 
     operator fun plusAssign(change: C) {
         log("Change: $change")
         launch {
             changes.send(change)
+            changeLists.send(listOf(change))
+
         }
     }
 
@@ -50,6 +53,7 @@ class ChangeWatcherRule<C> : TestRule, CoroutineScope {
         log("Changes: $changeList")
         launch {
             changeList.forEach { changes.send(it) }
+            changeLists.send(changeList)
         }
     }
 
@@ -69,6 +73,13 @@ class ChangeWatcherRule<C> : TestRule, CoroutineScope {
     suspend fun expectNone() {
         delay(25)
         assertEquals(null, changes.poll())
+    }
+
+    fun mustHaveLists(vararg mustChangeLists: List<C>) {
+        for (mustChangeList in mustChangeLists) {
+            assertEquals(mustChangeList, changeLists.poll())
+        }
+        assertEquals(null, changeLists.poll())
     }
 
     override fun apply(base: Statement, description: Description) = object : Statement() {

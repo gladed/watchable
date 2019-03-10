@@ -27,11 +27,9 @@ import org.junit.Assert.assertThat
 import org.junit.Rule
 import org.junit.Test
 
-class WatchableSetTest : CoroutineScope {
+class WatchableSetTest : ScopeTest() {
     @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
 
-    @Rule @JvmField val scope = ScopeRule(Dispatchers.Default)
-    override val coroutineContext = scope.coroutineContext
     private val chooser = Chooser(0)
     private val maxValue = 100
 

@@ -1,5 +1,10 @@
 # Version History
 
+## 0.5.5
+
+* Allow `subscribe`
+* Allow for a `minPeriod` when batching changes.
+
 ## 0.5.4
 
 * `runBlocking { ... }` no longer hangs forever when containing a watch or bind (#10).

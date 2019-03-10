@@ -29,10 +29,7 @@ import org.junit.Rule
 import org.junit.Test
 
 @ExperimentalCoroutinesApi
-class WatchableListTest : CoroutineScope {
-    @Rule @JvmField val scope = ScopeRule(Dispatchers.Default)
-    override val coroutineContext = scope.coroutineContext
-
+class WatchableListTest : ScopeTest() {
     @Rule @JvmField val changes = ChangeWatcherRule<ListChange<Int>>()
 
     private val chooser = Chooser(0) // Stable seed makes tests repeatable
@@ -49,7 +46,6 @@ class WatchableListTest : CoroutineScope {
             iterateMutable(watchableListOf(1, 2, 3), watchableListOf(4), mods, { add(maxValue + 1) }, chooser)
         }
     }
-
 
     @Test fun equality() {
         runBlocking {
