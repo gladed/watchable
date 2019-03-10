@@ -18,6 +18,7 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.isActive
 import java.time.Duration
 
@@ -28,6 +29,11 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
 
     /** Return the current value of [T]. */
     suspend fun get(): T
+
+    /**
+     * Return a channel which will receive successive lists of changes as they occur.
+     */
+    fun subscribe(): ReceiveChannel<List<C>>
 
     /**
      * On this [CoroutineScope], deliver every change on this [Watchable] to [func], starting with its initial
@@ -47,8 +53,8 @@ interface Watchable<T, C : Change<T>> : CoroutineScope {
      * the returned [Job] is cancelled, or if [func] throws.
      */
     fun CoroutineScope.watchBatches(
-        /** The minimum time between change notifications, or [Duration.ZERO] for no delay. */
-        minPeriod: Duration,
+        /** The minimum time between change notifications, or [Duration.ZERO] (the default) for no delay. */
+        minPeriod: Duration = Duration.ZERO,
         func: suspend (List<C>) -> Unit
     ): Job
 }

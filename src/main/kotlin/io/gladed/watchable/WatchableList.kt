@@ -18,7 +18,9 @@ package io.gladed.watchable
 
 import kotlin.coroutines.CoroutineContext
 
-/** A [Watchable] wrapper for a [List] which may also be modified or bound. */
+/**
+ * A [Watchable] wrapper for a [List] which may also be modified or bound. Use [watchableListOf] to create.
+ */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class WatchableList<T> internal constructor(
     override val coroutineContext: CoroutineContext,

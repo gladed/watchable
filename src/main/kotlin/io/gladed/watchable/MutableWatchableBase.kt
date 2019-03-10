@@ -16,9 +16,10 @@
 
 package io.gladed.watchable
 
+import batch
+import daemon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.Channel
@@ -77,74 +78,40 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     /** True if current processing a change from the watchable to which this object is bound. */
     private var isOnBoundChange: Boolean = false
 
-    fun CoroutineScope.subscribe(): ReceiveChannel<List<C>> {
+    override fun subscribe(): ReceiveChannel<List<C>> {
         if (!isActive) throw IllegalStateException("Cannot watch an inactive watchable")
 
         val channel = Channel<List<C>>(CAPACITY)
-        // Create a child scope unrelated to the caller's
-        val childScope = CoroutineScope(coroutineContext)
-        childScope.launch {
+        // Using this watchable's scope start shuttling
+        launch {
             // Simultaneously open the subscription and get the initial change set.
             val (initial, subscription) = mutableMutex.withLock {
                 (immutable ?: mutable.toImmutable().also { immutable = it }).toInitialChange() to
                     broadcaster.openSubscription()
             }
-            channel.send(listOf(initial))
 
-            // Launch a new job into the caller's coroutine context, but don't block it up forever.
-            val consumerJob = CoroutineScope(coroutineContext + SupervisorJob()).launch {
+            // Launch this daemon from the watchable's scope so that it lives as long
+            this@MutableWatchableBase.daemon {
+                channel.send(listOf(initial))
                 subscription.consumeEach {
-                    if (this@MutableWatchableBase.isActive && this@subscribe.isActive) {
-                        channel.send(it)
-                    } else {
-                        // Ignore any leftovers and cancel
-                        cancel()
-                    }
+                    channel.send(it)
                 }
             }
-            this@MutableWatchableBase.coroutineContext[Job]!!.invokeOnCompletion {
-                consumerJob.cancel()
-            }
         }
+
+        // Channel dies with this scope
+        coroutineContext[Job]?.invokeOnCompletion {
+            channel.cancel()
+        }
+
         return channel
     }
 
     override fun CoroutineScope.watchBatches(minPeriod: Duration, func: suspend (List<C>) -> Unit): Job {
-        if (!isActive) throw IllegalStateException("Cannot watch an inactive watchable")
-
-        // Create our own job handle so we can manage cancellation independently of the caller
-        val batchJob = Job()
-        val childScope = CoroutineScope(coroutineContext + batchJob)
-        childScope.launch {
-            // Simultaneously open the subscription and get the initial change set.
-            val (initial, subscription) = mutableMutex.withLock {
-                (immutable ?: mutable.toImmutable().also { immutable = it }).toInitialChange() to
-                    broadcaster.openSubscription()
-            }
-
-            // Deliver initial NOW and follow up with all subsequent changes.
-            func(listOf(initial))
-
-            // Launch a new job into the caller's coroutine context, but don't block it up forever.
-            val consumerJob = CoroutineScope(coroutineContext + SupervisorJob()).launch {
-                val batchedSubscription = batch(subscription, minPeriod.toMillis())
-                batchedSubscription.consumeEach {
-                    if (this@MutableWatchableBase.isActive && this@watchBatches.isActive) {
-                        func(it)
-                    } else {
-                        // Ignore any leftovers and cancel
-                        cancel()
-                    }
-                }
-            }
-
-            // If the batchJob dies then kill the consumer job.
-            batchJob.invokeOnCompletion { consumerJob.cancel() }
-            this@MutableWatchableBase.coroutineContext[Job]!!.invokeOnCompletion {
-                consumerJob.cancel()
-            }
+        if (!this@MutableWatchableBase.isActive) throw IllegalStateException("Cannot watch an inactive watchable")
+        return daemon {
+            batch(subscribe(), minPeriod.toMillis()).consumeEach { func(it) }
         }
-        return batchJob
     }
 
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */

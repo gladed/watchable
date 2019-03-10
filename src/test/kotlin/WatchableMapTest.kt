@@ -28,11 +28,8 @@ import org.junit.Rule
 import org.junit.Test
 import kotlin.system.measureTimeMillis
 
-class WatchableMapTest : CoroutineScope {
+class WatchableMapTest : ScopeTest() {
     @Rule @JvmField val changes = ChangeWatcherRule<MapChange<Int, String>>()
-
-    @Rule @JvmField val scope = ScopeRule(Dispatchers.Default)
-    override val coroutineContext = scope.coroutineContext
 
     private val chooser = Chooser(0) // Stable seed makes tests repeatable
     private val maxKey = 500
@@ -92,9 +89,10 @@ class WatchableMapTest : CoroutineScope {
             watch(map3) { changes += it }
             assertThat(map.toString(), startsWith("WatchableMap("))
             assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
-            changes.expect(MapChange.Initial(mapOf(1 to "1")))
+            changes.expect(MapChange.Initial(mapOf(2 to "2")))
             map.set(mapOf(3 to "3"))
-            changes.expect(MapChange.Remove(1, "1"), MapChange.Add(3, "3"))
+            changes.expect(MapChange.Remove(2, "2"), MapChange.Add(1, "1"), MapChange.Remove(1, "1"),
+                MapChange.Add(3, "3"))
         }
     }
 

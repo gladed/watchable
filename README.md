@@ -1,10 +1,10 @@
-[ ![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.5.4) ](https://bintray.com/gladed/watchable/watchable/0.5.4/link)
+[ ![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.5.5) ](https://bintray.com/gladed/watchable/watchable/0.5.5/link)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=gladed_watchable&metric=alert_status)](https://sonarcloud.io/dashboard?id=gladed_watchable)
 [![CircleCI](https://circleci.com/gh/gladed/watchable.svg?style=svg)](https://circleci.com/gh/gladed/watchable)
 [![CodeCov](https://codecov.io/github/gladed/watchable/coverage.svg?branch=master)](https://codecov.io/github/gladed/watchable)
 [![detekt](https://img.shields.io/badge/code%20style-%E2%9D%A4-FF4081.svg)](https://arturbosch.github.io/detekt/)
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.3.21-blue.svg)](https://kotlinlang.org/)
-[![API Docs](https://img.shields.io/badge/API_Docs-0.5.4-purple.svg)](https://gladed.github.io/watchable/0.5.4/io.gladed.watchable/)
+[![API Docs](https://img.shields.io/badge/API_Docs-0.5.5-purple.svg)](https://gladed.github.io/watchable/0.5.5/io.gladed.watchable/)
 
 # Watchable
 
@@ -43,17 +43,17 @@ repositories {
 }
 
 dependencies {
-    compile 'io.gladed:watchable:0.5.4'
+    compile 'io.gladed:watchable:0.5.5'
 }
 ```
 
 # Features
 
-## Data Types
+## Watchable Data Types
 
-`WatchableList`, `WatchableSet`, `WatchableMap` allow access to wrapped List, Set, and Map data. `WatchableValue` wraps a single object value of any type.
+[`WatchableList`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-list/), [`WatchableSet`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-set/), and [`WatchableMap`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-map/) allow access to wrapped List, Set, and Map data. [`WatchableValue`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-value/) wraps a single object value of any type.
 
-These types are created on a CoroutineScope with `watchable___Of(...)`. For example: 
+These types are created on a CoroutineScope with `watchable*Of(...)`. For example:
 
 ```kotlin
 class MyClass : CoroutineScope {
@@ -65,11 +65,9 @@ class MyClass : CoroutineScope {
 
 Each data type can be accessed, modified, watched, and bound. 
 
-## Accessing Data
+## Reading Data
 
-You can obtain a read-only copy of the underlying data using `get()`. Note that `get()` may suspend for a short time while other coroutines complete modifications of the data.
-
-For `WatchableSet`, `WatchableList`, and `WatchableMap` the returned data is guaranteed not to change, so you can safely iterate and access it normally.
+You can obtain a read-only, immutable copy of the underlying data using [`get()`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/get.html). This may suspend for a short time while other coroutines complete modifications of the data.
 
 ```kotlin
 val list = watchableListOf(1, 2, 3)
@@ -80,7 +78,7 @@ for (value in list.get()) {
 
 ## Modifying Contents
 
-A `MutableWatchable` can be modified with `use`, which takes a modifiable form of the underlying data as the receiver:
+Any [`MutableWatchable`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/) can be modified with [`use`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/use.html), which receives a modifiable form of the underlying data:
 
 ```kotlin
 val list = watchableListOf(1, 2)
@@ -88,16 +86,16 @@ list.use { add(3) }
 println("${list.get()}") // Prints "1, 2, 3" 
 ```  
 
-If other coroutines are already in `use` on the object, `use` will suspend until they are done, then execute your code. In this way, all modifications run sequentially.
+If other coroutines are already using the object, `use()` will suspend until they are done, then execute your code. In this way, all modifications run sequentially.
 
 ## Watching for Changes
 
-You can watch any `Watchable` for changes from any `CoroutineScope`.
+You can watch any `Watchable` for changes from any `CoroutineScope` using [watch](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/watch.html)
 
 ```kotlin
 val set = watchableSetOf(1, 2)
 set.watch { println("$it") } // Prints "SetChange.Initial(1, 2)"
-set.use { add(3) } // Prints "SetChange.Add(3)"
+set.use { add(3) } // Causes the line above to print "SetChange.Add(3)"
 ```
 
 ## Read-Only Watchable
@@ -106,7 +104,7 @@ You can use a `MutableWatchable`'s `.readOnly()` function to return a copy indic
 
 ## Binding
 
-A `bind` is just a `watch` that connects one watchable to another, so that the destination automatically receives all changes from an origin.
+A [`bind`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/bind.html) is just a `watch` that connects one watchable to another, so that the destination automatically receives all changes from an origin.
 
 ```kotlin
 val origin = listOf(4, 5).toWatchableList()
@@ -119,11 +117,15 @@ While bound, a watchable cannot be independently modified, and attempts to do so
 
 ## Batching
 
-While watching it's possible to batch lists of changes to be handled by watchBatches on a less frequent basis.
+It's possible to listen for lists of changes, or even to receive updates on a reliable, but less-frequent basis. See the documentation for [watchBatches](https://gladed.github.io/watchable/latest/io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/watch-batches.html), especially the `minPeriod` parameter.
 
 ## Object Lifetime
 
 `CoroutineScope` lifetime is respected. This means a `watch` or `bind` automatically stops operating when the related scope(s) complete. No additional cleanup code is required.
+
+## Subscribing
+
+You can [subscribe](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/subscribe.html) to changes on a watchable, returning an ordinary ReceiveChannel which receives lists of changes as they occur. However, it is usually more convenient to use `bind()` and `watch { ... }` as described above.
 
 # Version History
 

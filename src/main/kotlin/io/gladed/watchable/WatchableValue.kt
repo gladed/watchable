@@ -18,9 +18,8 @@ package io.gladed.watchable
 
 import kotlin.coroutines.CoroutineContext
 
-/** A [Watchable] value of [T] which may also be replaced or bound. */
-@UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
-    kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+/** A [Watchable] value of [T] which may also be replaced or bound. Use [watchableValueOf] to create. */
+@UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class WatchableValue<T> internal constructor(
     override val coroutineContext: CoroutineContext,
     initial: T
