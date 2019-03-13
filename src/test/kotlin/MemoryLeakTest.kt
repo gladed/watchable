@@ -28,11 +28,13 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNull
+import org.junit.Ignore
 import org.junit.Rule
 import org.junit.Test
 import java.lang.ref.WeakReference
 
 @Suppress("UNUSED_VALUE") // We mean to release items when we are done with them.
+@Ignore // These tests simply aren't reliable since gc behavior can vary
 class MemoryLeakTest {
     private val scope1 = CoroutineScope(Dispatchers.Default)
     @Rule @JvmField val changes = ChangeWatcherRule<ListChange<Int>>()

@@ -27,7 +27,7 @@ import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.Executors
 
-class CloseScopeTest {
+class CancelTest {
     private lateinit var intValue: WatchableValue<Int>
     @Rule @JvmField val changes = ChangeWatcherRule<ValueChange<Int>>()
 
@@ -106,7 +106,7 @@ class CloseScopeTest {
     }
 
     @Test
-    fun `throw during watch kills job`() {
+    fun `throw during watch cancels job`() {
         runBlocking {
             intValue = watchableValueOf(5)
             val watchJob = watch(intValue) {

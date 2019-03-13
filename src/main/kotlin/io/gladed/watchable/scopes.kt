@@ -17,6 +17,7 @@
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.delay
@@ -62,21 +63,13 @@ fun CoroutineScope.daemon(
     // Launch a new job into the caller's coroutine context, but don't block it up forever.
     val parentJob = coroutineContext[Job]!!
     val daemonScope = CoroutineScope(coroutineContext + SupervisorJob())
-    val job = daemonScope.launch(context, block = block).apply {
-        println("$daemonScope: watching $parentJob")
+    return daemonScope.launch(context, block = block).apply {
         // Cancel this job if parent completes
-        parentJob.invokeOnCompletion {
-            println("Parent job $parentJob complete so cancelling Job $this")
-            cancel()
+        parentJob.invokeOnCompletion { cancel() }
+    }.apply {
+        start()
+        invokeOnCompletion {
+            daemonScope.coroutineContext.cancel()
         }
     }
-    println("$job: starting")
-
-    job.start()
-    // Cancel the daemon if the job completes
-    job.invokeOnCompletion {
-        println("Job $job complete so cancelling daemon $daemonScope")
-        daemonScope.coroutineContext[Job]!!.cancel()
-    }
-    return job
 }

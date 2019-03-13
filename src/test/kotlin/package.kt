@@ -31,7 +31,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assert
-import org.junit.Assert.fail
 
 fun log(message: Any?) {
     println(Thread.currentThread().name + ": $message")

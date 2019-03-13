@@ -72,30 +72,30 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     private var isOnBoundChange: Boolean = false
 
     @Suppress("UNUSED_VARIABLE")
-    override fun subscribe(scope: CoroutineScope): ReceiveChannel<List<C>> {
-        val channel = Channel<List<C>>(CAPACITY)
-        scope.daemon {
-            val (initial, subscription) = mutableMutex.withLock {
-                (immutable ?: mutable.toImmutable().also { immutable = it }).toInitialChange() to
-                    broadcaster.openSubscription()
-            }
-            channel.send(listOf(initial))
-            subscription.consumeEach {
-                channel.send(it)
+    override fun subscribe(scope: CoroutineScope) =
+        Channel<List<C>>(CAPACITY).also { channel ->
+            scope.daemon {
+                // Under lock, grab initial and open subscription
+                val (initial, subscription) = mutableMutex.withLock {
+                    getImmutableWhileLocked() to broadcaster.openSubscription()
+                }
+                channel.send(listOf(initial.toInitialChange()))
+                subscription.consumeEach {
+                    channel.send(it)
+                }
             }
         }
-        return channel
-    }
 
-    override fun watchBatches(scope: CoroutineScope, minPeriod: Duration, func: suspend (List<C>) -> Unit): Job {
-        return scope.daemon {
-            println("$scope: daemon() so we can batch subscriptions")
+    private fun getImmutableWhileLocked() =
+        (immutable ?: mutable.toImmutable().also { immutable = it })
+
+    override fun watchBatches(scope: CoroutineScope, minPeriod: Duration, func: suspend (List<C>) -> Unit): Job =
+        scope.daemon {
             val subscription = subscribe(scope)
             batch(subscription, minPeriod.toMillis()).consumeEach {
                 func(it)
             }
         }
-    }
 
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
     protected fun <U> doChange(func: () -> U): U =
@@ -105,8 +105,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
 
     override suspend fun get(): T = immutable.let {
         it ?: mutableMutex.withLock {
-            immutable = mutable.toImmutable()
-            immutable!!
+            getImmutableWhileLocked()
         }
     }
 

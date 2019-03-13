@@ -15,29 +15,17 @@
  */
 
 import io.gladed.watchable.SetChange
-import io.gladed.watchable.ValueChange
-import io.gladed.watchable.WatchableSet
-import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.subscribe
-import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
-import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
-import org.hamcrest.CoreMatchers
-import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
-import java.util.concurrent.Executors
 
 class SubscribeTest : ScopeTest() {
     private val set = watchableSetOf(1)
@@ -81,7 +69,7 @@ class SubscribeTest : ScopeTest() {
         }
     }
 
-    @Test fun batchScope() {
+    @Test fun `batches arrive slowly`() {
         val set2 = watchableSetOf(2)
         runBlocking {
             val rxChanges = subscribe(set2)
@@ -96,7 +84,9 @@ class SubscribeTest : ScopeTest() {
                 SetChange.Remove(2),
                 SetChange.Add(3),
                 SetChange.Add(4)), batchChannel.receive())
-            assertTrue(50 <= System.currentTimeMillis() - start)
+            val elapsed = System.currentTimeMillis() - start
+            log(elapsed)
+            assertTrue(elapsed >= 48) // A couple ms of grace here
 
             // Cancel scope2, immediately killing batchChannel
             scope2.coroutineContext[Job]?.cancel()
