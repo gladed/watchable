@@ -20,12 +20,10 @@ import batch
 import daemon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.BroadcastChannel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consumeEach
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import java.time.Duration
@@ -73,40 +71,31 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     /** True if current processing a change from the watchable to which this object is bound. */
     private var isOnBoundChange: Boolean = false
 
+    @Suppress("UNUSED_VARIABLE")
     override fun subscribe(scope: CoroutineScope): ReceiveChannel<List<C>> {
-
         val channel = Channel<List<C>>(CAPACITY)
-        // Using this watchable's scope start shuttling
-        scope.launch {
-            // Simultaneously open the subscription and get the initial change set.
+        scope.daemon {
             val (initial, subscription) = mutableMutex.withLock {
                 (immutable ?: mutable.toImmutable().also { immutable = it }).toInitialChange() to
                     broadcaster.openSubscription()
             }
-
-            // Launch this daemon from the watchable's scope so that it lives as long
-            scope.daemon {
-                channel.send(listOf(initial))
-                subscription.consumeEach {
-                    channel.send(it)
-                }
+            channel.send(listOf(initial))
+            subscription.consumeEach {
+                channel.send(it)
             }
         }
-
-        // Cancel this channel when the scope completes
-        scope.coroutineContext[Job]?.invokeOnCompletion {
-            channel.cancel()
-        }
-
         return channel
     }
 
-    override fun watchBatches(scope: CoroutineScope, minPeriod: Duration, func: suspend (List<C>) -> Unit) =
-        scope.daemon {
-            batch(subscribe(scope), minPeriod.toMillis()).consumeEach {
+    override fun watchBatches(scope: CoroutineScope, minPeriod: Duration, func: suspend (List<C>) -> Unit): Job {
+        return scope.daemon {
+            println("$scope: daemon() so we can batch subscriptions")
+            val subscription = subscribe(scope)
+            batch(subscription, minPeriod.toMillis()).consumeEach {
                 func(it)
             }
         }
+    }
 
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
     protected fun <U> doChange(func: () -> U): U =

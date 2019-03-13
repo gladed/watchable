@@ -37,7 +37,7 @@ class CloseScopeTest {
 
     private val scope1 = LocalScope(dispatcher)
 
-    @Test fun noCallbackAfterScopeClose() {
+    @Test fun `callbacks stop when scope joined`() {
         runBlocking {
             intValue = watchableValueOf(5)
             watch(intValue) {
@@ -55,8 +55,7 @@ class CloseScopeTest {
         }
     }
 
-    @Test
-    fun `nothing happens after watch scope is closed`() {
+    @Test fun `callbacks stop when scope cancelled`() {
         runBlocking {
             intValue = watchableValueOf(5)
             scope1.watch(intValue) {
@@ -75,7 +74,7 @@ class CloseScopeTest {
     }
 
     @Test
-    fun `watch stops when job is cancelled`() {
+    fun `callbacks stop when job cancelled`() {
         runBlocking {
             intValue = watchableValueOf(5)
             val job = scope1.watch(intValue) {
@@ -96,7 +95,7 @@ class CloseScopeTest {
     }
 
     @Test
-    fun noBlock() {
+    fun `watch allows parent scope to join`() {
         runBlocking {
             intValue = watchableValueOf(5)
             watch(intValue) {
@@ -107,7 +106,7 @@ class CloseScopeTest {
     }
 
     @Test
-    fun throwDuringWatch() {
+    fun `throw during watch kills job`() {
         runBlocking {
             intValue = watchableValueOf(5)
             val watchJob = watch(intValue) {

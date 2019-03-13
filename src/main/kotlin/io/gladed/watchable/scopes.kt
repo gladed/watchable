@@ -17,7 +17,6 @@
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.delay
@@ -34,7 +33,7 @@ import kotlin.coroutines.EmptyCoroutineContext
 fun <U> CoroutineScope.batch(input: ReceiveChannel<List<U>>, periodMillis: Long = 0): ReceiveChannel<List<U>> =
     if (periodMillis <= 0L) input else produce {
         var lastSend = System.currentTimeMillis()
-        val buffer = mutableListOf<U>()
+        val buffer by lazy { mutableListOf<U>() }
         while (true) {
             val received = input.receiveOrNull() ?: break
             delay(periodMillis - (System.currentTimeMillis() - lastSend))
@@ -54,9 +53,7 @@ fun <U> CoroutineScope.batch(input: ReceiveChannel<List<U>>, periodMillis: Long 
     }
 
 /**
- * Return a new Job that runs but does not prevent the calling scope from completion.
- * The coroutine is cancelled when the returned [Job] or the calling [CoroutineScope] is cancelled.
- * The resulting job is automatically cancelled when the parent completes.
+ * Similar to [launch] but does not block parent's ability to [Job.join]. Cancels when parent cancels.
  */
 fun CoroutineScope.daemon(
     context: CoroutineContext = EmptyCoroutineContext,
@@ -66,11 +63,20 @@ fun CoroutineScope.daemon(
     val parentJob = coroutineContext[Job]!!
     val daemonScope = CoroutineScope(coroutineContext + SupervisorJob())
     val job = daemonScope.launch(context, block = block).apply {
+        println("$daemonScope: watching $parentJob")
         // Cancel this job if parent completes
-        parentJob.invokeOnCompletion { cancel() }
+        parentJob.invokeOnCompletion {
+            println("Parent job $parentJob complete so cancelling Job $this")
+            cancel()
+        }
     }
+    println("$job: starting")
+
     job.start()
     // Cancel the daemon if the job completes
-    job.invokeOnCompletion { daemonScope.coroutineContext[Job]!!.cancel() }
+    job.invokeOnCompletion {
+        println("Job $job complete so cancelling daemon $daemonScope")
+        daemonScope.coroutineContext[Job]!!.cancel()
+    }
     return job
 }
