@@ -47,7 +47,6 @@ class WatchableValueTest {
             log("Waiting for value change")
             changes.expect(ValueChange(5, 5))
             intValue.set(17)
-            assertTrue(intValue.isActive)
             changes.expect(ValueChange(5, 17))
             log("At end, shutting down")
         }

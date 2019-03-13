@@ -16,6 +16,7 @@
 
 import io.gladed.watchable.ListChange
 import io.gladed.watchable.WatchableList
+import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CoroutineScope
@@ -37,7 +38,7 @@ class MemoryLeakTest {
     @Test fun noScopeLeak() {
         runBlocking {
             // Create a var in scope1
-            var list1: WatchableList<Int>? = scope1.watchableListOf(1, 2, 3)
+            var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
             val ref = WeakReference(list1!!)
 
             // Watch it from scope 2
@@ -55,20 +56,20 @@ class MemoryLeakTest {
         }
     }
 
-    @Test fun noJobLeak() {
+    @Test fun `watchable can be gc'ed after job is cancelled`() {
         runBlocking {
             // Create a var in scope1
-            var list1: WatchableList<Int>? = scope1.watchableListOf(1, 2, 3)
+            var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
             val ref = WeakReference(list1!!)
 
-            // Watch it from scope 2
-            val job = scope2.watch(list1) {
+            // Watch it from a scope
+            var job: Job? = scope1.watch(list1) {
                 changes += it
             }
 
-            // Cancel scope1 and the job (leave scope2 running)
-            scope1.coroutineContext[Job]?.cancel()
-            job.cancel()
+            // Cancel and forget the job but leave the scope running.
+            job?.cancel()
+            job = null
             list1 = null
             assertNull(list1)
 
@@ -76,20 +77,17 @@ class MemoryLeakTest {
         }
     }
 
-    @Test fun noBindLeak() {
+    @Test fun `watchable bound as origin can be gc'ed after binding scope dies`() {
         runBlocking {
             // Create a var in scope1
-            var list1: WatchableList<Int>? = scope1.watchableListOf(1, 2, 3)
+            var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
             val ref = WeakReference(list1!!)
 
-            scope2.launch {
+            scope1.launch {
                 val list2 = watchableListOf(4)
-                list2.bind(list1!!)
-            }.join()
+                bind(list2, list1!!)
+            }.join() // join returns when scope is complete (and therefore bind should be dead)
 
-            // Kill both scopes, and make sure list1 can be freed
-            scope1.coroutineContext[Job]?.cancel()
-            scope2.coroutineContext[Job]?.cancel()
             list1 = null
             assertNull(list1)
 
@@ -100,12 +98,12 @@ class MemoryLeakTest {
     @Test fun noLostBindLeak() {
         runBlocking {
             // Create a var in scope1
-            var list1: WatchableList<Int>? = scope1.watchableListOf(1, 2, 3)
+            var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
             val ref = WeakReference(list1!!)
 
             scope2.launch {
                 val list2 = watchableListOf(4)
-                list2.bind(list1!!)
+                bind(list2, list1!!)
                 delay(50)
             }.join()
 

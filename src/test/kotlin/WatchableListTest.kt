@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.ListChange
+import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchBatches
 import io.gladed.watchable.watchableListOf
@@ -73,7 +74,7 @@ class WatchableListTest : ScopeTest() {
         runBlocking {
             val list = watchableListOf(1)
             val list2 = watchableListOf<Int>()
-            list2.bind(list)
+            bind(list2, list)
             val list3 = list2.readOnly()
             list.set(listOf(3))
             assertThat(list.toString(), startsWith("WatchableList("))

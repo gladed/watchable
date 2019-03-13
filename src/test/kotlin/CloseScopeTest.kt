@@ -20,11 +20,9 @@ import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers
 import org.junit.Assert
-import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.Executors
@@ -52,76 +50,35 @@ class CloseScopeTest {
             // intValue can still be set
             intValue.set(88)
             Assert.assertEquals(88, intValue.get())
-            // But, it's not active
-            Assert.assertFalse(intValue.isActive)
             // And it generates no changes
             changes.expectNone()
         }
     }
 
-    @Test fun noWatchAfterScopeClose() {
-        runBlocking {
-            intValue = watchableValueOf(5)
-        }
-
-        try {
-            runBlocking {
-                // Can't start watching; it's dead.
-                watch(intValue) { }
-            }
-            fail("Should not have reached this point")
-        } catch (e: IllegalStateException) { e.printStackTrace() }
-    }
-
-
     @Test
-    fun watchFromOtherScope() {
-        runBlocking {
-            intValue = scope1.watchableValueOf(5)
-            watch(intValue) {
-                changes += it
-            }
-            changes.expect(ValueChange(5, 5))
-            intValue.set(17)
-            changes.expect(ValueChange(5, 17))
-
-            // Shut down the other scope
-            scope1.coroutineContext.cancel()
-            Assert.assertFalse(intValue.isActive)
-            intValue.set(88)
-            changes.expectNone()
-        }
-    }
-
-    @Test
-    fun watchOnOtherScope() {
+    fun `nothing happens after watch scope is closed`() {
         runBlocking {
             intValue = watchableValueOf(5)
             scope1.watch(intValue) {
-                log("Handling $it")
                 Assert.assertThat(Thread.currentThread().name, CoreMatchers.containsString("scope1"))
-                // Because we're watching from this scope it should be named here
                 changes += it
             }
-
             changes.expect(ValueChange(5, 5))
             intValue.set(17)
             changes.expect(ValueChange(5, 17))
 
-            // Shut down the other scope
+            // Shut down the watching scope
             scope1.coroutineContext.cancel()
-            Assert.assertTrue(intValue.isActive) // Active, but we will not receive stuff
             intValue.set(88)
             changes.expectNone()
         }
     }
 
     @Test
-    fun cancelJob() {
+    fun `watch stops when job is cancelled`() {
         runBlocking {
             intValue = watchableValueOf(5)
             val job = scope1.watch(intValue) {
-                log("Handling $it")
                 Assert.assertThat(Thread.currentThread().name, CoreMatchers.containsString("scope1"))
                 // Because we're watching from this scope it should be named here
                 changes += it
@@ -133,7 +90,6 @@ class CloseScopeTest {
 
             // Shut down the job
             job.cancel()
-            Assert.assertTrue(intValue.isActive) // Active, but we will not receive stuff
             intValue.set(88)
             changes.expectNone()
         }

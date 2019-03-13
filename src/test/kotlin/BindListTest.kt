@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.ListChange
+import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
@@ -31,21 +32,21 @@ import org.junit.Test
 class BindListTest {
     @Rule @JvmField val changes = ChangeWatcherRule<ListChange<Int>>()
 
-    @Test fun bind() {
+    @Test fun `bind works`() {
         runBlocking {
             val origin = watchableListOf(5)
             val dest = watchableListOf<Int>()
-            dest.bind(origin)
+            bind(dest, origin)
             eventually { assertEquals(listOf(5), dest.get()) }
         }
     }
 
-    @Test fun bindThenChange() {
+    @Test fun `change after bind`() {
         runBlocking {
             val origin = watchableListOf(4, 5)
             val dest = watchableListOf<Int>()
             assertFalse(dest.isBound())
-            dest.bind(origin)
+            bind(dest, origin)
             assertTrue(dest.isBound())
             watch(dest) { changes += it }
 
@@ -69,7 +70,7 @@ class BindListTest {
             runBlocking {
                 val origin = watchableListOf(4, 5)
                 val dest = watchableListOf(6)
-                dest.bind(origin)
+                bind(dest, origin)
                 dest.use { add(5) }
                 fail("Modification should not have been permitted")
             }
@@ -82,7 +83,7 @@ class BindListTest {
         runBlocking {
             val origin = watchableListOf(4)
             val dest = watchableListOf<Int>()
-            dest.bind(origin)
+            bind(dest, origin)
             origin.use { addAll(listOf(8, 7)) }
             eventually { assertEquals(listOf(4, 8, 7), dest.get()) }
             dest.unbind()
@@ -115,7 +116,7 @@ class BindListTest {
                 }
             }
 
-            dest.bind(origin) {
+            bind(dest, origin) {
                 println("Handling $it")
                 when(it) {
                     is ListChange.Initial -> {
@@ -139,7 +140,7 @@ class BindListTest {
             }
 
             eventually {
-                dest.get() == mapOf(4 to 2, 6 to 1)
+                assertEquals(dest.get(), mapOf(4 to 2, 6 to 1))
             }
         }
     }

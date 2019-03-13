@@ -18,7 +18,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.channels.ClosedReceiveChannelException
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.delay
@@ -32,33 +31,26 @@ import kotlin.coroutines.EmptyCoroutineContext
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-fun <U> CoroutineScope.batch(input: ReceiveChannel<List<U>>, periodMillis: Long): ReceiveChannel<List<U>> =
+fun <U> CoroutineScope.batch(input: ReceiveChannel<List<U>>, periodMillis: Long = 0): ReceiveChannel<List<U>> =
     if (periodMillis <= 0L) input else produce {
-        try {
-            var lastSend = System.currentTimeMillis()
-            val buffer = mutableListOf<U>()
-            while (true) {
-                val received = input.receive()
-                val toDelay = periodMillis - (System.currentTimeMillis() - lastSend)
-                val toDeliver: List<U> = if (toDelay <= 0) received else {
-                    // Delay until min period is reached
-                    delay(toDelay)
-                    if (input.isEmpty) {
-                        // No further changes so send the original list as-is
-                        received
-                    } else {
-                        // Other changes, so combine into temporary buffer
-                        buffer.addAll(received)
-                        while (!input.isEmpty) {
-                            buffer.addAll(input.poll()!!)
-                        }
-                        buffer.toList().also { buffer.clear() }
-                    }
+        var lastSend = System.currentTimeMillis()
+        val buffer = mutableListOf<U>()
+        while (true) {
+            val received = input.receiveOrNull() ?: break
+            delay(periodMillis - (System.currentTimeMillis() - lastSend))
+
+            val toDeliver = if (input.isEmpty) received else {
+                // Append all changes into the buffer
+                buffer.addAll(received)
+                while (!input.isEmpty) {
+                    input.poll()?.also { buffer.addAll(it) }
                 }
-                lastSend = System.currentTimeMillis()
-                send(toDeliver)
+                buffer.toList().also { buffer.clear() }
             }
-        } catch (e: ClosedReceiveChannelException) { } // Ignore
+
+            lastSend = System.currentTimeMillis()
+            send(toDeliver)
+        }
     }
 
 /**

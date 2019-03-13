@@ -16,6 +16,7 @@
 
 import io.gladed.watchable.Change
 import io.gladed.watchable.MutableWatchable
+import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -56,9 +57,7 @@ fun <T, M : T, C : Change<T>> CoroutineScope.iterateMutable(
     count: Int = 1000
 ): Job = launch {
 
-    log("iterateMutable: bind")
-    two.bind(one)
-    log("iterateMutable: watch")
+    bind(two, one)
     watch(two) {
         launch {
             if (0 == chooser(10)) two.get()
@@ -80,7 +79,6 @@ fun <T, M : T, C : Change<T>> CoroutineScope.iterateMutable(
     watch(two) {
         launch {
             if (one.get() == two.get()) {
-                println("DONE, cancelling")
                 this@iterateMutable.coroutineContext.cancel()
                 yield()
             }
