@@ -56,6 +56,7 @@ class MemoryLeakTest {
         }
     }
 
+    @Suppress("UNUSED_VALUE") // We mean to release items when we are done with them.
     @Test fun `watchable can be gc'ed after job is cancelled`() {
         runBlocking {
             // Create a var in scope1
@@ -63,16 +64,15 @@ class MemoryLeakTest {
             val ref = WeakReference(list1!!)
 
             // Watch it from a scope
-            var job: Job? = scope1.watch(list1) {
-                changes += it
-            }
+            var job: Job? = watch(list1) { changes += it }
+            changes.expect(ListChange.Initial(listOf(1, 2, 3)))
 
             // Cancel and forget the job but leave the scope running.
             job?.cancel()
             job = null
             list1 = null
-            assertNull(list1)
 
+            // TODO: For some reason cancellation of the Job is not causing everything to go away!!!
             scour { assertNull(ref.get()) }
         }
     }

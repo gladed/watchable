@@ -42,6 +42,7 @@ class FileStore(dir: File) : Store, CoroutineScope {
     }
 
     private fun watch(bird: Bird) {
+        // This can be more efficient but requires aggregation and batching of changes.
         watch(bird.name) { launch { save(bird) } }
         watch(bird.following) { launch { save(bird) } }
         watch(bird.chirps) { launch { save(bird) } }

@@ -117,7 +117,6 @@ class BindListTest {
             }
 
             bind(dest, origin) {
-                println("Handling $it")
                 when(it) {
                     is ListChange.Initial -> {
                         clear()

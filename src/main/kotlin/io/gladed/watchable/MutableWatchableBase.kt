@@ -103,7 +103,9 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
 
     override fun watchBatches(scope: CoroutineScope, minPeriod: Duration, func: suspend (List<C>) -> Unit) =
         scope.daemon {
-            batch(subscribe(scope), minPeriod.toMillis()).consumeEach { func(it) }
+            batch(subscribe(scope), minPeriod.toMillis()).consumeEach {
+                func(it)
+            }
         }
 
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
