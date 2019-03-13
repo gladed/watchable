@@ -15,62 +15,68 @@
  */
 
 import io.gladed.watchable.ValueChange
+import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.newSingleThreadContext
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.containsString
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThat
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.Executors
+import java.util.concurrent.Executors.newSingleThreadExecutor
 
+@UseExperimental(ObsoleteCoroutinesApi::class)
 class BindValueTest {
     @Rule @JvmField val changes = ChangeWatcherRule<ValueChange<Int>>()
 
-    @Test fun bindTest() {
+    @Test fun `bind value`() {
         runBlocking {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
-            dest.bind(origin)
+            bind(dest, origin)
             eventually { assertEquals(5, dest.get()) }
         }
     }
 
-    @Test fun bindThenChange() {
+    @Test fun `bind then change`() {
         runBlocking {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             watch(dest) { changes += it }
             changes.expect(ValueChange(6, 6))
-            dest.bind(origin)
+            bind(dest, origin)
             origin.set(7)
             changes.expect(ValueChange(6, 7))
             assertEquals(7, dest.get())
         }
     }
 
-    @Test fun badBind() {
+    @Test fun `bind to self`() {
         try {
             runBlocking {
                 val origin = watchableValueOf(5)
-                origin.bind(origin)
+                bind(origin, origin)
                 fail("Shouldn't get here")
             }
         } catch (e: IllegalStateException) { }
     }
 
-    @Test fun badRebind() {
+    @Test fun `bind twice`() {
         try {
             runBlocking {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
-                dest.bind(origin)
-                dest.bind(origin)
+                bind(dest, origin)
+                bind(dest, origin)
                 fail("Second bind should have thrown")
             }
         } catch (e: IllegalStateException) {
@@ -78,13 +84,13 @@ class BindValueTest {
         }
     }
 
-    @Test fun badCircle() {
+    @Test fun `circular binding`() {
         try {
             runBlocking {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
-                dest.bind(origin)
-                origin.bind(dest)
+                bind(dest, origin)
+                bind(origin, dest)
                 fail("Second bind should have thrown")
             }
         } catch (e: IllegalStateException) {
@@ -92,12 +98,12 @@ class BindValueTest {
         }
     }
 
-    @Test fun badModify() {
+    @Test fun `modify bound`() {
         try {
             runBlocking {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
-                dest.bind(origin)
+                bind(dest, origin)
                 dest.set(7)
                 fail("Modification should not be permitted")
                 assertEquals(6, dest.get())
@@ -107,11 +113,11 @@ class BindValueTest {
         }
     }
 
-    @Test fun unbind() {
+    @Test fun `bind then unbind`() {
         runBlocking {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
-            dest.bind(origin)
+            bind(dest, origin)
             eventually { assertEquals(5, dest.get()) }
             dest.unbind()
             origin.set(7)
@@ -119,19 +125,12 @@ class BindValueTest {
         }
     }
 
-    private val dispatcher1 = Executors.newSingleThreadExecutor {
-        task -> Thread(task, "scope1")
-    }.asCoroutineDispatcher()
-    private val scope1 = LocalScope(dispatcher1)
+    private val scope1 = LocalScope(newSingleThreadContext("scope1"))
+    private val scope2 = LocalScope(newSingleThreadContext("scope2"))
 
-    private val dispatcher2 = Executors.newSingleThreadExecutor {
-        task -> Thread(task, "scope2")
-    }.asCoroutineDispatcher()
-    private val scope2 = LocalScope(dispatcher2)
-
-    @Test fun watchOnScope() {
+    @Test fun `watch from different scope`() {
         runBlocking {
-            val origin = scope1.watchableValueOf(5)
+            val origin = watchableValueOf(5)
             scope2.watch(origin) {
                 assertThat(Thread.currentThread().name, containsString("scope2"))
                 changes += it
@@ -142,40 +141,20 @@ class BindValueTest {
         }
     }
 
-    @Test fun killDestScope() {
+    @Test fun `kill binding scope`() {
         runBlocking {
-            val origin = scope1.watchableValueOf(5)
-            val dest = scope2.watchableValueOf(6)
-            scope2.watch(dest) { changes += it }
-            dest.bind(origin)
+            val origin = watchableValueOf(5)
+            val dest = watchableValueOf(6)
+            watch(dest) { changes += it }
+            scope2.bind(dest, origin)
             origin.set(7)
             eventually { assertEquals(7, dest.get()) }
             scope2.close() // Kill the destination value's scope
 
+            // Changing origin has no effect on bound thing, though it is still bound
             origin.set(8)
             always { assertEquals(7, dest.get()) }
-        }
-    }
-
-    @Test fun killOriginScope() {
-        runBlocking {
-            val origin = scope1.watchableValueOf(5)
-            val dest = scope2.watchableValueOf(6)
-            watch(dest) {
-                changes += it
-            }
-            changes.expect(ValueChange(6, 6))
-            dest.bind(origin)
-            changes.expect(ValueChange(6, 5))
-            origin.set(7)
-            changes.expect(ValueChange(5, 7))
-
-            scope1.close() // Kill the origin value's scope
-            assertFalse(origin.isActive)
-            // Because origin scope was killed it should NOT pass further values on to dest
-            origin.set(8)
-            changes.expectNone()
-            assertEquals(7, dest.get())
+            assertTrue(dest.isBound())
         }
     }
 }

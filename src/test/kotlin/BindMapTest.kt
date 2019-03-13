@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.MapChange
+import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.runBlocking
@@ -26,11 +27,11 @@ import org.junit.Test
 class BindMapTest {
     @Rule @JvmField val changes = ChangeWatcherRule<MapChange<Int, String>>()
 
-    @Test fun bind() {
+    @Test fun `bind maps`() {
         runBlocking {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
-            dest.bind(origin)
+            bind(dest, origin)
             eventually { assertEquals(mapOf(5 to "5"), dest.get()) }
         }
     }
@@ -39,7 +40,7 @@ class BindMapTest {
         runBlocking {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
-            dest.bind(origin)
+            bind(dest, origin)
             origin.use {
                 this[7] = "7"
                 this -= 5
@@ -57,7 +58,7 @@ class BindMapTest {
             runBlocking {
                 val origin = watchableMapOf(5 to "5")
                 val dest = watchableMapOf(6 to "6")
-                dest.bind(origin)
+                bind(dest, origin)
                 dest.use { put(7, "7") }
                 fail("Modification should not have been permitted")
             }
@@ -71,7 +72,7 @@ class BindMapTest {
             runBlocking {
                 val origin = watchableMapOf(5 to "5")
                 val dest = watchableMapOf(6 to "6")
-                dest.bind(origin)
+                bind(dest, origin)
                 dest.use {
                     remove(6)
                     remove(5)
@@ -87,7 +88,7 @@ class BindMapTest {
         runBlocking {
             val origin = watchableMapOf(5 to "5")
             val dest = watchableMapOf(6 to "6")
-            dest.bind(origin)
+            bind(dest, origin)
             origin.use {
                 putAll(listOf(8 to "8", 7 to "7"))
             }

@@ -39,17 +39,17 @@ interface MutableWatchable<T, M : T, C : Change<T>> : Watchable<T, C> {
 
     /**
      * Binds this unbound object to [origin], such that when [origin] changes, this object is updated to match
-     * [origin] exactly. This object may not be modified while bound. When this object's [CoroutineScope] completes,
-     * no further binding related changes are applied. Bindings may not be circular.
+     * [origin] exactly, until [scope] completes. While bound, this object may not be externally modified or
+     * rebound.
      */
-    fun bind(origin: Watchable<T, C>)
+    fun bind(scope: CoroutineScope, origin: Watchable<T, C>)
 
     /**
-     * Binds this unbound object to [origin], such that for every change to [origin], the mutable form of this
-     * object is updated with [apply]. This object may not be otherwise modified while bound. When this object's
-     * [CoroutineScope] completes, apply is no longer invoked. Bindings may not be circular.
+     * Binds this unbound object to [origin], such that for every change to [origin], the change is applied
+     * to this object with [apply], until [scope] completes. While bound, this object may not be externally
+     * modified or rebound.
      */
-    fun <T2, C2 : Change<T2>> bind(origin: Watchable<T2, C2>, apply: M.(C2) -> Unit)
+    fun <T2, C2 : Change<T2>> bind(scope: CoroutineScope, origin: Watchable<T2, C2>, apply: M.(C2) -> Unit)
 
     /** Cancel any existing binding that exists for this object. */
     fun unbind()

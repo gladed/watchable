@@ -57,16 +57,23 @@ class ChangeWatcherRule<C> : TestRule, CoroutineScope {
         }
     }
 
-    suspend fun expect(vararg expected: C, timeout: Long = 250) {
-        val remaining = expected.toMutableList()
+    suspend fun expect(vararg expected: C, timeout: Long = 250, strict: Boolean = true) {
+        val expectedList = expected.toList()
+        val current = mutableListOf<C>()
+
         val result = withTimeoutOrNull(timeout) {
-            while (remaining.isNotEmpty()) {
-                assertEquals(remaining.first(), changes.receive())
-                remaining.removeAt(0)
+            while (expectedList != current) {
+                if (strict && current.isNotEmpty()) {
+                    assertEquals(expectedList.take(current.size), current)
+                }
+                current.add(changes.receive())
+                if (!strict && current.size > expectedList.size) {
+                    current.removeAt(0)
+                }
             }
         }
         if (result == null) {
-            fail("Never received ${remaining.first()} in ${timeout}ms")
+            assertEquals(expectedList, current)
         }
     }
 

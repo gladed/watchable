@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.MapChange
+import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.CoroutineScope
@@ -84,7 +85,7 @@ class WatchableMapTest : ScopeTest() {
         runBlocking {
             val map = watchableMapOf(1 to "1")
             val map2 = watchableMapOf(2 to "2")
-            map2.bind(map)
+            bind(map2, map)
             val map3 = map2.readOnly()
             watch(map3) { changes += it }
             assertThat(map.toString(), startsWith("WatchableMap("))

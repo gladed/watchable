@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.SetChange
+import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.runBlocking
@@ -27,11 +28,11 @@ import org.junit.Test
 class BindSetTest {
     @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
 
-    @Test fun bind() {
+    @Test fun `bind sets`() {
         runBlocking {
             val origin = watchableSetOf(5)
             val dest = watchableSetOf(6)
-            dest.bind(origin)
+            bind(dest, origin)
             eventually { assertEquals(setOf(5), dest.get()) }
         }
     }
@@ -40,7 +41,7 @@ class BindSetTest {
         runBlocking {
             val origin = watchableSetOf(4)
             val dest = watchableSetOf<Int>()
-            dest.bind(origin)
+            bind(dest, origin)
             origin.use {
                 add(6)
                 add(5)
@@ -57,7 +58,7 @@ class BindSetTest {
             runBlocking {
                 val origin = watchableSetOf(4, 5)
                 val dest = watchableSetOf(6)
-                dest.bind(origin)
+                bind(dest, origin)
                 dest.use {
                     add(7)
                 }
@@ -73,7 +74,7 @@ class BindSetTest {
             runBlocking {
                 val origin = watchableSetOf(4, 5)
                 val dest = watchableSetOf(5)
-                dest.bind(origin)
+                bind(dest, origin)
                 dest.use {
                     remove(5)
                 }
@@ -88,7 +89,7 @@ class BindSetTest {
         runBlocking {
             val origin = watchableSetOf(4, 5)
             val dest = watchableSetOf(6)
-            dest.bind(origin)
+            bind(dest, origin)
             origin.use {
                 addAll(listOf(8, 7))
             }

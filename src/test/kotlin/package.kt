@@ -16,6 +16,7 @@
 
 import io.gladed.watchable.Change
 import io.gladed.watchable.MutableWatchable
+import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -30,7 +31,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assert
-import org.junit.Assert.fail
 
 fun log(message: Any?) {
     println(Thread.currentThread().name + ": $message")
@@ -56,9 +56,7 @@ fun <T, M : T, C : Change<T>> CoroutineScope.iterateMutable(
     count: Int = 1000
 ): Job = launch {
 
-    log("iterateMutable: bind")
-    two.bind(one)
-    log("iterateMutable: watch")
+    bind(two, one)
     watch(two) {
         launch {
             if (0 == chooser(10)) two.get()
@@ -80,7 +78,6 @@ fun <T, M : T, C : Change<T>> CoroutineScope.iterateMutable(
     watch(two) {
         launch {
             if (one.get() == two.get()) {
-                println("DONE, cancelling")
                 this@iterateMutable.coroutineContext.cancel()
                 yield()
             }
@@ -119,4 +116,19 @@ suspend fun always(timeout: Int = 100, delay: Int = 10, test: suspend () -> Unit
             }
         }
     } catch (e: TimeoutCancellationException) {  } // expected
+}
+
+/** Keep garbage collecting and running [untilSuccess] until it doesn't throw or until we exhaust attempts. */
+suspend fun scour(maxIterations: Int = 50, delay: Int = 50, untilSuccess: () -> Unit) {
+    val runtime = Runtime.getRuntime()
+    for (i in 0 until maxIterations) {
+        runtime.runFinalization()
+        runtime.gc()
+        try {
+            untilSuccess()
+            return
+        } catch (e: AssertionError) { } // Keep trying
+        delay(delay.toLong())
+    }
+    untilSuccess()
 }

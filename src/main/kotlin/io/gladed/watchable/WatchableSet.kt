@@ -16,12 +16,8 @@
 
 package io.gladed.watchable
 
-import kotlin.coroutines.CoroutineContext
-
 /** A [Watchable] wrapper for a [Set] which may also be modified or bound. Use [watchableSetOf] to create. */
-@UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class WatchableSet<T> internal constructor(
-    override val coroutineContext: CoroutineContext,
     initial: Collection<T>
 ) : MutableWatchableBase<Set<T>, MutableSet<T>, SetChange<T>>(), ReadOnlyWatchableSet<T> {
 

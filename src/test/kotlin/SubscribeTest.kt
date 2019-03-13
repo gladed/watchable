@@ -15,35 +15,25 @@
  */
 
 import io.gladed.watchable.SetChange
-import io.gladed.watchable.ValueChange
-import io.gladed.watchable.WatchableSet
-import io.gladed.watchable.WatchableValue
-import io.gladed.watchable.watch
+import io.gladed.watchable.subscribe
 import io.gladed.watchable.watchableSetOf
-import io.gladed.watchable.watchableValueOf
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.ClosedReceiveChannelException
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
-import org.hamcrest.CoreMatchers
-import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
-import java.util.concurrent.Executors
 
 class SubscribeTest : ScopeTest() {
     private val set = watchableSetOf(1)
     @Rule @JvmField val scope2 = ScopeRule(Dispatchers.Default)
 
     @Test fun sub() {
-        val rxChanges = set.subscribe()
         runBlocking {
+            val rxChanges = subscribe(set)
             assertEquals(listOf(SetChange.Initial(setOf(1))), rxChanges.receive())
             set.use { remove(1) }
             assertEquals(listOf(SetChange.Remove(1)), rxChanges.receive())
@@ -51,7 +41,7 @@ class SubscribeTest : ScopeTest() {
     }
 
     @Test fun cancelSub() {
-        val rxChanges = set.subscribe()
+        val rxChanges = set.subscribe(scope2)
         runBlocking {
             assertEquals(listOf(SetChange.Initial(setOf(1))), rxChanges.receive())
             rxChanges.cancel()
@@ -63,9 +53,10 @@ class SubscribeTest : ScopeTest() {
     }
 
     @Test fun cancelScope() {
-        val set2 = scope2.watchableSetOf(2)
-        val rxChanges = set2.subscribe()
+        val set2 = watchableSetOf(2)
         runBlocking {
+            val rxChanges = subscribe(set2)
+
             assertEquals(listOf(SetChange.Initial(setOf(2))), rxChanges.receive())
 
             // Cancel set2's scope
@@ -73,16 +64,16 @@ class SubscribeTest : ScopeTest() {
 
             set2.use { remove(2) }
             try {
-                assertEquals(listOf(SetChange.Remove(1)), rxChanges.receive())
+                assertEquals(listOf(SetChange.Remove(2)), rxChanges.receive())
             } catch (e: ClosedReceiveChannelException) { }
         }
     }
 
-    @Test fun batchScope() {
-        val set2 = scope2.watchableSetOf(2)
-        val rxChanges = set2.subscribe()
+    @Test fun `batches arrive slowly`() {
+        val set2 = watchableSetOf(2)
         runBlocking {
-            val batchChannel = batch(rxChanges, 50)
+            val rxChanges = subscribe(set2)
+            val batchChannel = scope2.batch(rxChanges, 50)
             assertEquals(listOf(SetChange.Initial(setOf(2))), batchChannel.receive())
             val start = System.currentTimeMillis()
 
@@ -93,13 +84,15 @@ class SubscribeTest : ScopeTest() {
                 SetChange.Remove(2),
                 SetChange.Add(3),
                 SetChange.Add(4)), batchChannel.receive())
-            assertTrue(50 <= System.currentTimeMillis() - start)
+            val elapsed = System.currentTimeMillis() - start
+            log(elapsed)
+            assertTrue(elapsed >= 48) // A couple ms of grace here
 
-            // Cancel set2's scope, immediately killing batchChannel
+            // Cancel scope2, immediately killing batchChannel
             scope2.coroutineContext[Job]?.cancel()
             try {
                 assertEquals(listOf(SetChange.Remove(1)), batchChannel.receive())
-            } catch (e: ClosedReceiveChannelException) { }
+            } catch (e: CancellationException) { }
         }
     }
 }
