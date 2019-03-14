@@ -53,17 +53,14 @@ dependencies {
 
 [`WatchableList`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-list/), [`WatchableSet`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-set/), and [`WatchableMap`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-map/) allow access to wrapped List, Set, and Map data. [`WatchableValue`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-value/) wraps a single object value of any type.
 
-These types are created on a CoroutineScope with `watchable*Of(...)`. For example:
-
 ```kotlin
-class MyClass : CoroutineScope {
-    val list = watchableListOf(1, 2, 3)
-    val map = watchableMapOf(4 to "four")
-    val set = watchableSetOf(5.0, 6.0)
-    val value = watchableValueOf(URI.create("https://github.com"))
+val list = watchableListOf(1, 2, 3)
+val map = watchableMapOf(4 to "four")
+val set = watchableSetOf(5.0, 6.0)
+val value = watchableValueOf(URI.create("https://github.com"))
 ```
 
-Each data type can be accessed, modified, watched, and bound. 
+Each data type can be accessed, modified, watched, and bound, etc.
 
 ## Reading Data
 
@@ -98,7 +95,7 @@ set.use { add(3) } // Prints: Add(added=3)
 
 ## Read-Only Watchable
 
-You can use a `MutableWatchable`'s `.readOnly()` function to return a copy indicating it must not be changed externally. The copy may still be watched normally.
+You can use a `MutableWatchable`'s `.readOnly()` function to return a `Watchable` copy, which cannot be changed externally. The copy may still be watched normally.
 
 ## Binding
 
