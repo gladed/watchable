@@ -16,5 +16,8 @@
 
 package io.gladed.watchable
 
-/** Describes a change to an object of type [T]. */
-interface Change<out T>
+/** A single change to a single watchable in a group. */
+data class GroupChange(
+    val watchable: Watchable<out Any, out Change<Any>>,
+    val change: Change<Any>
+) : Change<List<Watchable<out Any, out Change<Any>>>>

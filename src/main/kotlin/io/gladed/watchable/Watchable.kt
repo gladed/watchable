@@ -16,11 +16,14 @@
 
 package io.gladed.watchable
 
+import batch
+import daemon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.isActive
-import java.time.Duration
 
 /**
  * Wraps type [T] so that it may be watched for changes of type [C].
@@ -40,7 +43,7 @@ interface Watchable<T, C : Change<T>> {
      * the returned job is cancelled or the [scope] completes.
      */
     fun watch(scope: CoroutineScope, func: (C) -> Unit) =
-        watchBatches(scope, Duration.ZERO) { changes ->
+        batch(scope) { changes ->
             for (change in changes) {
                 if (scope.isActive) func(change) else break
             }
@@ -50,10 +53,14 @@ interface Watchable<T, C : Change<T>> {
      * Deliver lists of changes for this [Watchable] to [func], starting with its initial state, until
      * the returned job is cancelled or the [scope] completes.
      */
-    fun watchBatches(
+    @UseExperimental(ObsoleteCoroutinesApi::class)
+    fun batch(
         scope: CoroutineScope,
-        /** The minimum time between change notifications, or [Duration.ZERO] (the default) for no delay. */
-        minPeriod: Duration = Duration.ZERO,
+        /** The minimum time in millis between change notifications, or 0 (the default) for no delay. */
+        minPeriod: Long = 0,
         func: suspend (List<C>) -> Unit
-    ): Job
+    ): Job =
+        scope.daemon {
+            batch(subscribe(scope), minPeriod).consumeEach { func(it) }
+        }
 }

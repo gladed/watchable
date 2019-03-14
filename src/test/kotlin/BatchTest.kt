@@ -16,13 +16,12 @@
 
 import io.gladed.watchable.ValueChange
 import io.gladed.watchable.WatchableValue
-import io.gladed.watchable.watchBatches
+import io.gladed.watchable.batch
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
-import java.time.Duration
 
 class BatchTest {
     private lateinit var intValue: WatchableValue<Int>
@@ -32,7 +31,7 @@ class BatchTest {
     @Test fun batch() {
         runBlocking {
             intValue = watchableValueOf(1)
-            watchBatches(intValue, Duration.ofMillis(50)) {
+            batch(intValue, 50) {
                 changes += it
             }
             changes.expect(ValueChange(1, 1)) // Get situated

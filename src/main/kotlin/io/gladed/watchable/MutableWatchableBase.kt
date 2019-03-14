@@ -16,7 +16,6 @@
 
 package io.gladed.watchable
 
-import batch
 import daemon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -25,7 +24,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import java.time.Duration
 
 /** Base for implementing a type that is watchable, mutable, and bindable. */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
@@ -87,14 +85,6 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
 
     private fun getImmutableWhileLocked() =
         (immutable ?: mutable.toImmutable().also { immutable = it })
-
-    override fun watchBatches(scope: CoroutineScope, minPeriod: Duration, func: suspend (List<C>) -> Unit): Job =
-        scope.daemon {
-            val subscription = subscribe(scope)
-            batch(subscription, minPeriod.toMillis()).consumeEach {
-                func(it)
-            }
-        }
 
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
     protected fun <U> doChange(func: () -> U): U =
@@ -158,7 +148,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
         }
 
         // Start watching
-        val job = scope.watchBatches(origin) {
+        val job = scope.batch(origin) {
             use {
                 isOnBoundChange = true
                 for (change in it) {
@@ -180,6 +170,6 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     }
 
     companion object {
-        private const val CAPACITY = 10
+        const val CAPACITY = 10
     }
 }

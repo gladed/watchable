@@ -1,6 +1,7 @@
 package external
 
-import io.gladed.watchable.watch
+import io.gladed.watchable.batch
+import io.gladed.watchable.group
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -42,10 +43,10 @@ class FileStore(dir: File) : Store, CoroutineScope {
     }
 
     private fun watch(bird: Bird) {
-        // This can be more efficient but requires aggregation and batching of changes.
-        watch(bird.name) { launch { save(bird) } }
-        watch(bird.following) { launch { save(bird) } }
-        watch(bird.chirps) { launch { save(bird) } }
+        // Only save this maximum once per 250
+        batch(group(bird.name, bird.following, bird.chirps), 250) {
+            launch { save(bird) }
+        }
     }
 
     private suspend fun save(bird: Bird) {

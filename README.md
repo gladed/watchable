@@ -1,10 +1,10 @@
-[ ![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.5.5) ](https://bintray.com/gladed/watchable/watchable/0.5.5/link)
+[ ![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.6.0) ](https://bintray.com/gladed/watchable/watchable/0.6.0/link)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=gladed_watchable&metric=alert_status)](https://sonarcloud.io/dashboard?id=gladed_watchable)
 [![CircleCI](https://circleci.com/gh/gladed/watchable.svg?style=svg)](https://circleci.com/gh/gladed/watchable)
 [![CodeCov](https://codecov.io/github/gladed/watchable/coverage.svg?branch=master)](https://codecov.io/github/gladed/watchable)
 [![detekt](https://img.shields.io/badge/code%20style-%E2%9D%A4-FF4081.svg)](https://arturbosch.github.io/detekt/)
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.3.21-blue.svg)](https://kotlinlang.org/)
-[![API Docs](https://img.shields.io/badge/API_Docs-0.5.5-purple.svg)](https://gladed.github.io/watchable/0.5.5/io.gladed.watchable/)
+[![API Docs](https://img.shields.io/badge/API_Docs-0.6.0-purple.svg)](https://gladed.github.io/watchable/0.6.0/io.gladed.watchable/)
 
 # Watchable
 
@@ -43,7 +43,7 @@ repositories {
 }
 
 dependencies {
-    compile 'io.gladed:watchable:0.5.5'
+    compile 'io.gladed:watchable:0.6.0'
 }
 ```
 
@@ -71,9 +71,7 @@ You can obtain a read-only, immutable copy of the underlying data using [`get()`
 
 ```kotlin
 val list = watchableListOf(1, 2, 3)
-for (value in list.get()) {
-    println("$value")
-} // Prints "1, 2, 3"
+println(list.get()) // Prints [1, 2, 3]
 ```
 
 ## Modifying Contents
@@ -83,7 +81,7 @@ Any [`MutableWatchable`](https://gladed.github.io/watchable/latest/io.gladed.wat
 ```kotlin
 val list = watchableListOf(1, 2)
 list.use { add(3) }
-println("${list.get()}") // Prints "1, 2, 3" 
+println(list.get()) // Prints [1, 2, 3]
 ```  
 
 If other coroutines are already using the object, `use()` will suspend until they are done, then execute your code. In this way, all modifications run sequentially.
@@ -94,8 +92,8 @@ You can watch any `Watchable` for changes from any `CoroutineScope` using [watch
 
 ```kotlin
 val set = watchableSetOf(1, 2)
-set.watch { println("$it") } // Prints "SetChange.Initial(1, 2)"
-set.use { add(3) } // Causes the line above to print "SetChange.Add(3)"
+set.watch { println(it) } // Prints: Initial(initial=[1, 2])
+set.use { add(3) } // Prints: Add(added=3)
 ```
 
 ## Read-Only Watchable
@@ -117,7 +115,33 @@ While bound, a watchable cannot be independently modified, and attempts to do so
 
 ## Batching
 
-It's possible to listen for lists of changes, or even to receive updates on a reliable, but less-frequent basis. See the documentation for [watchBatches](https://gladed.github.io/watchable/latest/io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/watch-batches.html), especially the `minPeriod` parameter.
+It's possible to listen for lists of changes, or even to receive updates on a reliable, but less-frequent basis. See the documentation for [batch](https://gladed.github.io/watchable/latest/io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/batch.html), especially the `minPeriod` parameter.
+
+```kotlin
+val list = listOf(4, 5).toWatchableList()
+batch(list) { println(it) } // Prints: [Initial(initial=[4, 5])]
+list.use { add(6); add(7) } // Prints: [Add(index=2, added=6), Add(index=3, added=7)]
+```
+
+## Grouping
+
+You can group several watchables into a `WatchableGroup` so that you receive changes for both:
+
+```kotlin
+val list = listOf(4).toWatchableList()
+val set = setOf("a").toWatchableSet()
+
+watch(group(set, list)) { println(it) }
+// Prints:
+//   GroupChange(watchable=WatchableSet(), change=Initial(initial=[a]))
+//   GroupChange(watchable=WatchableList(), change=Initial(initial=[4]))
+
+list.use { add(6) }
+set.use { add("b") }
+// Prints:
+//   GroupChange(watchable=WatchableList(), change=Add(index=1, added=6))
+//   GroupChange(watchable=WatchableSet(), change=Add(added=b))
+```
 
 ## Object Lifetime
 
@@ -126,6 +150,10 @@ It's possible to listen for lists of changes, or even to receive updates on a re
 ## Subscribing
 
 You can [subscribe](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/subscribe.html) to changes on a watchable, returning an ordinary ReceiveChannel which receives lists of changes as they occur. However, it is usually more convenient to use `bind()` and `watch { ... }` as described above.
+
+# Sample
+
+See the [Sample Project](/sample) for some ideas on how this could be integrated into a project.
 
 # Version History
 

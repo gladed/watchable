@@ -62,6 +62,7 @@ class FileStoreTest {
 
         // From disk...
         runBlocking {
+            delay(500) // Allow file store to save
             val robin = fileStore.findBird(robinId)!!
             assertEquals(listOf(wrenId), robin.following.get())
         }
