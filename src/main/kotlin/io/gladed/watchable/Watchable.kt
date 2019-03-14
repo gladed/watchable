@@ -16,8 +16,6 @@
 
 package io.gladed.watchable
 
-import batch
-import daemon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
@@ -30,8 +28,8 @@ import kotlinx.coroutines.isActive
  */
 interface Watchable<T, C : Change<T>> {
 
-    /** Return the current value of [T]. */
-    suspend fun get(): T
+    /** Return an immutable copy of the current value of [T]. */
+    val value: T
 
     /**
      * Return a channel which will receive successive lists of changes as they occur.
@@ -40,9 +38,9 @@ interface Watchable<T, C : Change<T>> {
 
     /**
      * Deliver changes for this [Watchable] to [func], starting with its initial state, until
-     * the returned job is cancelled or the [scope] completes.
+     * the returned [Job] is cancelled or the [scope] completes.
      */
-    fun watch(scope: CoroutineScope, func: (C) -> Unit) =
+    fun watch(scope: CoroutineScope, func: suspend (C) -> Unit): Job =
         batch(scope) { changes ->
             for (change in changes) {
                 if (scope.isActive) func(change) else break
@@ -51,7 +49,7 @@ interface Watchable<T, C : Change<T>> {
 
     /**
      * Deliver lists of changes for this [Watchable] to [func], starting with its initial state, until
-     * the returned job is cancelled or the [scope] completes.
+     * the returned [Job] is cancelled or the [scope] completes.
      */
     @UseExperimental(ObsoleteCoroutinesApi::class)
     fun batch(

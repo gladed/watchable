@@ -2,7 +2,6 @@ package util
 
 import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.watchableValueOf
-import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.Decoder
 import kotlinx.serialization.Encoder
 import kotlinx.serialization.KSerializer
@@ -20,7 +19,7 @@ class WatchableValueSerializer<T : Any>(private val dataSerializer: KSerializer<
 
     override fun serialize(encoder: Encoder, obj: WatchableValue<T>) {
         with(encoder.beginStructure(descriptor)) {
-            encodeSerializableElement(descriptor, 0, dataSerializer, runBlocking { obj.get() })
+            encodeSerializableElement(descriptor, 0, dataSerializer, obj.value)
             endStructure(descriptor)
         }
     }

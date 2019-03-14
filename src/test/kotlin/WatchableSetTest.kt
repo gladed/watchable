@@ -14,40 +14,19 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.SetChange
 import io.gladed.watchable.bind
-import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThat
-import org.junit.Rule
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WatchableSetTest : ScopeTest() {
-    @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
-
-    private val chooser = Chooser(0)
-    private val maxValue = 100
-
-    private val mods = listOf<MutableSet<Int>.() -> Unit>(
-        { remove(chooser(maxValue)) },
-        { add(chooser(maxValue)) }
-    )
-
-    @Test fun changes() {
-        CoroutineScope(coroutineContext + Job()).apply {
-            runToEnd {
-                iterateMutable(watchableSetOf(1, 2), watchableSetOf<Int>(), mods, { add(maxValue + 1) }, chooser)
-            }
-        }
-    }
-
-    @Test fun replace() {
+    @Test
+    fun replace() {
         runBlocking {
             val set = watchableSetOf(1)
             val set2 = watchableSetOf<Int>()
@@ -56,7 +35,16 @@ class WatchableSetTest : ScopeTest() {
             assertThat(set.toString(), startsWith("WatchableSet("))
             assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
             set.set(setOf(3))
-            eventually { assertEquals(setOf(3), set3.get()) }
+            eventually { assertEquals(setOf(3), set3.value) }
         }
+    }
+
+    @Test fun listApis() {
+        val set = watchableSetOf(1, 2)
+        assertEquals(2, set.size)
+        assertTrue(set.contains(2))
+        assertFalse(set.containsAll(listOf(2, 3)))
+        assertFalse(set.isEmpty())
+        assertEquals(1, set.iterator().next())
     }
 }

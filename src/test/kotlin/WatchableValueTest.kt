@@ -76,9 +76,9 @@ class WatchableValueTest {
             }
             changes.expect(ValueChange(4, 4))
             intValue.set(5)
-            assertEquals(5, readOnly.get())
+            assertEquals(5, readOnly.value)
             intValue.set(6)
-            assertEquals(6, readOnly.get())
+            assertEquals(6, readOnly.value)
             changes.expect(ValueChange(4, 5))
             changes.expect(ValueChange(5, 6))
             assertEquals(6, readOnly.value)

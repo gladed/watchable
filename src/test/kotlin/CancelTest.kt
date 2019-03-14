@@ -49,7 +49,7 @@ class CancelTest {
         runBlocking {
             // intValue can still be set
             intValue.set(88)
-            Assert.assertEquals(88, intValue.get())
+            Assert.assertEquals(88, intValue.value)
             // And it generates no changes
             changes.expectNone()
         }

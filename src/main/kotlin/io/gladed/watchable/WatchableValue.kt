@@ -42,8 +42,8 @@ class WatchableValue<T> internal constructor(
 
     /** Return an unmodifiable form of this [WatchableSet]. */
     fun readOnly(): ReadOnlyWatchableValue<T> = object : ReadOnlyWatchableValue<T> by this {
-        override fun toString() = "ReadOnlyWatchableValue()"
+        override fun toString() = "ReadOnlyWatchableValue($value)"
     }
 
-    override fun toString() = "WatchableValue()"
+    override fun toString() = "WatchableValue($value)"
 }

@@ -16,7 +16,6 @@
 
 package io.gladed.watchable
 
-import daemon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -30,7 +29,7 @@ class WatchableGroup(
     private val watchables: List<Watchable<out Any, out Change<Any>>>
 ) : Watchable<List<Watchable<out Any, out Change<Any>>>, GroupChange> {
 
-    override suspend fun get(): List<Watchable<out Any, out Change<Any>>> = watchables
+    override val value: List<Watchable<out Any, out Change<Any>>> = watchables
 
     @UseExperimental(ExperimentalCoroutinesApi::class)
     override fun subscribe(scope: CoroutineScope): ReceiveChannel<List<GroupChange>> =

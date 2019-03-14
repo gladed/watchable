@@ -29,69 +29,8 @@ import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
 
-class BindListTest {
+class BindSpecialTest {
     @Rule @JvmField val changes = ChangeWatcherRule<ListChange<Int>>()
-
-    @Test fun `bind works`() {
-        runBlocking {
-            val origin = watchableListOf(5)
-            val dest = watchableListOf<Int>()
-            bind(dest, origin)
-            eventually { assertEquals(listOf(5), dest.get()) }
-        }
-    }
-
-    @Test fun `change after bind`() {
-        runBlocking {
-            val origin = watchableListOf(4, 5)
-            val dest = watchableListOf<Int>()
-            assertFalse(dest.isBound())
-            bind(dest, origin)
-            assertTrue(dest.isBound())
-            watch(dest) { changes += it }
-
-            origin.use {
-                addAll(listOf(8, 7))
-                remove(5)
-            }
-
-            origin.use {
-                add(9)
-                remove(4)
-                this[1] = 11
-            }
-
-            eventually { assertEquals(listOf(8, 11, 9), dest.get()) }
-        }
-    }
-
-    @Test fun badWrite() {
-        try {
-            runBlocking {
-                val origin = watchableListOf(4, 5)
-                val dest = watchableListOf(6)
-                bind(dest, origin)
-                dest.use { add(5) }
-                fail("Modification should not have been permitted")
-            }
-        } catch (e: IllegalStateException) {
-            // Expected
-        }
-    }
-
-    @Test fun unbindThenChange() {
-        runBlocking {
-            val origin = watchableListOf(4)
-            val dest = watchableListOf<Int>()
-            bind(dest, origin)
-            origin.use { addAll(listOf(8, 7)) }
-            eventually { assertEquals(listOf(4, 8, 7), dest.get()) }
-            dest.unbind()
-            dest.unbind() // twice to show it works ok
-            origin.use { remove(4) }
-            always { assertEquals(listOf(4, 8, 7), dest.get()) }
-        }
-    }
 
     @Test fun specialBinding() {
         runBlocking {
@@ -139,7 +78,7 @@ class BindListTest {
             }
 
             eventually {
-                assertEquals(dest.get(), mapOf(4 to 2, 6 to 1))
+                assertEquals(mapOf(4 to 2, 6 to 1), dest.value)
             }
         }
     }

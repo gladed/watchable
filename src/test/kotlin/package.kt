@@ -16,7 +16,9 @@
 
 import io.gladed.watchable.Change
 import io.gladed.watchable.MutableWatchable
+import io.gladed.watchable.Watchable
 import io.gladed.watchable.bind
+import io.gladed.watchable.subscribe
 import io.gladed.watchable.watch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -31,9 +33,18 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.yield
 import org.junit.Assert
+import org.junit.Assert.fail
+import java.time.ZoneOffset
+import java.time.ZonedDateTime
+import java.time.format.DateTimeFormatter
+import kotlin.system.measureTimeMillis
+
+
+private val clockTimeFormat = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
 
 fun log(message: Any?) {
-    println(Thread.currentThread().name + ": $message")
+    val now = ZonedDateTime.now( ZoneOffset.UTC ).format( clockTimeFormat )
+    println("$now ${Thread.currentThread().name}: $message")
 }
 
 /** Launch block on the current scope then block until it completes. */
@@ -45,46 +56,6 @@ fun CoroutineScope.runToEnd(block: suspend () -> Unit) {
     }.invokeOnCompletion { cause ->
         if (cause != null && cause !is CancellationException) throw cause
     }
-}
-
-fun <T, M : T, C : Change<T>> CoroutineScope.iterateMutable(
-    one: MutableWatchable<T, M, C>,
-    two: MutableWatchable<T, M, C>,
-    mods: List<M.() -> Unit>,
-    closer: M.() -> Unit,
-    chooser: Chooser,
-    count: Int = 1000
-): Job = launch {
-
-    bind(two, one)
-    watch(two) {
-        launch {
-            if (0 == chooser(10)) two.get()
-        }
-    }
-    log("Launching $count")
-
-    (0 until count).map {
-        launch {
-            one.use {
-                chooser(mods)!!(this)
-            }
-        }
-    }.joinAll()
-
-    log("Closing")
-    one.use { closer() }
-
-    watch(two) {
-        launch {
-            if (one.get() == two.get()) {
-                this@iterateMutable.coroutineContext.cancel()
-                yield()
-            }
-        }
-    }
-    delay(3000)
-    Assert.assertEquals(one.get(), two.get())
 }
 
 suspend fun eventually(timeout: Int = 250, delay: Int = 10, test: suspend () -> Unit) {
@@ -131,4 +102,55 @@ suspend fun scour(maxIterations: Int = 50, delay: Int = 50, untilSuccess: () -> 
         delay(delay.toLong())
     }
     untilSuccess()
+}
+
+/** Fail if [func] doesn't throw with [cls]. */
+inline fun mustThrow(cls: Class<out Any> = Throwable::class.java, func: () -> Unit) {
+    try {
+        func()
+        fail("Did not throw!")
+    } catch (t: Throwable) {
+        if (!cls.isInstance(t)) {
+            fail("Threw unexpected $t")
+        }
+    }
+}
+
+/** Call all the things on a Kotlin data class. */
+fun <T : Any> cover(obj: T) {
+    Assert.assertEquals(obj, obj)
+    @Suppress("SENSELESS_COMPARISON")
+    (Assert.assertFalse(obj == null))
+    Assert.assertFalse(obj == 1)
+    Assert.assertNotNull(obj.toString())
+    obj.hashCode()
+    obj::class.java.declaredMethods.forEach { method ->
+        // Invoke all available accessors
+        if (method.name.startsWith("get") && method.parameterCount == 0) {
+            try {
+                method.invoke(obj)
+            } catch (exception: IllegalAccessException) { } // Don't care
+        }
+
+        if (method.name.startsWith("component") && method.parameterCount == 0) {
+            method.invoke(obj)
+        }
+    }
+}
+
+suspend fun <T, C: Change<T>> Watchable<T, C>.watchUntil(scope: CoroutineScope, func: () -> Unit) {
+    val rx = scope.subscribe(this)
+    withTimeout(250) {
+        while(true) {
+            rx.receive()
+            try {
+                func()
+                // Did not throw so exit
+                break
+            } catch (t: Throwable) {
+                // Keep watching because func is still throwing
+            }
+        }
+        rx.cancel()
+    }
 }

@@ -29,7 +29,12 @@ import org.junit.Test
 class GroupTest {
     @Rule @JvmField val changes = ChangeWatcherRule<GroupChange>()
 
-    @Test(timeout = 250) fun `subscribe to a group of watchables`() {
+    @Test fun coverage() {
+        val intValue = watchableValueOf(1)
+        cover(GroupChange(intValue, ValueChange(1, 1)))
+    }
+
+    @Test(timeout = 500) fun `subscribe to a group of watchables`() {
         runBlocking {
             val intValue = watchableValueOf(1)
             val setValue = watchableSetOf("1")
@@ -39,7 +44,7 @@ class GroupTest {
         }
     }
 
-    @Test(timeout = 250) fun `watch a group of watchables`() {
+    @Test(timeout = 500) fun `watch a group of watchables`() {
         runBlocking {
             val intValue = watchableValueOf(1)
             val setValue = watchableSetOf("1")

@@ -50,7 +50,7 @@ fun <T, M : T, C : Change<T>> CoroutineScope.bind(dest: MutableWatchable<T, M, C
  */
 fun <T, C : Change<T>> CoroutineScope.watch(
     watchable: Watchable<T, C>,
-    func: (C) -> Unit
+    func: suspend (C) -> Unit
 ) = watchable.watch(this@watch, func)
 
 /**

@@ -1,7 +1,9 @@
 # Version History
 
-## 0.6.0
-
+## 0.6.x
+* Replaced suspending `get()` with `value` for direct immutable access without suspension.
+* Replaced read-only collection implementations for Map, List, and Set.
+* Fix a problem with `batch` failing to consume, slowing down `use`.
 * Remove requirement for each `Watchable` object to have their own `CoroutineScope`.
 * Add `group()` API.
 * Add sample project.

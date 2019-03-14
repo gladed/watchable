@@ -19,9 +19,5 @@ data class Bird(
 
     /** [Bird.id]s that this bird is following. */
     @Serializable(with = WatchableListSerializer::class)
-    val following: WatchableList<String> = watchableListOf(),
-
-    /** The list of [Chirp.id]s originating from this bird. */
-    @Serializable(with = WatchableListSerializer::class)
-    val chirps: WatchableList<String> = watchableListOf()
+    val following: WatchableList<String> = watchableListOf()
 )

@@ -13,18 +13,22 @@ import kotlinx.serialization.json.Json
 import model.Bird
 import store.Store
 import java.io.File
+import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
 
 @UseExperimental(ObsoleteCoroutinesApi::class)
-class FileStore(dir: File) : Store, CoroutineScope {
+class FileStore(
+    override val coroutineContext: CoroutineContext = newSingleThreadContext("FileStore") + Job(),
+    dir: File,
+    private val fileDelayMillis: Long = DEFAULT_FILE_DELAY_MILLIS
+) : Store, CoroutineScope {
+
     private val birdsDir = File(dir, BIRDS_DIR)
     private val birds = mutableMapOf<String, Handle<Bird>>()
-    override val coroutineContext = newSingleThreadContext("FileStore") + Job()
 
     override suspend fun makeBird(name: String): Bird {
         val bird = Bird(name = watchableValueOf(name))
         birds[bird.id] = newHandle(bird)
-        save(bird)
         watch(bird)
         return bird
     }
@@ -43,9 +47,9 @@ class FileStore(dir: File) : Store, CoroutineScope {
     }
 
     private fun watch(bird: Bird) {
-        // Only save this maximum once per 250
-        batch(group(bird.name, bird.following, bird.chirps), 250) {
-            launch { save(bird) }
+        // Only save this maximum once per fileDelayMillis
+        batch(group(bird.name, bird.following), fileDelayMillis) {
+            save(bird)
         }
     }
 
@@ -54,9 +58,8 @@ class FileStore(dir: File) : Store, CoroutineScope {
             val birdDir = File(birdsDir, bird.id)
             birdDir.mkdirs()
             File(birdDir, BIRD_FILE_NAME).bufferedWriter().use {
-                it.write(Json.stringify(Bird.serializer(), bird)
-                    .also { println("Saving $it")})
-                }
+                it.write(Json.stringify(Bird.serializer(), bird))
+            }
         }
     }
 
@@ -70,6 +73,8 @@ class FileStore(dir: File) : Store, CoroutineScope {
         }
 
     companion object {
+        // Wait .5 seconds before persisting to disk to prevent thrash
+        const val DEFAULT_FILE_DELAY_MILLIS = 500L
         const val BIRD_FILE_NAME = "bird.json"
         const val BIRDS_DIR = "birds"
         private suspend fun callerContext() = coroutineContext

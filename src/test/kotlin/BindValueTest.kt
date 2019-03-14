@@ -43,7 +43,7 @@ class BindValueTest {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             bind(dest, origin)
-            eventually { assertEquals(5, dest.get()) }
+            eventually { assertEquals(5, dest.value) }
         }
     }
 
@@ -56,7 +56,7 @@ class BindValueTest {
             bind(dest, origin)
             origin.set(7)
             changes.expect(ValueChange(6, 7))
-            assertEquals(7, dest.get())
+            assertEquals(7, dest.value)
         }
     }
 
@@ -106,7 +106,7 @@ class BindValueTest {
                 bind(dest, origin)
                 dest.set(7)
                 fail("Modification should not be permitted")
-                assertEquals(6, dest.get())
+                assertEquals(6, dest.value)
             }
         } catch (e: IllegalStateException) {
             // Expected
@@ -118,10 +118,10 @@ class BindValueTest {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             bind(dest, origin)
-            eventually { assertEquals(5, dest.get()) }
+            eventually { assertEquals(5, dest.value) }
             dest.unbind()
             origin.set(7)
-            always { assertEquals(5, dest.get()) }
+            always { assertEquals(5, dest.value) }
         }
     }
 
@@ -148,12 +148,12 @@ class BindValueTest {
             watch(dest) { changes += it }
             scope2.bind(dest, origin)
             origin.set(7)
-            eventually { assertEquals(7, dest.get()) }
+            eventually { assertEquals(7, dest.value) }
             scope2.close() // Kill the destination value's scope
 
             // Changing origin has no effect on bound thing, though it is still bound
             origin.set(8)
-            always { assertEquals(7, dest.get()) }
+            always { assertEquals(7, dest.value) }
             assertTrue(dest.isBound())
         }
     }
