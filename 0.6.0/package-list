@@ -1,0 +1,11 @@
+$dokka.format:gfm
+$dokka.linkExtension:md
+$dokka.location:io.gladed.watchable$batch(kotlinx.coroutines.CoroutineScope, io.gladed.watchable.Watchable((io.gladed.watchable.batch.T, io.gladed.watchable.batch.C)), kotlin.Long, kotlin.SuspendFunction1((kotlin.collections.List((io.gladed.watchable.batch.C)), kotlin.Unit)))io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/batch.md
+$dokka.location:io.gladed.watchable$bind(kotlinx.coroutines.CoroutineScope, io.gladed.watchable.MutableWatchable((io.gladed.watchable.bind.T, io.gladed.watchable.bind.M, io.gladed.watchable.bind.C)), io.gladed.watchable.Watchable((io.gladed.watchable.bind.T, io.gladed.watchable.bind.C)))io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/bind.md
+$dokka.location:io.gladed.watchable$bind(kotlinx.coroutines.CoroutineScope, io.gladed.watchable.MutableWatchable((io.gladed.watchable.bind.T, io.gladed.watchable.bind.M, io.gladed.watchable.bind.C)), io.gladed.watchable.Watchable((io.gladed.watchable.bind.T2, io.gladed.watchable.bind.C2)), kotlin.Function2((io.gladed.watchable.bind.M, io.gladed.watchable.bind.C2, kotlin.Unit)))io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/bind.md
+$dokka.location:io.gladed.watchable$subscribe(kotlinx.coroutines.CoroutineScope, io.gladed.watchable.Watchable((io.gladed.watchable.subscribe.T, io.gladed.watchable.subscribe.C)))io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/subscribe.md
+$dokka.location:io.gladed.watchable$toWatchableList(kotlin.collections.Collection((io.gladed.watchable.toWatchableList.T)))io.gladed.watchable/kotlin.collections.-collection/to-watchable-list.md
+$dokka.location:io.gladed.watchable$toWatchableMap(kotlin.collections.Map((io.gladed.watchable.toWatchableMap.K, io.gladed.watchable.toWatchableMap.V)))io.gladed.watchable/kotlin.collections.-map/to-watchable-map.md
+$dokka.location:io.gladed.watchable$toWatchableSet(kotlin.collections.Collection((io.gladed.watchable.toWatchableSet.T)))io.gladed.watchable/kotlin.collections.-collection/to-watchable-set.md
+$dokka.location:io.gladed.watchable$watch(kotlinx.coroutines.CoroutineScope, io.gladed.watchable.Watchable((io.gladed.watchable.watch.T, io.gladed.watchable.watch.C)), kotlin.Function1((io.gladed.watchable.watch.C, kotlin.Unit)))io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/watch.md
+io.gladed.watchable
