@@ -15,12 +15,9 @@
  */
 
 import io.gladed.watchable.ListChange
+import io.gladed.watchable.batch
 import io.gladed.watchable.bind
-import io.gladed.watchable.watch
-import io.gladed.watchable.watchBatches
 import io.gladed.watchable.watchableListOf
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
@@ -62,7 +59,7 @@ class WatchableListTest : ScopeTest() {
     @Test fun clear() {
         runBlocking {
             val list = watchableListOf(3, 4)
-            watchBatches(list) { changes += it }
+            batch(list) { changes += it }
             changes.expect(ListChange.Initial(listOf(3, 4)))
             list.use { clear() }
             changes.expect(ListChange.Remove(0, 3), ListChange.Remove(0, 4))

@@ -18,7 +18,6 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.ReceiveChannel
-import java.time.Duration
 
 /** Return a new [WatchableValue] wrapping [value], living on this [CoroutineScope]. */
 fun <T : Any> watchableValueOf(value: T) = WatchableValue(value)
@@ -55,15 +54,15 @@ fun <T, C : Change<T>> CoroutineScope.watch(
 ) = watchable.watch(this@watch, func)
 
 /**
- * Deliver changes for this [Watchable] to [func], starting with its initial state, until
+ * Deliver multiple changes for this [Watchable] to [func], starting with its initial state, until
  * the returned job is cancelled or this [CoroutineScope] completes.
  */
-fun <T, C : Change<T>> CoroutineScope.watchBatches(
+fun <T, C : Change<T>> CoroutineScope.batch(
     watchable: Watchable<T, C>,
-    /** The minimum time between change notifications, or [Duration.ZERO] (the default) for no delay. */
-    minPeriod: Duration = Duration.ZERO,
+    /** The minimum time between change notifications in milliseconds, or 0 for no delay. */
+    minPeriod: Long = 0,
     func: suspend (List<C>) -> Unit
-) = watchable.watchBatches(this@watchBatches, minPeriod, func)
+) = watchable.batch(this@batch, minPeriod, func)
 
 /**
  * Bind [dest] so that it receives changes from [origin] and applies them with [apply] for as long as
@@ -81,3 +80,8 @@ fun <T, M : T, C : Change<T>, T2, C2 : Change<T2>> CoroutineScope.bind(
  */
 fun <T, C : Change<T>> CoroutineScope.subscribe(target: Watchable<T, C>): ReceiveChannel<List<C>> =
     target.subscribe(this)
+
+/**
+ * Create and return a group of watchable objects that itself is watchable.
+ */
+fun group(vararg watchables: Watchable<out Any, out Change<Any>>) = WatchableGroup(watchables.toList())

@@ -73,7 +73,7 @@ class SubscribeTest : ScopeTest() {
         val set2 = watchableSetOf(2)
         runBlocking {
             val rxChanges = subscribe(set2)
-            val batchChannel = scope2.batch(rxChanges, 50)
+            val batchChannel = scope2.batch(rxChanges, 150)
             assertEquals(listOf(SetChange.Initial(setOf(2))), batchChannel.receive())
             val start = System.currentTimeMillis()
 
@@ -86,7 +86,7 @@ class SubscribeTest : ScopeTest() {
                 SetChange.Add(4)), batchChannel.receive())
             val elapsed = System.currentTimeMillis() - start
             log(elapsed)
-            assertTrue(elapsed >= 48) // A couple ms of grace here
+            assertTrue(elapsed >= 50) // Arrive more slowly than 50 (150 expected)
 
             // Cancel scope2, immediately killing batchChannel
             scope2.coroutineContext[Job]?.cancel()

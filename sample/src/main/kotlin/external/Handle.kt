@@ -9,7 +9,7 @@ import java.lang.IllegalStateException
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A scope that completes other contexts are removed or completed.
+ * A scope that completes when all other contexts are removed or completed.
  */
 class Handle<T>(
     /** The initial context for this [Handle]. */
