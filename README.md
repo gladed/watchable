@@ -88,7 +88,7 @@ If other coroutines are already using the object, `use()` will suspend until the
 
 ## Watching for Changes
 
-You can watch any `Watchable` for changes from any `CoroutineScope` using [watch](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/watch.html)
+You can watch any `Watchable` for changes from any `CoroutineScope` using [`watch`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/watch.html):
 
 ```kotlin
 val set = watchableSetOf(1, 2)
@@ -125,7 +125,7 @@ list.use { add(6); add(7) } // Prints: [Add(index=2, added=6), Add(index=3, adde
 
 ## Grouping
 
-You can group several watchables into a `WatchableGroup` so that you receive changes for both:
+You can [`group`](https://gladed.github.io/watchable/latest/io.gladed.watchable/group.html) several watchables into a `WatchableGroup` so that you receive changes for both:
 
 ```kotlin
 val list = listOf(4).toWatchableList()
@@ -149,7 +149,7 @@ set.use { add("b") }
 
 ## Subscribing
 
-You can [subscribe](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/subscribe.html) to changes on a watchable, returning an ordinary ReceiveChannel which receives lists of changes as they occur. However, it is usually more convenient to use `bind()` and `watch { ... }` as described above.
+You can [`subscribe`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/subscribe.html) to changes on a watchable, returning an ordinary `ReceiveChannel` which receives lists of changes as they occur. However, it is usually more convenient to use `bind()` and `watch { ... }` as described above.
 
 # Sample
 
