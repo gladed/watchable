@@ -17,13 +17,17 @@
 import io.gladed.watchable.MapChange
 import io.gladed.watchable.bind
 import io.gladed.watchable.watch
+import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
+import org.junit.Assert
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThat
+import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Rule
 import org.junit.Test
@@ -32,45 +36,6 @@ import kotlin.system.measureTimeMillis
 class WatchableMapTest : ScopeTest() {
     @Rule @JvmField val changes = ChangeWatcherRule<MapChange<Int, String>>()
 
-    private val chooser = Chooser(0) // Stable seed makes tests repeatable
-    private val maxKey = 500
-
-    private val modifications = listOf<MutableMap<Int, String>.() -> Unit>(
-        // Remove
-        { chooser(keys)?.also { remove(it) } },
-
-        // Replace (by map)
-        { chooser(keys)?.also { key -> replace(key, this[key]!! + key) } },
-
-        // Add/replace
-        { chooser(maxKey).also { key -> this[key] = key.toString() } },
-
-        // Add or replace (again, so we get a lot of insertions)
-        { chooser(maxKey).also { key -> this[key] = key.toString() } },
-
-        // Replace (by entry)
-        { chooser(entries)?.apply { setValue("$value$key") } }
-    )
-
-    @Test fun changes() {
-        val count = 1000
-        val elapsed = measureTimeMillis {
-            runToEnd {
-                iterateMutable(
-                    watchableMapOf(),
-                    watchableMapOf(),
-                    modifications,
-                    { this[maxKey + 1] = "end" },
-                    chooser,
-                    count
-                ).join()
-            }
-        }
-        // With sync: 31 micros for 100k iters
-        // Without sync: 26
-        log("$count in $elapsed ms. ${elapsed * 1000 / count } μs per iteration.")
-    }
-
     @Test fun entries() {
         runBlocking {
             val map = watchableMapOf(1 to "1")
@@ -78,10 +43,20 @@ class WatchableMapTest : ScopeTest() {
                 val first = entries.first()
                 assertEquals(first, first)
                 log("Entry: $entries has hash ${entries.hashCode()}") // Coverage
+                mustThrow(UnsupportedOperationException::class.java) {
+                    entries.add(object : MutableMap.MutableEntry<Int, String> {
+                        override val key: Int = 1
+                        override val value: String = "1"
+                        override fun setValue(newValue: String) = throw Error()
+                    })
+                }
+                first.setValue("2")
             }
+            assertEquals(mapOf(1 to "2"), map)
         }
     }
-    @Test fun replace() {
+
+    @Test fun readOnly() {
         runBlocking {
             val map = watchableMapOf(1 to "1")
             val map2 = watchableMapOf(2 to "2")
@@ -97,15 +72,31 @@ class WatchableMapTest : ScopeTest() {
         }
     }
 
-    @Test fun noEntryMod() {
-        try {
-            runToEnd {
-                val map = watchableMapOf(1 to "1")
-                map.use {
-                    entries.add(entries.first())
-                }
-                fail("Shouldn't be able to add by entry")
+    @Test fun bindReadOnly() {
+        runBlocking {
+            val map = watchableMapOf(1 to "1")
+            val map2 = watchableMapOf(2 to "2")
+            val map3 = map.readOnly()
+            bind(map2, map3)
+            map.use {
+                put(3, "3")
             }
-        } catch (e: UnsupportedOperationException) { }
+
+            map3.watchUntil(this) {
+                assertEquals(map, map3)
+            }
+        }
+    }
+
+    @Test fun listApis() {
+        val map = watchableMapOf(1 to "1", 2 to "2")
+        assertEquals(2, map.size)
+        assertEquals("1", map.entries.first().value)
+        assertEquals(1, map.keys.first())
+        assertEquals("1", map.values.first())
+        assertTrue(map.containsKey(2))
+        assertTrue(map.containsValue("1"))
+        assertEquals("2", map[2])
+        assertFalse(map.isEmpty())
     }
 }

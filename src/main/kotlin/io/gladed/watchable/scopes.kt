@@ -13,6 +13,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -20,8 +21,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.produce
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.selects.select
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.EmptyCoroutineContext
 
@@ -31,26 +32,39 @@ import kotlin.coroutines.EmptyCoroutineContext
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+@Suppress("ComplexMethod")
 fun <U> CoroutineScope.batch(input: ReceiveChannel<List<U>>, periodMillis: Long = 0): ReceiveChannel<List<U>> =
     if (periodMillis <= 0L) input else produce {
-        var lastSend = System.currentTimeMillis()
-        val buffer by lazy { mutableListOf<U>() }
-        while (true) {
-            val received = input.receiveOrNull() ?: break
-            delay(periodMillis - (System.currentTimeMillis() - lastSend))
+        var lastSend = 0L
+        val buffer = mutableListOf<U>()
 
-            val toDeliver = if (input.isEmpty) received else {
-                // Append all changes into the buffer
-                buffer.addAll(received)
-                while (!input.isEmpty) {
-                    input.poll()?.also { buffer.addAll(it) }
-                }
-                buffer.toList().also { buffer.clear() }
+        // The amount of time remaining before we can deliver again
+        fun remaining() = periodMillis - (System.currentTimeMillis() - lastSend)
+
+        suspend fun deliver() {
+            if (remaining() <= 0 && buffer.isNotEmpty()) {
+                send(buffer.toList())
+                lastSend = System.currentTimeMillis()
+                buffer.clear()
             }
-
-            lastSend = System.currentTimeMillis()
-            send(toDeliver)
         }
+
+        loop@ while (true) {
+            deliver()
+            select<Any?> {
+                input.onReceiveOrNull { received ->
+                    received?.also { item ->
+                        buffer += item
+                        while (!input.isEmpty) {
+                            input.poll()?.also { more -> buffer += more }
+                        }
+                    }
+                }
+                remaining().takeIf { it > 0 }?.also { onTimeout(it) { } }
+            } ?: break
+        }
+        lastSend = 0
+        deliver()
     }
 
 /**
@@ -69,6 +83,7 @@ fun CoroutineScope.daemon(
     }.apply {
         start()
         invokeOnCompletion {
+            // Close the daemon if job is cancelled
             daemonScope.coroutineContext.cancel()
         }
     }

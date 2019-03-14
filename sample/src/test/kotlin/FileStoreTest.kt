@@ -1,6 +1,7 @@
 import external.FileStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
@@ -10,61 +11,56 @@ import org.junit.rules.TemporaryFolder
 
 class FileStoreTest {
     @Rule @JvmField val folder = TemporaryFolder()
-    private lateinit var fileStore: FileStore
 
-    @Before fun setup() {
-        fileStore = FileStore(folder.root)
-    }
+    private fun <T> withFileStore(func: suspend FileStore.() -> T) =
+        runBlocking {
+            // Sadly there is no "flush" to synchronize with all outstanding changes. So we will delay.
+            val fileStore = FileStore(coroutineContext, folder.root, 25)
+            fileStore.func().also { delay(50) }
+        }
 
     @Test fun `create bird`() {
-        runBlocking {
-            with(fileStore) {
-                val bird = makeBird("robin")
-                assertEquals("robin", bird.name.get())
-            }
+        withFileStore {
+            val bird = makeBird("robin")
+            assertEquals("robin", bird.name.value)
         }
     }
 
     @Test fun `get same bird back from cache`() {
-        runBlocking {
-            with(fileStore) {
-                val bird = makeBird("robin")
-                // We can get a reference to the very same bird.
-                assertTrue(bird === findBird(bird.id))
-            }
+        withFileStore {
+            val bird = makeBird("robin")
+            // We can get a reference to the very same bird.
+            assertTrue(bird === findBird(bird.id))
         }
     }
 
     @Test fun `get same bird back from disk`() {
-        val oldBird = runBlocking {
+        val oldBird = withFileStore {
             println("Context: $coroutineContext")
-            fileStore.makeBird("robin")
+            makeBird("robin")
         }
 
-        runBlocking {
-            val newBird = fileStore.findBird(oldBird.id)
+        withFileStore {
+            val newBird = findBird(oldBird.id)
             assertTrue(newBird !== oldBird) // NOT the same bird, a new copy
-            assertEquals("robin", newBird?.name?.get())
+            assertEquals("robin", newBird?.name?.value)
         }
     }
 
     @Test fun `change bird content`() {
-        val (robinId, wrenId) = runBlocking {
-            with(fileStore) {
-                val robin = makeBird("robin")
-                val wren = makeBird("wren")
-                robin.following.use {
-                    add(wren.id)
-                }
-                robin.id to wren.id
+        val (robinId, wrenId) = withFileStore {
+            val robin = makeBird("robin")
+            val wren = makeBird("wren")
+            robin.following.use {
+                add(wren.id)
             }
+            robin.id to wren.id
         }
 
-        // From disk...
-        runBlocking {
-            delay(500) // Allow file store to save
-            val robin = fileStore.findBird(robinId)!!
-            assertEquals(listOf(wrenId), robin.following.get())
+        // New filestore instance must load from disk
+        withFileStore {
+            val robin = findBird(robinId)!!
+            assertEquals(listOf(wrenId), robin.following)
         }
     }
 }

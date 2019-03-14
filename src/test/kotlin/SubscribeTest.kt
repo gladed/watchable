@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.SetChange
+import io.gladed.watchable.batch
 import io.gladed.watchable.subscribe
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.CancellationException

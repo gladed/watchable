@@ -16,7 +16,6 @@
 
 package io.gladed.watchable
 
-import daemon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BroadcastChannel
@@ -74,7 +73,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
             scope.daemon {
                 // Under lock, grab initial and open subscription
                 val (initial, subscription) = mutableMutex.withLock {
-                    getImmutableWhileLocked() to broadcaster.openSubscription()
+                    value to broadcaster.openSubscription()
                 }
                 channel.send(listOf(initial.toInitialChange()))
                 subscription.consumeEach {
@@ -83,20 +82,13 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
             }
         }
 
-    private fun getImmutableWhileLocked() =
-        (immutable ?: mutable.toImmutable().also { immutable = it })
-
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
     protected fun <U> doChange(func: () -> U): U =
         if (boundTo != null && !isOnBoundChange) {
             throw IllegalStateException("A bound object may not be modified.")
         } else func()
 
-    override suspend fun get(): T = immutable.let {
-        it ?: mutableMutex.withLock {
-            getImmutableWhileLocked()
-        }
-    }
+    override val value: T get() = immutable ?: mutable.toImmutable().also { immutable = it }
 
     override suspend fun <U> use(func: M.() -> U): U =
         mutableMutex.withLock {
@@ -117,10 +109,8 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
 
     private suspend fun deliverChanges() {
         if (changes.isNotEmpty()) {
-            // Clear immutable because it's now wrong
-            // There's a massive performance benefit here because we don't have
-            // to make and throw away a lot of near-identical copies.
-            immutable = null
+            // Clear the immutable form, allow it to be repopulated later
+            immutable = mutable.toImmutable()
             // Deliver and clear out changes if the channel is open
             val changeList = changes.toList()
             changes.clear()

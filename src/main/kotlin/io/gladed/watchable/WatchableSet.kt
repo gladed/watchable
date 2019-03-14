@@ -17,9 +17,19 @@
 package io.gladed.watchable
 
 /** A [Watchable] wrapper for a [Set] which may also be modified or bound. Use [watchableSetOf] to create. */
+@Suppress("TooManyFunctions")
 class WatchableSet<T> internal constructor(
     initial: Collection<T>
 ) : MutableWatchableBase<Set<T>, MutableSet<T>, SetChange<T>>(), ReadOnlyWatchableSet<T> {
+
+    override val size get() = value.size
+    override fun contains(element: T) = value.contains(element)
+    override fun containsAll(elements: Collection<T>) = value.containsAll(elements)
+    override fun isEmpty() = value.isEmpty()
+    override fun iterator(): Iterator<T> = value.iterator()
+    override fun equals(other: Any?) = value == other
+    override fun hashCode() = value.hashCode()
+    override fun toString() = "WatchableSet($value)"
 
     override val mutable = object : AbstractMutableSet<T>() {
         private val real = initial.toMutableSet()
@@ -74,8 +84,6 @@ class WatchableSet<T> internal constructor(
 
     /** Return an unmodifiable form of this [WatchableSet]. */
     fun readOnly(): ReadOnlyWatchableSet<T> = object : ReadOnlyWatchableSet<T> by this {
-        override fun toString() = "ReadOnlyWatchableSet()"
+        override fun toString() = "ReadOnlyWatchableSet($value)"
     }
-
-    override fun toString() = "WatchableSet()"
 }

@@ -17,7 +17,7 @@
 import kotlin.random.Random
 
 /** A class that makes pseudorandom choices. */
-class Chooser(seed: Int) {
+class Chooser(seed: Int = Random.nextInt()) {
     private val random = Random(seed)
     operator fun invoke(max: Int): Int = random.nextInt(max)
     operator fun <T> invoke(collection: Collection<T>): T? =

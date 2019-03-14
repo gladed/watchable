@@ -1,10 +1,10 @@
-[ ![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.6.0) ](https://bintray.com/gladed/watchable/watchable/0.6.0/link)
+[ ![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.6.1) ](https://bintray.com/gladed/watchable/watchable/0.6.1/link)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=gladed_watchable&metric=alert_status)](https://sonarcloud.io/dashboard?id=gladed_watchable)
 [![CircleCI](https://circleci.com/gh/gladed/watchable.svg?style=svg)](https://circleci.com/gh/gladed/watchable)
 [![CodeCov](https://codecov.io/github/gladed/watchable/coverage.svg?branch=master)](https://codecov.io/github/gladed/watchable)
 [![detekt](https://img.shields.io/badge/code%20style-%E2%9D%A4-FF4081.svg)](https://arturbosch.github.io/detekt/)
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.3.21-blue.svg)](https://kotlinlang.org/)
-[![API Docs](https://img.shields.io/badge/API_Docs-0.6.0-purple.svg)](https://gladed.github.io/watchable/0.6.0/io.gladed.watchable/)
+[![API Docs](https://img.shields.io/badge/API_Docs-0.6.1-purple.svg)](https://gladed.github.io/watchable/0.6.1/io.gladed.watchable/)
 
 # Watchable
 
@@ -43,7 +43,7 @@ repositories {
 }
 
 dependencies {
-    compile 'io.gladed:watchable:0.6.0'
+    compile 'io.gladed:watchable:0.6.1'
 }
 ```
 
@@ -64,11 +64,12 @@ Each data type can be accessed, modified, watched, and bound, etc.
 
 ## Reading Data
 
-You can obtain a read-only, immutable copy of the underlying data using [`get()`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/get.html). This may suspend for a short time while other coroutines complete modifications of the data.
+You can obtain a read-only, immutable copy of the underlying data with `value` (https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/value.html). In the case of `WatchableList`, `WatchableSet`, and `WatchableMap` can also be treated as read-only views of the underlying content, but be warned that this content may change at any time.
 
 ```kotlin
 val list = watchableListOf(1, 2, 3)
-println(list.get()) // Prints [1, 2, 3]
+println(list) // Prints WatchableList([1, 2, 3])
+println(list.value) // Prints [1, 2, 3]
 ```
 
 ## Modifying Contents
@@ -78,7 +79,7 @@ Any [`MutableWatchable`](https://gladed.github.io/watchable/latest/io.gladed.wat
 ```kotlin
 val list = watchableListOf(1, 2)
 list.use { add(3) }
-println(list.get()) // Prints [1, 2, 3]
+println(list.value) // Prints [1, 2, 3]
 ```  
 
 If other coroutines are already using the object, `use()` will suspend until they are done, then execute your code. In this way, all modifications run sequentially.
@@ -89,7 +90,7 @@ You can watch any `Watchable` for changes from any `CoroutineScope` using [`watc
 
 ```kotlin
 val set = watchableSetOf(1, 2)
-set.watch { println(it) } // Prints: Initial(initial=[1, 2])
+watch(set) { println(it) } // Prints: Initial(initial=[1, 2])
 set.use { add(3) } // Prints: Add(added=3)
 ```
 
@@ -99,24 +100,26 @@ You can use a `MutableWatchable`'s `.readOnly()` function to return a `Watchable
 
 ## Binding
 
-A [`bind`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/bind.html) is just a `watch` that connects one watchable to another, so that the destination automatically receives all changes from an origin.
+A [`bind`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/bind.html) is just a `watch` that connects one watchable of the same type to another, so that the destination automatically receives all changes from an origin.
 
 ```kotlin
 val origin = listOf(4, 5).toWatchableList()
 val destination = watchableListOf<Int>()
 destination.bind(origin)
-// Eventually, destination will match origin, and stay in sync with any further changes to origin.
+// Eventually, destination will match origin, and will stay in sync with any further changes to origin.
 ```
 
 While bound, a watchable cannot be independently modified, and attempts to do so in `use` will throw.
 
+Complex binds are possible in which changes are received and may be arbitrarily mapped into changes on a bound item. See the `apply` parameter.
+
 ## Batching
 
-It's possible to listen for lists of changes, or even to receive updates on a reliable, but less-frequent basis. See the documentation for [batch](https://gladed.github.io/watchable/latest/io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/batch.html), especially the `minPeriod` parameter.
+It's possible to listen for lists of changes, collected and delivered in-order periodically. See the documentation for [batch](https://gladed.github.io/watchable/latest/io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/batch.html), especially the `minPeriod` parameter.
 
 ```kotlin
 val list = listOf(4, 5).toWatchableList()
-batch(list) { println(it) } // Prints: [Initial(initial=[4, 5])]
+batch(list, 50) { println(it) } // Prints: [Initial(initial=[4, 5])]
 list.use { add(6); add(7) } // Prints: [Add(index=2, added=6), Add(index=3, added=7)]
 ```
 
@@ -140,13 +143,15 @@ set.use { add("b") }
 //   GroupChange(watchable=WatchableSet(), change=Add(added=b))
 ```
 
-## Object Lifetime
-
-`CoroutineScope` lifetime is respected. This means a `watch` or `bind` automatically stops operating when the related scope(s) complete. No additional cleanup code is required.
-
 ## Subscribing
 
 You can [`subscribe`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/subscribe.html) to changes on a watchable, returning an ordinary `ReceiveChannel` which receives lists of changes as they occur. However, it is usually more convenient to use `bind()` and `watch { ... }` as described above.
+
+USE WITH CARE! If the returned channel is not consumed (with `receive()`), attempts to `use` may suspend. 
+
+## Object Lifetime
+
+`CoroutineScope` lifetime is respected. This means a `watch` or `bind` automatically stops operating when the initiating scope completes. No additional cleanup code is required.
 
 # Sample
 

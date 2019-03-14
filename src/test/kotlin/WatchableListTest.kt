@@ -17,44 +17,20 @@
 import io.gladed.watchable.ListChange
 import io.gladed.watchable.batch
 import io.gladed.watchable.bind
+import io.gladed.watchable.subscribe
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThat
+import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-@ExperimentalCoroutinesApi
 class WatchableListTest : ScopeTest() {
     @Rule @JvmField val changes = ChangeWatcherRule<ListChange<Int>>()
-
-    private val chooser = Chooser(0) // Stable seed makes tests repeatable
-    private val maxValue = 100
-
-    private val mods = listOf<MutableList<Int>.() -> Unit>(
-        { if (isNotEmpty()) removeAt(chooser(size)) },
-        { add(chooser(maxValue)) },
-        { if (isNotEmpty()) chooser(size).also { at -> this[at] = chooser(maxValue) } }
-    )
-
-    @Test fun changes() {
-        runToEnd {
-            iterateMutable(watchableListOf(1, 2, 3), watchableListOf(4), mods, { add(maxValue + 1) }, chooser)
-        }
-    }
-
-    @Test fun equality() {
-        runBlocking {
-            val list = watchableListOf(1, 2, 3)
-            assertEquals(list.get(), list.get())
-            assertEquals(listOf(1, 2, 3), list.get())
-            assertEquals(list.get(), listOf(1, 2, 3))
-            val list2 = watchableListOf(1, 2, 3)
-            assertEquals(list.get(), list2.get())
-        }
-    }
 
     @Test fun clear() {
         runBlocking {
@@ -67,17 +43,29 @@ class WatchableListTest : ScopeTest() {
         }
     }
 
-    @Test fun replace() {
+    @Test fun readOnly() {
         runBlocking {
             val list = watchableListOf(1)
-            val list2 = watchableListOf<Int>()
-            bind(list2, list)
-            val list3 = list2.readOnly()
-            list.set(listOf(3))
+            val readOnlyList = list.readOnly()
+            val rx = subscribe(readOnlyList)
+            assertEquals(listOf(ListChange.Initial(listOf(1))), rx.receive())
             assertThat(list.toString(), startsWith("WatchableList("))
-            assertThat(list3.toString(), startsWith("ReadOnlyWatchableList("))
-
-            eventually { assertEquals(listOf(3), list3.get()) }
+            assertThat(readOnlyList.toString(), startsWith("ReadOnlyWatchableList("))
         }
+    }
+
+    @Test fun listApis() {
+        val list = watchableListOf(1, 2)
+        assertEquals(2, list.size)
+        assertTrue(list.contains(2))
+        assertFalse(list.containsAll(setOf(3, 2)))
+        assertEquals(1, list[0])
+        assertEquals(1, list.indexOf(2))
+        assertFalse(list.isEmpty())
+        assertEquals(-1, list.lastIndexOf(3))
+        assertEquals(1, list.iterator().next())
+        assertEquals(0, list.listIterator().nextIndex())
+        assertEquals(2, list.listIterator(1).next())
+        assertEquals(listOf(2), list.subList(1, 2))
     }
 }
