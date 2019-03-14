@@ -29,7 +29,7 @@ set.use { add(3) }
 
 Adding listeners for changes is easy. But it's hard to remember and unregister all of those listeners. If you don't, lots of objects will be kept in memory indefinitely.
 
-`Watchable` objects are bound to the lifetime of the surrounding `CoroutineScope`. When the scope dies, so does its `Watchable`s, along with any `watch` requests made from that scope.
+`Watchable` object actions (like `watch`, `bind`, etc as explained below) are limited to the lifetime of the calling `CoroutineScope`. When the scope completes, its watchable operations also die and are cleaned up automatically.
 
 This can be useful in [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html). The data model lives at the center, and everyone points in. If the data model is defined as Watchable objects, then other components (having their own lifecycles) can simply watch for changes and react accordingly, without coupling directly to each other.
 
