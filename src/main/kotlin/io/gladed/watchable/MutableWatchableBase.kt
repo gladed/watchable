@@ -78,12 +78,19 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
                 }
 
                 if (!channel.isClosedForSend) {
+                    println("${Thread.currentThread().name} Delivering initial state")
                     channel.send(listOf(initial.toInitialChange()))
                     subscription.consumeEach { changes ->
-                        if (channel.isClosedForSend) subscription.cancel() else {
+                        println("${Thread.currentThread().name} Handling $changes")
+                        // TODO: This happens too fast
+                        if (channel.isClosedForSend) {
+                            println("${Thread.currentThread().name} Handling $changes but channel is closed for send")
+                            subscription.cancel()
+                        } else {
                             val toSend = changes.toMutableList()
                             // Drain the subscription of all events, every time
                             while (true) subscription.poll()?.also { toSend += it } ?: break
+                            println("Delivering $toSend to channel")
                             channel.send(toSend)
                         }
                     }

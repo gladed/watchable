@@ -17,50 +17,9 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.isActive
-
-/** A handle allowing a subscription to be closed. */
-interface SubscriptionHandle {
-    fun cancel()
-
-    fun close()
-
-    suspend fun join()
-
-    suspend fun closeAndJoin() {
-        close()
-        join()
-    }
-}
-
-abstract class SubscriptionBase<C> : Subscription<C> {
-    protected val channel = Channel<List<C>>(CAPACITY)
-
-    protected abstract val daemon: Job
-
-    override suspend fun join() { daemon.join() }
-
-    override fun close() { channel.close() }
-
-    override fun cancel() { channel.cancel() }
-
-    override val receiver get() = channel
-
-    companion object {
-        const val CAPACITY = 10
-    }
-}
-
-
-/** A subscription to a channel of events that can be closed or cancelled. */
-interface Subscription<C> : SubscriptionHandle {
-    val receiver: ReceiveChannel<List<C>>
-}
 
 /**
  * Wraps type [T] so that it may be watched for changes of type [C].

@@ -60,6 +60,11 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
     private lateinit var watchable1: MutableWatchable<T, M, C>
     private lateinit var watchable2: MutableWatchable<T, M, C>
 
+    /** Apply a random modification to this [M]. */
+    private fun M.modify() {
+        modificationMaker(this, chooser).invoke(this)
+    }
+
 
     @Before fun setup() {
         watchable1 = maker1()
@@ -79,9 +84,7 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
         runBlocking {
             bind(watchable2, watchable1)
             for (i in 0 until 200) {
-                watchable1.use {
-                    modificationMaker(this, chooser).invoke(this)
-                }
+                watchable1.use { modify() }
             }
             assertNotEquals(watchable1, watchable2)
             watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
@@ -111,9 +114,7 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
             mustThrow(IllegalStateException::class.java) {
                 bind(watchable2, watchable1)
                 for (i in 0 until 20) {
-                    watchable2.use {
-                        modificationMaker(this, chooser).invoke(this)
-                    }
+                    watchable2.use { modify() }
                 }
             }
         }
@@ -124,7 +125,7 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
             bind(watchable2, watchable1)
             for (i in 0 until 100) {
                 watchable1.use {
-                    modificationMaker(this, chooser).invoke(this)
+                    modify()
                 }
             }
 
@@ -136,12 +137,23 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
             watchable2.unbind() // Safe
 
             for (i in 0 until 100) {
-                watchable1.use {
-                    modificationMaker(this, chooser).invoke(this)
-                }
+                watchable1.use { modify() }
             }
             delay(50) // No changes arrive
             assertNotEquals(watchable1, watchable2)
+        }
+    }
+
+    @Test fun `receive events while flushing`() {
+        runBlocking {
+            val handle = subscribe(watchable1)
+            log(handle.receiver.receive())
+            watchable1.use { modify() }
+            watchable1.use { modify() }
+            watchable1.use { modify() }
+            log("Closing handle")
+            handle.close()
+            log(handle.receiver.receive())
         }
     }
 
@@ -170,7 +182,7 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
             // Throw many modifications at watchable1
             for (i in 0 until 100) {
                 watchable1.use {
-                    modificationMaker(this, chooser).invoke(this)
+                    modify()
                 }
             }
 
@@ -213,7 +225,7 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
             (0 until count).map {
                 launch {
                     watchable1.use {
-                        modificationMaker(this, chooser).invoke(this)
+                        modify()
                     }
                 }
             }.joinAll()
