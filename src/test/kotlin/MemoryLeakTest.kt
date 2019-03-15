@@ -64,7 +64,7 @@ class MemoryLeakTest {
         runBlocking {
             var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
             val ref = WeakReference(list1!!)
-            var sub: ReceiveChannel<List<ListChange<Int>>>? = scope1.subscribe(list1).receiver
+            var sub: ReceiveChannel<List<ListChange<Int>>>? = scope1.subscribe(list1)
             // Cancel the sub and drop vars
             sub?.cancel()
             sub = null

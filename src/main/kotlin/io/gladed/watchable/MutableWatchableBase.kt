@@ -17,10 +17,10 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.selects.whileSelect
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -70,34 +70,40 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     @Suppress("UNUSED_VARIABLE")
     override fun subscribe(scope: CoroutineScope): Subscription<C> =
         object : SubscriptionBase<C>() {
-            // Use a daemon to close with scope but still allow scope.join()
-            override val daemon = scope.daemon {
-                // Under lock, grab initial and open subscription so that all changes are captured
+            override val daemon: Job = scope.daemon {
+                // Atomically grab initial state and receive channel
                 val (initial, subscription) = mutableMutex.withLock {
-                    value to broadcaster.openSubscription()
+                    value.toInitialChange() to broadcaster.openSubscription()
                 }
 
-                if (!channel.isClosedForSend) {
-                    println("${Thread.currentThread().name} Delivering initial state")
-                    channel.send(listOf(initial.toInitialChange()))
-                    subscription.consumeEach { changes ->
-                        println("${Thread.currentThread().name} Handling $changes")
-                        // TODO: This happens too fast
-                        if (channel.isClosedForSend) {
-                            println("${Thread.currentThread().name} Handling $changes but channel is closed for send")
-                            subscription.cancel()
-                        } else {
-                            val toSend = changes.toMutableList()
-                            // Drain the subscription of all events, every time
-                            while (true) subscription.poll()?.also { toSend += it } ?: break
-                            println("Delivering $toSend to channel")
-                            channel.send(toSend)
+                // Clean up subscription on exit
+                coroutineContext[Job]?.invokeOnCompletion {
+                    subscription.cancel()
+                }
+
+                // Deliver data as long as we can
+                if (!isClosedForSend) {
+                    send(listOf(initial))
+                    process(subscription)
+                }
+            }
+
+            private suspend fun process(subscription: ReceiveChannel<List<C>>) {
+                whileSelect {
+                    // If data arrives pass it along
+                    subscription.onReceive { changes ->
+                        if (isClosedForSend) false else {
+                            send(compile(changes, subscription))
+                            true
                         }
+                    }
+                    // If subscription closure is requested, close it
+                    daemonMonitor.onJoin {
+                        false
                     }
                 }
             }
         }
-
 
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
     protected fun <U> doChange(func: () -> U): U =

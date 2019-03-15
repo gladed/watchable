@@ -22,10 +22,10 @@ interface SubscriptionHandle {
     /** Cancel the subscription immediately so that no further events are reported. */
     fun cancel()
 
-    /** Close the subscription gently, causing all outstanding events to be delivered before the channel is closed. */
+    /** Close the subscription, allowing all outstanding events to be delivered first. */
     fun close()
 
-    /** Suspend until all outstanding events have been processed (if any) and the channel is closed or cancelled. */
+    /** Suspend until the subscription is complete. */
     suspend fun join()
 
     /** Flush all events and close the channel (shorthand for [close] then [join]). */

@@ -18,7 +18,8 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.selects.whileSelect
 
 /**
  * A group of [Watchable] objects that can be watched for any change.
@@ -32,17 +33,28 @@ class WatchableGroup(
     @UseExperimental(ExperimentalCoroutinesApi::class)
     override fun subscribe(scope: CoroutineScope): Subscription<GroupChange> =
         object : SubscriptionBase<GroupChange>() {
-            val subscriptions = watchables.map { it to it.subscribe(scope) }.toMutableList()
+            override val daemon: Job = scope.daemon {
+                // Watch all subscriptions until they are all closed
+                val subscriptions = watchables.map { it to it.subscribe(scope) }.toMap().toMutableMap()
 
-            override val daemon = scope.daemon {
-                while (subscriptions.isNotEmpty()) {
-                    val selected: Pair<Watchable<out Any, out Change<Any>>, List<Change<Any>>> = select {
-                        subscriptions.forEach { (watchable, sub) ->
-                            sub.receiver.onReceive { watchable to it }
+                // Clean up subscription on exit
+                coroutineContext[Job]?.invokeOnCompletion {
+                    subscriptions.values.forEach { it.cancel() }
+                }
+
+                whileSelect {
+                    subscriptions.forEach { (watchable, sub) ->
+                        sub.onReceiveOrNull { changes ->
+                            if (changes == null) {
+                                subscriptions -= watchable
+                                subscriptions.isNotEmpty() // exit daemon if no subscriptions remain
+                            } else {
+                                send(compile(changes, sub).map { GroupChange(watchable, it) })
+                                true
+                            }
                         }
                     }
-                    channel.send(selected.second.map { GroupChange(selected.first, it) })
-                    subscriptions.removeIf { it.second.receiver.isClosedForReceive }
+                    daemonMonitor.onJoin { false }
                 }
             }
         }

@@ -19,6 +19,4 @@ package io.gladed.watchable
 import kotlinx.coroutines.channels.ReceiveChannel
 
 /** A subscription to a channel of events that can be closed or cancelled. */
-interface Subscription<C> : SubscriptionHandle {
-    val receiver: ReceiveChannel<List<C>>
-}
+interface Subscription<C> : SubscriptionHandle, ReceiveChannel<List<C>>

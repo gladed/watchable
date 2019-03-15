@@ -23,8 +23,11 @@ import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
+import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
@@ -120,8 +123,9 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
         }
     }
 
-    @Test fun `unbound changes not applied`() {
+    @Test(timeout = 500) fun `unbound changes not applied`() {
         runBlocking {
+            log("bind")
             bind(watchable2, watchable1)
             for (i in 0 until 100) {
                 watchable1.use {
@@ -129,31 +133,24 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
                 }
             }
 
+            log("wait around for match")
             watchable2.watchUntil(this) {
                 assertEquals(watchable1, watchable2)
             }
 
+            log("unbind")
             watchable2.unbind()
             watchable2.unbind() // Safe
 
+            log("modify again")
             for (i in 0 until 100) {
                 watchable1.use { modify() }
             }
+            log("delay")
             delay(50) // No changes arrive
+            log("ensure no changes")
             assertNotEquals(watchable1, watchable2)
-        }
-    }
-
-    @Test fun `receive events while flushing`() {
-        runBlocking {
-            val handle = subscribe(watchable1)
-            log(handle.receiver.receive())
-            watchable1.use { modify() }
-            watchable1.use { modify() }
-            watchable1.use { modify() }
-            log("Closing handle")
-            handle.close()
-            log(handle.receiver.receive())
+            log("done")
         }
     }
 
@@ -217,38 +214,67 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
     @Test fun stress() {
         val start = System.currentTimeMillis()
         val count = 10000
-        runBlocking {
-            bind(watchable2, watchable1)
-
-            assertNotEquals(watchable1, watchable2)
-
-            (0 until count).map {
-                launch {
-                    watchable1.use {
-                        modify()
-                    }
+        bind(watchable2, watchable1)
+        val allJobs = (0 until count).map {
+            launch {
+                watchable1.use {
+                    modify()
                 }
-            }.joinAll()
+            }
+        }
 
+        runBlocking {
+            allJobs.joinAll()
             watchable1.use {
                 finalMod(this)
             }
-
-            watch(watchable2) {
-                // Randomly read while modifying
-                try {
-                    if (0 == chooser(10)) watchable2.value.toString()
-                } catch (e: Exception) {
-                    log("THIS IS A PROBLEM: $e")
-                }
-            }
-
-            // Eventually w2 will catch up to w1
-            watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
-            assertEquals(watchable1.hashCode(), watchable2.hashCode())
         }
+
+        watch(watchable2) {
+            // Randomly read while modifying
+            try {
+                if (0 == chooser(10)) watchable2.value.toString()
+            } catch (e: Exception) {
+                log("THIS IS A PROBLEM: $e")
+            }
+        }
+
+        // Eventually w2 will catch up to w1
+        runBlocking {
+            watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
+        }
+        assertEquals(watchable1.hashCode(), watchable2.hashCode())
         val elapsed = System.currentTimeMillis() - start
         log("$count in $elapsed ms. ${elapsed * 1000 / count} μs per iteration.")
+    }
+
+    @Test(timeout = 1000) fun `first scope does not stop second`() {
+        val scope1 = LocalScope(Dispatchers.Default)
+        val scope2 = LocalScope(Dispatchers.Default)
+
+        val job1 = scope1.launch {
+            val sub1 = subscribe(watchable1)
+            log(sub1.receive())
+            // Stuff the broadcaster with events
+            (0 until 100).forEach { _ ->
+                watchable1.use { modify() }
+            }
+            // do not receive, the subscription should die anyway
+        }
+
+        runBlocking { job1.join() }
+
+        val job2 = scope2.launch {
+            val sub2 = subscribe(watchable1)
+            log(sub2.receive())
+            (0 until 100).forEach { _ ->
+                watchable1.use { modify() }
+            }
+            // No obstructions to receiving this data
+            log(sub2.receive())
+        }
+
+        runBlocking { job2.join() }
     }
 
     companion object {
@@ -322,7 +348,6 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
                 { watchableSetOf(1) },
                 { watchableSetOf(2) },
                 setModificationMaker,
-                { set: MutableSet<Int> -> set += MAX_SIZE })
-            )
+                { set: MutableSet<Int> -> set += MAX_SIZE }))
     }
 }

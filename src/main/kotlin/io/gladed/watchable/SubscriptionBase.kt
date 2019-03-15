@@ -18,22 +18,46 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.ReceiveChannel
 
 /** A base implementation of [Subscription] assuming use of [daemon]. */
-internal abstract class SubscriptionBase<C> : Subscription<C> {
-    protected abstract val daemon: Job
+@UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
+internal abstract class SubscriptionBase<C> : Subscription<C>, Channel<List<C>> by Channel<List<C>>(CAPACITY) {
 
-    protected val channel = Channel<List<C>>(CAPACITY)
+    /**
+     * Background processor for handling subscription. It must deliver data (from an unspecified source) and
+     * gracefully exit if daemonMonitor completes.
+     */
+    internal abstract val daemon: Job
 
-    override val receiver get() = channel
+    /** Close this to signal the daemon to wrap up its work and exit. */
+    internal val daemonMonitor = Job()
 
-    override suspend fun join() { daemon.join() }
+    override suspend fun join() {
+        daemon.join()
+    }
 
-    override fun close() { channel.close() }
-
-    override fun cancel() { channel.cancel() }
+    override fun close() {
+        // Inform the daemon we are done
+        daemonMonitor.cancel()
+    }
 
     companion object {
         const val CAPACITY = 10
+        /**
+         * A utility method for efficiently combining outstanding changes from a given receive channel into a
+         * single change list for delivery.
+         */
+        fun <C> compile(changes: List<C>, rx: ReceiveChannel<List<C>>): List<C> {
+            var compiled: MutableList<C>? = null
+            // Drain out additional events if any
+            while (true) rx.poll()?.also {
+                if (compiled == null) {
+                    compiled = changes.toMutableList()
+                }
+                compiled!!.addAll(it)
+            } ?: break
+            return compiled ?: changes
+        }
     }
 }

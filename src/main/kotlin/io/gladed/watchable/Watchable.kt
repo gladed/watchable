@@ -57,7 +57,7 @@ interface Watchable<T, C : Change<T>> {
     ): SubscriptionHandle =
         subscribe(scope).also { subscription ->
             scope.daemon {
-                batch(subscription.receiver, minPeriod).consumeEach { func(it) }
+                batch(subscription, minPeriod).consumeEach { func(it) }
             }
         }
 }
