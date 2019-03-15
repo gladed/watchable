@@ -213,7 +213,7 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
 
     @Test fun stress() {
         val start = System.currentTimeMillis()
-        val count = 10000
+        val count = 5000
         bind(watchable2, watchable1)
         val allJobs = (0 until count).map {
             launch {

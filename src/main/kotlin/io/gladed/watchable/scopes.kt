@@ -33,8 +33,8 @@ import kotlin.coroutines.EmptyCoroutineContext
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Suppress("ComplexMethod")
-fun <U> CoroutineScope.batch(input: ReceiveChannel<List<U>>, periodMillis: Long = 0): ReceiveChannel<List<U>> =
-    if (periodMillis <= 0L) input else produce {
+fun <U> batch(scope: CoroutineScope, input: ReceiveChannel<List<U>>, periodMillis: Long = 0): ReceiveChannel<List<U>> =
+    if (periodMillis <= 0L) input else scope.produce {
         var lastSend = 0L
         val buffer = mutableListOf<U>()
 
@@ -53,11 +53,8 @@ fun <U> CoroutineScope.batch(input: ReceiveChannel<List<U>>, periodMillis: Long 
             deliver()
             select<Any?> {
                 input.onReceiveOrNull { received ->
-                    received?.also { item ->
-                        buffer += item
-                        while (!input.isEmpty) {
-                            input.poll()?.also { more -> buffer += more }
-                        }
+                    if (received != null) {
+                        buffer += SubscriptionBase.compile(received, input)
                     }
                 }
                 remaining().takeIf { it > 0 }?.also { onTimeout(it) { } }

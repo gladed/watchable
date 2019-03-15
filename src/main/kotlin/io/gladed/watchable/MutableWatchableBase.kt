@@ -71,7 +71,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     override fun subscribe(scope: CoroutineScope): Subscription<C> =
         object : SubscriptionBase<C>() {
             override val daemon: Job = scope.daemon {
-                // Atomically grab initial state and receive channel
+                // Atomically grab initial state and broadcast subscription
                 val (initial, subscription) = mutableMutex.withLock {
                     value.toInitialChange() to broadcaster.openSubscription()
                 }

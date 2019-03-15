@@ -74,7 +74,7 @@ class SubscribeTest : ScopeTest() {
         val set2 = watchableSetOf(2)
         runBlocking {
             val rxChanges = subscribe(set2)
-            val batchChannel = scope2.batch(rxChanges, 150)
+            val batchChannel = batch(scope2, rxChanges, 150)
             assertEquals(listOf(SetChange.Initial(setOf(2))), batchChannel.receive())
             val start = System.currentTimeMillis()
 

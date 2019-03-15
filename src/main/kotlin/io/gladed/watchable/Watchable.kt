@@ -30,12 +30,13 @@ interface Watchable<T, C : Change<T>> {
     val value: T
 
     /**
-     * Return a subscription watching for changes to this watchable.
+     * Return a subscription for changes to this watchable.
      */
     fun subscribe(scope: CoroutineScope): Subscription<C>
 
     /**
-     * Deliver changes for this [Watchable] to [func], starting with its initial state, until the scope completes.
+     * Deliver changes for this [Watchable] to [func], starting with its initial state, until the scope completes
+     * or the returned [SubscriptionHandle] is closed.
      */
     fun watch(scope: CoroutineScope, func: suspend (C) -> Unit): SubscriptionHandle =
         batch(scope) { changes ->
@@ -45,8 +46,8 @@ interface Watchable<T, C : Change<T>> {
         }
 
     /**
-     * Deliver periodic lists of changes for this [Watchable] to [func], starting with its initial state, until
-     * the scope completes.
+     * Deliver lists of changes for this [Watchable] to [func], starting with its initial state, until
+     * the [scope] completes or the returned [SubscriptionHandle] is closed.
      */
     @UseExperimental(ObsoleteCoroutinesApi::class)
     fun batch(
@@ -57,7 +58,7 @@ interface Watchable<T, C : Change<T>> {
     ): SubscriptionHandle =
         subscribe(scope).also { subscription ->
             scope.daemon {
-                batch(subscription, minPeriod).consumeEach { func(it) }
+                batch(this, subscription, minPeriod).consumeEach { func(it) }
             }
         }
 }

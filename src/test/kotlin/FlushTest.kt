@@ -14,23 +14,43 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.GroupChange
+import io.gladed.watchable.ListChange
 import io.gladed.watchable.ValueChange
+import io.gladed.watchable.batch
 import io.gladed.watchable.subscribe
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Rule
 import org.junit.Test
 
 class FlushTest : ScopeTest() {
-    @Test(timeout = 250)
+    @Rule @JvmField val changes = ChangeWatcherRule<ValueChange<Int>>()
+
+    @Test(timeout = 500)
     fun `receive events while flushing`() {
+        val value = watchableValueOf(1)
+        val handle = subscribe(value)
         runBlocking {
-            val value = watchableValueOf(1)
-            val handle = subscribe(value)
             assertEquals(listOf(ValueChange(1, 1)), handle.receive())
             value.set(2)
             handle.close()
             assertEquals(listOf(ValueChange(1, 2)), handle.receive())
+            handle.join()
+        }
+    }
+
+
+    @Test(timeout = 500)
+    fun `get final batch`() {
+        runBlocking {
+            val value = watchableValueOf(1)
+            val handle = batch(value) { changes += it }
+            changes.expect(ValueChange(1, 1))
+            value.set(2)
+            handle.close()
+            changes.expect(ValueChange(1, 2))
             handle.join()
         }
     }

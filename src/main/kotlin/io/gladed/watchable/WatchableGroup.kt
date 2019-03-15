@@ -35,19 +35,21 @@ class WatchableGroup(
         object : SubscriptionBase<GroupChange>() {
             override val daemon: Job = scope.daemon {
                 // Watch all subscriptions until they are all closed
-                val subscriptions = watchables.map { it to it.subscribe(scope) }.toMap().toMutableMap()
+                val subscriptions = watchables.map { it to it.subscribe(scope) }.toMap()
 
                 // Clean up subscription on exit
                 coroutineContext[Job]?.invokeOnCompletion {
                     subscriptions.values.forEach { it.cancel() }
                 }
+                val remaining = subscriptions.toMutableMap()
 
                 whileSelect {
-                    subscriptions.forEach { (watchable, sub) ->
+                    remaining.forEach { (watchable, sub) ->
                         sub.onReceiveOrNull { changes ->
                             if (changes == null) {
-                                subscriptions -= watchable
-                                subscriptions.isNotEmpty() // exit daemon if no subscriptions remain
+                                remaining -= watchable
+                                // exit daemon if no remaining subscriptions
+                                remaining.isNotEmpty()
                             } else {
                                 send(compile(changes, sub).map { GroupChange(watchable, it) })
                                 true
