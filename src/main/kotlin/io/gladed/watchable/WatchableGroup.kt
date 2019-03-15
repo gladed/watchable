@@ -18,8 +18,6 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.selects.select
 
 /**
@@ -32,18 +30,19 @@ class WatchableGroup(
     override val value: List<Watchable<out Any, out Change<Any>>> = watchables
 
     @UseExperimental(ExperimentalCoroutinesApi::class)
-    override fun subscribe(scope: CoroutineScope): ReceiveChannel<List<GroupChange>> =
-        Channel<List<GroupChange>>(MutableWatchableBase.CAPACITY).apply {
-            scope.daemon {
-                val subscriptions = watchables.map { it to it.subscribe(scope) }.toMutableList()
+    override fun subscribe(scope: CoroutineScope): Subscription<GroupChange> =
+        object : SubscriptionBase<GroupChange>() {
+            val subscriptions = watchables.map { it to it.subscribe(scope) }.toMutableList()
+
+            override val daemon = scope.daemon {
                 while (subscriptions.isNotEmpty()) {
                     val selected: Pair<Watchable<out Any, out Change<Any>>, List<Change<Any>>> = select {
                         subscriptions.forEach { (watchable, sub) ->
-                            sub.onReceive { watchable to it }
+                            sub.receiver.onReceive { watchable to it }
                         }
                     }
-                    send(selected.second.map { GroupChange(selected.first, it) })
-                    subscriptions.removeIf { it.second.isClosedForReceive }
+                    channel.send(selected.second.map { GroupChange(selected.first, it) })
+                    subscriptions.removeIf { it.second.receiver.isClosedForReceive }
                 }
             }
         }

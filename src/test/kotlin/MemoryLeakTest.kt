@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.SubscriptionHandle
 import io.gladed.watchable.ListChange
 import io.gladed.watchable.WatchableList
 import io.gladed.watchable.bind
@@ -63,7 +64,7 @@ class MemoryLeakTest {
         runBlocking {
             var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
             val ref = WeakReference(list1!!)
-            var sub: ReceiveChannel<List<ListChange<Int>>>? = scope1.subscribe(list1)
+            var sub: ReceiveChannel<List<ListChange<Int>>>? = scope1.subscribe(list1).receiver
             // Cancel the sub and drop vars
             sub?.cancel()
             sub = null
@@ -91,7 +92,7 @@ class MemoryLeakTest {
             val ref = WeakReference(list1!!)
 
             // Watch it from the current scope
-            var job: Job? = watch(list1) {
+            var job: SubscriptionHandle? = watch(list1) {
             }
 
             // Cancel and forget the job but leave the scope running.

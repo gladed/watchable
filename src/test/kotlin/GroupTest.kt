@@ -38,7 +38,7 @@ class GroupTest {
         runBlocking {
             val intValue = watchableValueOf(1)
             val setValue = watchableSetOf("1")
-            val rx = group(intValue, setValue).subscribe(this)
+            val rx = group(intValue, setValue).subscribe(this).receiver
             assertEquals(listOf(GroupChange(intValue, ValueChange(1, 1))), rx.receive())
             assertEquals(listOf(GroupChange(setValue, SetChange.Initial(setOf("1")))), rx.receive())
         }

@@ -19,8 +19,9 @@ repositories {
 }
 
 dependencies {
-    compile rootProject
     compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.10.0"
+    compile "io.gladed:watchable:0.6.1"  // Downloaded version
+//    compile rootProject  // Local version
     testCompile 'junit:junit:4.12'
 }
 

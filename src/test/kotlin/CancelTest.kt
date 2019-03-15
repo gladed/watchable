@@ -109,14 +109,14 @@ class CancelTest {
     fun `throw during watch cancels job`() {
         runBlocking {
             intValue = watchableValueOf(5)
-            val watchJob = watch(intValue) {
+            val handle = watch(intValue) {
                 changes += it
                 throw IllegalStateException("Whoops!")
             }
             changes.expect(ValueChange(5, 5))
             intValue.set(7)
             changes.expectNone()
-            Assert.assertTrue(watchJob.isCancelled)
+            handle.cancel()
         }
     }
 

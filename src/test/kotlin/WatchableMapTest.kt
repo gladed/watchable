@@ -65,10 +65,9 @@ class WatchableMapTest : ScopeTest() {
             watch(map3) { changes += it }
             assertThat(map.toString(), startsWith("WatchableMap("))
             assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
-            changes.expect(MapChange.Initial(mapOf(2 to "2")))
+            changes.expect(MapChange.Initial(mapOf(1 to "1")))
             map.set(mapOf(3 to "3"))
-            changes.expect(MapChange.Remove(2, "2"), MapChange.Add(1, "1"), MapChange.Remove(1, "1"),
-                MapChange.Add(3, "3"))
+            changes.expect(MapChange.Remove(1, "1"), MapChange.Add(3, "3"))
         }
     }
 

@@ -34,7 +34,7 @@ class SubscribeTest : ScopeTest() {
 
     @Test fun sub() {
         runBlocking {
-            val rxChanges = subscribe(set)
+            val rxChanges = subscribe(set).receiver
             assertEquals(listOf(SetChange.Initial(setOf(1))), rxChanges.receive())
             set.use { remove(1) }
             assertEquals(listOf(SetChange.Remove(1)), rxChanges.receive())
@@ -42,7 +42,7 @@ class SubscribeTest : ScopeTest() {
     }
 
     @Test fun cancelSub() {
-        val rxChanges = set.subscribe(scope2)
+        val rxChanges = set.subscribe(scope2).receiver
         runBlocking {
             assertEquals(listOf(SetChange.Initial(setOf(1))), rxChanges.receive())
             rxChanges.cancel()
@@ -56,7 +56,7 @@ class SubscribeTest : ScopeTest() {
     @Test fun cancelScope() {
         val set2 = watchableSetOf(2)
         runBlocking {
-            val rxChanges = subscribe(set2)
+            val rxChanges = subscribe(set2).receiver
 
             assertEquals(listOf(SetChange.Initial(setOf(2))), rxChanges.receive())
 
@@ -73,7 +73,7 @@ class SubscribeTest : ScopeTest() {
     @Test fun `batches arrive slowly`() {
         val set2 = watchableSetOf(2)
         runBlocking {
-            val rxChanges = subscribe(set2)
+            val rxChanges = subscribe(set2).receiver
             val batchChannel = scope2.batch(rxChanges, 150)
             assertEquals(listOf(SetChange.Initial(setOf(2))), batchChannel.receive())
             val start = System.currentTimeMillis()

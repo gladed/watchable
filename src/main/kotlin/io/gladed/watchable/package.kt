@@ -78,7 +78,7 @@ fun <T, M : T, C : Change<T>, T2, C2 : Change<T2>> CoroutineScope.bind(
  * Create a [ReceiveChannel] for intercepting lists of changes made to [target] for as long as this
  * [CoroutineScope] lives.
  */
-fun <T, C : Change<T>> CoroutineScope.subscribe(target: Watchable<T, C>): ReceiveChannel<List<C>> =
+fun <T, C : Change<T>> CoroutineScope.subscribe(target: Watchable<T, C>): Subscription<C> =
     target.subscribe(this)
 
 /**

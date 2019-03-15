@@ -139,7 +139,7 @@ fun <T : Any> cover(obj: T) {
 }
 
 suspend fun <T, C: Change<T>> Watchable<T, C>.watchUntil(scope: CoroutineScope, func: () -> Unit) {
-    val rx = scope.subscribe(this)
+    val rx = scope.subscribe(this).receiver
     withTimeout(250) {
         while(true) {
             rx.receive()

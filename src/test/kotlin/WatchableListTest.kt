@@ -47,7 +47,7 @@ class WatchableListTest : ScopeTest() {
         runBlocking {
             val list = watchableListOf(1)
             val readOnlyList = list.readOnly()
-            val rx = subscribe(readOnlyList)
+            val rx = subscribe(readOnlyList).receiver
             assertEquals(listOf(ListChange.Initial(listOf(1))), rx.receive())
             assertThat(list.toString(), startsWith("WatchableList("))
             assertThat(readOnlyList.toString(), startsWith("ReadOnlyWatchableList("))

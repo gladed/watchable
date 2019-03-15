@@ -19,9 +19,48 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.isActive
+
+/** A handle allowing a subscription to be closed. */
+interface SubscriptionHandle {
+    fun cancel()
+
+    fun close()
+
+    suspend fun join()
+
+    suspend fun closeAndJoin() {
+        close()
+        join()
+    }
+}
+
+abstract class SubscriptionBase<C> : Subscription<C> {
+    protected val channel = Channel<List<C>>(CAPACITY)
+
+    protected abstract val daemon: Job
+
+    override suspend fun join() { daemon.join() }
+
+    override fun close() { channel.close() }
+
+    override fun cancel() { channel.cancel() }
+
+    override val receiver get() = channel
+
+    companion object {
+        const val CAPACITY = 10
+    }
+}
+
+
+/** A subscription to a channel of events that can be closed or cancelled. */
+interface Subscription<C> : SubscriptionHandle {
+    val receiver: ReceiveChannel<List<C>>
+}
 
 /**
  * Wraps type [T] so that it may be watched for changes of type [C].
@@ -32,15 +71,14 @@ interface Watchable<T, C : Change<T>> {
     val value: T
 
     /**
-     * Return a channel which will receive successive lists of changes as they occur.
+     * Return a subscription watching for changes to this watchable.
      */
-    fun subscribe(scope: CoroutineScope): ReceiveChannel<List<C>>
+    fun subscribe(scope: CoroutineScope): Subscription<C>
 
     /**
-     * Deliver changes for this [Watchable] to [func], starting with its initial state, until
-     * the returned [Job] is cancelled or the [scope] completes.
+     * Deliver changes for this [Watchable] to [func], starting with its initial state, until the scope completes.
      */
-    fun watch(scope: CoroutineScope, func: suspend (C) -> Unit): Job =
+    fun watch(scope: CoroutineScope, func: suspend (C) -> Unit): SubscriptionHandle =
         batch(scope) { changes ->
             for (change in changes) {
                 if (scope.isActive) func(change) else break
@@ -48,8 +86,8 @@ interface Watchable<T, C : Change<T>> {
         }
 
     /**
-     * Deliver lists of changes for this [Watchable] to [func], starting with its initial state, until
-     * the returned [Job] is cancelled or the [scope] completes.
+     * Deliver periodic lists of changes for this [Watchable] to [func], starting with its initial state, until
+     * the scope completes.
      */
     @UseExperimental(ObsoleteCoroutinesApi::class)
     fun batch(
@@ -57,8 +95,10 @@ interface Watchable<T, C : Change<T>> {
         /** The minimum time in millis between change notifications, or 0 (the default) for no delay. */
         minPeriod: Long = 0,
         func: suspend (List<C>) -> Unit
-    ): Job =
-        scope.daemon {
-            batch(subscribe(scope), minPeriod).consumeEach { func(it) }
+    ): SubscriptionHandle =
+        subscribe(scope).also { subscription ->
+            scope.daemon {
+                batch(subscription.receiver, minPeriod).consumeEach { func(it) }
+            }
         }
 }
