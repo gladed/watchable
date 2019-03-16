@@ -53,7 +53,7 @@ dependencies {
     api "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
 
     // Coroutines are deeply integrated here
-    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.1'
+    api 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.1'
 
     testImplementation 'junit:junit:4.12'
     testImplementation 'org.mockito:mockito-core:2.15.0'
