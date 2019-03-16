@@ -1,6 +1,7 @@
 # Version History
 
 ## 0.6.x
+* Handles coming back from `watch` etc support `close` which flushes current contents.
 * Replaced suspending `get()` with `value` for direct immutable access without suspension.
 * Replaced read-only collection implementations for Map, List, and Set.
 * Fix a problem with `batch` failing to consume, slowing down `use`.

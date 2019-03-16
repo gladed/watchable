@@ -14,30 +14,30 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.SetChange
 import io.gladed.watchable.batch
-import io.gladed.watchable.group
-import io.gladed.watchable.toWatchableList
-import io.gladed.watchable.toWatchableSet
-import io.gladed.watchable.watch
-import kotlinx.coroutines.delay
+import io.gladed.watchable.watchableSetOf
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import org.junit.Rule
 import org.junit.Test
 
-/** Check certain doc comments are accurate. */
-class ReadmeTest {
-    @Test fun `batching docs`() {
-        val list = listOf(4, 5).toWatchableList()
+class BatchTest : ScopeTest() {
+    @Rule @JvmField val scope1 = ScopeRule(Dispatchers.Default)
+    @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
+    private val set = watchableSetOf(1)
+
+    @Test fun `batch changes arrive slowly`() {
         runBlocking {
-            batch(list) { println(it) }
-            delay(25)
-            // Prints: [Initial(initial=[4, 5])]
-            list.use {
-                add(6)
-                add(7)
+            batch(set, 150) {
+                changes += it
             }
-            delay(25)
-            // Prints: [Add(index=2, added=6), Add(index=3, added=7)]
+            changes.expect(SetChange.Initial(setOf(1)))
+
+            set.use { add(2) }
+            // Nothing shows up immediately
+            changes.expectNone(25)
+            changes.expect(SetChange.Add(2), timeout = 250)
         }
     }
-
 }

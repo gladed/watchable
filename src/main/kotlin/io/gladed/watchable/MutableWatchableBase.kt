@@ -19,8 +19,8 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.selects.whileSelect
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -68,19 +68,44 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     private var isOnBoundChange: Boolean = false
 
     @Suppress("UNUSED_VARIABLE")
-    override fun subscribe(scope: CoroutineScope) =
-        Channel<List<C>>(CAPACITY).also { channel ->
-            scope.daemon {
-                // Under lock, grab initial and open subscription
-                val (initial, subscription) = mutableMutex.withLock {
-                    value to broadcaster.openSubscription()
+    override fun subscribe(
+        scope: CoroutineScope,
+        consumer: Subscription<C>.() -> SubscriptionHandle
+    ) = object : SubscriptionBase<C>() {
+        override val daemon: Job = scope.daemon {
+            // Atomically grab initial state and an rxChannel containing change events
+            val (initial, subscription) = mutableMutex.withLock {
+                value.toInitialChange() to broadcaster.openSubscription()
+            }
+
+            // Clean up subscription on exit
+            coroutineContext[Job]?.invokeOnCompletion {
+                subscription.cancel()
+            }
+
+            // Deliver data as long as we can
+            if (!isClosedForSend) {
+                send(listOf(initial))
+                process(subscription)
+            }
+        }
+
+        private suspend fun process(subscription: ReceiveChannel<List<C>>) {
+            whileSelect {
+                // If any data arrives pass along as much as we can get
+                subscription.onReceive { changes ->
+                    if (isClosedForSend) false else {
+                        send(subscription.appendPolled(changes))
+                        true
+                    }
                 }
-                channel.send(listOf(initial.toInitialChange()))
-                subscription.consumeEach {
-                    channel.send(it)
+                // If subscription closure is requested, close it
+                daemonMonitor.onJoin {
+                    false
                 }
             }
         }
+    }.consumer()
 
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
     protected fun <U> doChange(func: () -> U): U =
@@ -119,7 +144,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     }
 
     /** Wrapper for a binding. */
-    private class Binding(val other: Watchable<*, *>, val job: Job)
+    private class Binding(val other: Watchable<*, *>, val handle: SubscriptionHandle)
 
     override fun bind(scope: CoroutineScope, origin: Watchable<T, C>) {
         bind(scope, origin) {
@@ -154,7 +179,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
 
     override fun unbind() {
         binding?.apply {
-            job.cancel()
+            handle.cancel()
             binding = null
         }
     }

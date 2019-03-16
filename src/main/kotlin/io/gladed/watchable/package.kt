@@ -17,7 +17,6 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.channels.ReceiveChannel
 
 /** Return a new [WatchableValue] wrapping [value], living on this [CoroutineScope]. */
 fun <T : Any> watchableValueOf(value: T) = WatchableValue(value)
@@ -46,7 +45,7 @@ fun <T, M : T, C : Change<T>> CoroutineScope.bind(dest: MutableWatchable<T, M, C
 
 /**
  * Deliver changes for this [Watchable] to [func], starting with its initial state, until
- * the returned job is cancelled or this [CoroutineScope] completes.
+ * the returned [SubscriptionHandle] is closed or this [CoroutineScope] completes.
  */
 fun <T, C : Change<T>> CoroutineScope.watch(
     watchable: Watchable<T, C>,
@@ -55,7 +54,7 @@ fun <T, C : Change<T>> CoroutineScope.watch(
 
 /**
  * Deliver multiple changes for this [Watchable] to [func], starting with its initial state, until
- * the returned job is cancelled or this [CoroutineScope] completes.
+ * the returned [SubscriptionHandle] is closed or this [CoroutineScope] completes.
  */
 fun <T, C : Change<T>> CoroutineScope.batch(
     watchable: Watchable<T, C>,
@@ -73,13 +72,6 @@ fun <T, M : T, C : Change<T>, T2, C2 : Change<T2>> CoroutineScope.bind(
     origin: Watchable<T2, C2>,
     apply: M.(C2) -> Unit
 ) = dest.bind(this, origin, apply)
-
-/**
- * Create a [ReceiveChannel] for intercepting lists of changes made to [target] for as long as this
- * [CoroutineScope] lives.
- */
-fun <T, C : Change<T>> CoroutineScope.subscribe(target: Watchable<T, C>): ReceiveChannel<List<C>> =
-    target.subscribe(this)
 
 /**
  * Create and return a group of watchable objects that itself is watchable.

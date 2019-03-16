@@ -18,19 +18,12 @@ import io.gladed.watchable.ValueChange
 import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.runBlocking
-import org.hamcrest.CoreMatchers.containsString
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThat
-import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
-import java.util.concurrent.Executors
 
 class WatchableValueTest {
 

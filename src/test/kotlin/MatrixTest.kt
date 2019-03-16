@@ -16,28 +16,20 @@
 
 import io.gladed.watchable.Change
 import io.gladed.watchable.MutableWatchable
-import io.gladed.watchable.Watchable
 import io.gladed.watchable.bind
-import io.gladed.watchable.subscribe
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.yield
-import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -60,6 +52,11 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
     private lateinit var watchable1: MutableWatchable<T, M, C>
     private lateinit var watchable2: MutableWatchable<T, M, C>
 
+    /** Apply a random modification to this [M]. */
+    private fun M.modify() {
+        modificationMaker(this, chooser).invoke(this)
+    }
+
 
     @Before fun setup() {
         watchable1 = maker1()
@@ -79,9 +76,7 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
         runBlocking {
             bind(watchable2, watchable1)
             for (i in 0 until 200) {
-                watchable1.use {
-                    modificationMaker(this, chooser).invoke(this)
-                }
+                watchable1.use { modify() }
             }
             assertNotEquals(watchable1, watchable2)
             watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
@@ -111,9 +106,7 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
             mustThrow(IllegalStateException::class.java) {
                 bind(watchable2, watchable1)
                 for (i in 0 until 20) {
-                    watchable2.use {
-                        modificationMaker(this, chooser).invoke(this)
-                    }
+                    watchable2.use { modify() }
                 }
             }
         }
@@ -121,27 +114,32 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
 
     @Test fun `unbound changes not applied`() {
         runBlocking {
+            log("bind")
             bind(watchable2, watchable1)
             for (i in 0 until 100) {
                 watchable1.use {
-                    modificationMaker(this, chooser).invoke(this)
+                    modify()
                 }
             }
 
+            log("wait around for match")
             watchable2.watchUntil(this) {
                 assertEquals(watchable1, watchable2)
             }
 
+            log("unbind")
             watchable2.unbind()
             watchable2.unbind() // Safe
 
+            log("modify again")
             for (i in 0 until 100) {
-                watchable1.use {
-                    modificationMaker(this, chooser).invoke(this)
-                }
+                watchable1.use { modify() }
             }
+            log("delay")
             delay(50) // No changes arrive
+            log("ensure no changes")
             assertNotEquals(watchable1, watchable2)
+            log("done")
         }
     }
 
@@ -170,7 +168,7 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
             // Throw many modifications at watchable1
             for (i in 0 until 100) {
                 watchable1.use {
-                    modificationMaker(this, chooser).invoke(this)
+                    modify()
                 }
             }
 
@@ -204,37 +202,37 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
 
     @Test fun stress() {
         val start = System.currentTimeMillis()
-        val count = 10000
-        runBlocking {
-            bind(watchable2, watchable1)
-
-            assertNotEquals(watchable1, watchable2)
-
-            (0 until count).map {
-                launch {
-                    watchable1.use {
-                        modificationMaker(this, chooser).invoke(this)
-                    }
+        val count = 2000
+        bind(watchable2, watchable1)
+        val allJobs = (0 until count).map {
+            launch {
+                watchable1.use {
+                    modify()
                 }
-            }.joinAll()
+            }
+        }
 
+        runBlocking {
+            allJobs.joinAll()
             watchable1.use {
                 finalMod(this)
             }
-
-            watch(watchable2) {
-                // Randomly read while modifying
-                try {
-                    if (0 == chooser(10)) watchable2.value.toString()
-                } catch (e: Exception) {
-                    log("THIS IS A PROBLEM: $e")
-                }
-            }
-
-            // Eventually w2 will catch up to w1
-            watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
-            assertEquals(watchable1.hashCode(), watchable2.hashCode())
         }
+
+        watch(watchable2) {
+            // Randomly read while modifying
+            try {
+                if (0 == chooser(10)) watchable2.value.toString()
+            } catch (e: Exception) {
+                log("THIS IS A PROBLEM: $e")
+            }
+        }
+
+        // Eventually w2 will catch up to w1
+        runBlocking {
+            watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
+        }
+        assertEquals(watchable1.hashCode(), watchable2.hashCode())
         val elapsed = System.currentTimeMillis() - start
         log("$count in $elapsed ms. ${elapsed * 1000 / count} μs per iteration.")
     }
@@ -310,7 +308,6 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
                 { watchableSetOf(1) },
                 { watchableSetOf(2) },
                 setModificationMaker,
-                { set: MutableSet<Int> -> set += MAX_SIZE })
-            )
+                { set: MutableSet<Int> -> set += MAX_SIZE }))
     }
 }

@@ -17,10 +17,7 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.isActive
 
 /**
@@ -32,15 +29,21 @@ interface Watchable<T, C : Change<T>> {
     val value: T
 
     /**
-     * Return a channel which will receive successive lists of changes as they occur.
+     * Initiate and consume a subscription for changes to this [Watchable], returning a handle for control
+     * over the subscription.
      */
-    fun subscribe(scope: CoroutineScope): ReceiveChannel<List<C>>
+    fun subscribe(
+        /** Scope in which this subscription runs. Completion of the scope will also cancel the subscription. */
+        scope: CoroutineScope,
+        /** Function which consumes the subscription, returning its handle. */
+        consumer: Subscription<C>.() -> SubscriptionHandle
+    ): SubscriptionHandle
 
     /**
-     * Deliver changes for this [Watchable] to [func], starting with its initial state, until
-     * the returned [Job] is cancelled or the [scope] completes.
+     * Deliver changes for this [Watchable] to [func], starting with its initial state, until the scope completes
+     * or the returned [SubscriptionHandle] is closed.
      */
-    fun watch(scope: CoroutineScope, func: suspend (C) -> Unit): Job =
+    fun watch(scope: CoroutineScope, func: suspend (C) -> Unit): SubscriptionHandle =
         batch(scope) { changes ->
             for (change in changes) {
                 if (scope.isActive) func(change) else break
@@ -49,7 +52,7 @@ interface Watchable<T, C : Change<T>> {
 
     /**
      * Deliver lists of changes for this [Watchable] to [func], starting with its initial state, until
-     * the returned [Job] is cancelled or the [scope] completes.
+     * the [scope] completes or the returned [SubscriptionHandle] is closed.
      */
     @UseExperimental(ObsoleteCoroutinesApi::class)
     fun batch(
@@ -57,8 +60,6 @@ interface Watchable<T, C : Change<T>> {
         /** The minimum time in millis between change notifications, or 0 (the default) for no delay. */
         minPeriod: Long = 0,
         func: suspend (List<C>) -> Unit
-    ): Job =
-        scope.daemon {
-            batch(subscribe(scope), minPeriod).consumeEach { func(it) }
-        }
+    ): SubscriptionHandle =
+        subscribe(scope) { batch(scope, minPeriod, func) }
 }

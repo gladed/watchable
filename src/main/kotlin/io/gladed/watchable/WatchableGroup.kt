@@ -18,9 +18,7 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.selects.select
+import kotlinx.coroutines.selects.whileSelect
 
 /**
  * A group of [Watchable] objects that can be watched for any change.
@@ -32,19 +30,25 @@ class WatchableGroup(
     override val value: List<Watchable<out Any, out Change<Any>>> = watchables
 
     @UseExperimental(ExperimentalCoroutinesApi::class)
-    override fun subscribe(scope: CoroutineScope): ReceiveChannel<List<GroupChange>> =
-        Channel<List<GroupChange>>(MutableWatchableBase.CAPACITY).apply {
-            scope.daemon {
-                val subscriptions = watchables.map { it to it.subscribe(scope) }.toMutableList()
-                while (subscriptions.isNotEmpty()) {
-                    val selected: Pair<Watchable<out Any, out Change<Any>>, List<Change<Any>>> = select {
-                        subscriptions.forEach { (watchable, sub) ->
-                            sub.onReceive { watchable to it }
-                        }
-                    }
-                    send(selected.second.map { GroupChange(selected.first, it) })
-                    subscriptions.removeIf { it.second.isClosedForReceive }
+    override fun subscribe(
+        scope: CoroutineScope,
+        consumer: Subscription<GroupChange>.() -> SubscriptionHandle
+    ) = object : SubscriptionBase<GroupChange>() {
+
+        // Start watching other subscriptions, delivering their changes here.
+        val subscriptions = watchables.map { watchable ->
+            watchable.batch(scope) { changes ->
+                send(changes.map { GroupChange(watchable, it) })
+            }
+        }.toMutableList()
+
+        override val daemon = scope.daemon {
+            whileSelect {
+                daemonMonitor.onJoin {
+                    subscriptions.forEach { it.closeAndJoin() }
+                    false
                 }
             }
         }
+    }.consumer()
 }

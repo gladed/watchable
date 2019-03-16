@@ -18,9 +18,12 @@ import io.gladed.watchable.GroupChange
 import io.gladed.watchable.SetChange
 import io.gladed.watchable.ValueChange
 import io.gladed.watchable.group
+import io.gladed.watchable.toWatchableList
+import io.gladed.watchable.toWatchableSet
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import io.gladed.watchable.watchableValueOf
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Rule
@@ -34,17 +37,17 @@ class GroupTest {
         cover(GroupChange(intValue, ValueChange(1, 1)))
     }
 
-    @Test(timeout = 500) fun `subscribe to a group of watchables`() {
+    @Test fun `subscribe to a group of watchables`() {
         runBlocking {
             val intValue = watchableValueOf(1)
             val setValue = watchableSetOf("1")
-            val rx = group(intValue, setValue).subscribe(this)
-            assertEquals(listOf(GroupChange(intValue, ValueChange(1, 1))), rx.receive())
-            assertEquals(listOf(GroupChange(setValue, SetChange.Initial(setOf("1")))), rx.receive())
+            group(intValue, setValue).watch(this) { changes += it }
+            changes.expect(GroupChange(intValue, ValueChange(1, 1)))
+            changes.expect(GroupChange(setValue, SetChange.Initial(setOf("1"))))
         }
     }
 
-    @Test(timeout = 500) fun `watch a group of watchables`() {
+    @Test fun `watch a group of watchables`() {
         runBlocking {
             val intValue = watchableValueOf(1)
             val setValue = watchableSetOf("1")
@@ -56,4 +59,39 @@ class GroupTest {
                 GroupChange(setValue, SetChange.Initial(setOf("1"))))
         }
     }
+
+    @Test fun `cancel watching of a group`() {
+        runBlocking {
+            val intValue = watchableValueOf(1)
+            val setValue = watchableSetOf("1")
+            val handle = watch(group(intValue, setValue)) {
+                changes += it
+            }
+            changes.expect(
+                GroupChange(intValue, ValueChange(1, 1)),
+                GroupChange(setValue, SetChange.Initial(setOf("1"))))
+            handle.close()
+            changes.expectNone()
+            setValue.use { add("2") }
+            changes.expectNone()
+        }
+    }
+
+    @Test fun `example from readme`() {
+        val list = listOf(4).toWatchableList()
+        val set = setOf("a").toWatchableSet()
+        runBlocking {
+            watch(group(set, list)) { println(it) }
+            delay(25)
+            // Prints:
+            //   GroupChange(watchable=WatchableSet(), change=Initial(initial=[a]))
+            //   GroupChange(watchable=WatchableList(), change=Initial(initial=[4]))
+            list.use { add(6) }
+            set.use { add("b") }
+            //   GroupChange(watchable=WatchableList(), change=Add(index=1, added=6))
+            //   GroupChange(watchable=WatchableSet(), change=Add(added=b))
+            delay(25)
+        }
+    }
+
 }
