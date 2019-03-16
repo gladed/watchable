@@ -60,6 +60,23 @@ class GroupTest {
         }
     }
 
+    @Test fun `cancel watching of a group`() {
+        runBlocking {
+            val intValue = watchableValueOf(1)
+            val setValue = watchableSetOf("1")
+            val handle = watch(group(intValue, setValue)) {
+                changes += it
+            }
+            changes.expect(
+                GroupChange(intValue, ValueChange(1, 1)),
+                GroupChange(setValue, SetChange.Initial(setOf("1"))))
+            handle.close()
+            changes.expectNone()
+            setValue.use { add("2") }
+            changes.expectNone()
+        }
+    }
+
     @Test fun `example from readme`() {
         val list = listOf(4).toWatchableList()
         val set = setOf("a").toWatchableSet()
