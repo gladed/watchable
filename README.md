@@ -1,10 +1,10 @@
-[ ![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.6.1) ](https://bintray.com/gladed/watchable/watchable/0.6.1/link)
+[ ![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.6.2) ](https://bintray.com/gladed/watchable/watchable/0.6.2/link)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=gladed_watchable&metric=alert_status)](https://sonarcloud.io/dashboard?id=gladed_watchable)
 [![CircleCI](https://circleci.com/gh/gladed/watchable.svg?style=svg)](https://circleci.com/gh/gladed/watchable)
 [![CodeCov](https://codecov.io/github/gladed/watchable/coverage.svg?branch=master)](https://codecov.io/github/gladed/watchable)
 [![detekt](https://img.shields.io/badge/code%20style-%E2%9D%A4-FF4081.svg)](https://arturbosch.github.io/detekt/)
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.3.21-blue.svg)](https://kotlinlang.org/)
-[![API Docs](https://img.shields.io/badge/API_Docs-0.6.1-purple.svg)](https://gladed.github.io/watchable/0.6.1/io.gladed.watchable/)
+[![API Docs](https://img.shields.io/badge/API_Docs-latest-purple.svg)](https://gladed.github.io/watchable/latest/io.gladed.watchable/)
 
 # Watchable
 
@@ -43,7 +43,7 @@ repositories {
 }
 
 dependencies {
-    compile 'io.gladed:watchable:0.6.1'
+    compile 'io.gladed:watchable:0.6.2'
 }
 ```
 
@@ -103,9 +103,9 @@ You can use a `MutableWatchable`'s `.readOnly()` function to return a `Watchable
 A [`bind`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/bind.html) is just a `watch` that connects one watchable of the same type to another, so that the destination automatically receives all changes from an origin.
 
 ```kotlin
-val origin = listOf(4, 5).toWatchableList()
-val destination = watchableListOf<Int>()
-destination.bind(origin)
+val from = listOf(4, 5).toWatchableList()
+val into = watchableListOf<Int>()
+bind(into, from)
 // Eventually, destination will match origin, and will stay in sync with any further changes to origin.
 ```
 
@@ -143,15 +143,11 @@ set.use { add("b") }
 //   GroupChange(watchable=WatchableSet(), change=Add(added=b))
 ```
 
-## Subscribing
-
-You can [`subscribe`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/subscribe.html) to changes on a watchable, returning an ordinary `ReceiveChannel` which receives lists of changes as they occur. However, it is usually more convenient to use `bind()` and `watch { ... }` as described above.
-
-USE WITH CARE! If the returned channel is not consumed (with `receive()`), attempts to `use` may suspend. 
-
 ## Object Lifetime
 
-`CoroutineScope` lifetime is respected. This means a `watch` or `bind` automatically stops operating when the initiating scope completes. No additional cleanup code is required.
+The initiating `CoroutineScope` lifetime is respected: `watch` or `bind` will automatically stop operating when the initiating scope completes. No additional cleanup code is required.
+
+`watch` etc do return a handle which can be used to stop watching with more granular control. For example, calling `close` on the handle returned by `watch` allows any pending changes to be processed.
 
 # Sample
 

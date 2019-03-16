@@ -18,7 +18,6 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ObsoleteCoroutinesApi
-import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.isActive
 
 /**
@@ -30,9 +29,15 @@ interface Watchable<T, C : Change<T>> {
     val value: T
 
     /**
-     * Return a subscription for changes to this watchable.
+     * Initiate and consume a subscription for changes to this [Watchable], returning a handle for control
+     * over the subscription.
      */
-    fun subscribe(scope: CoroutineScope): Subscription<C>
+    fun subscribe(
+        /** Scope in which this subscription runs. Completion of the scope will also cancel the subscription. */
+        scope: CoroutineScope,
+        /** Function which consumes the subscription, returning its handle. */
+        consumer: Subscription<C>.() -> SubscriptionHandle
+    ): SubscriptionHandle
 
     /**
      * Deliver changes for this [Watchable] to [func], starting with its initial state, until the scope completes
@@ -56,9 +61,5 @@ interface Watchable<T, C : Change<T>> {
         minPeriod: Long = 0,
         func: suspend (List<C>) -> Unit
     ): SubscriptionHandle =
-        subscribe(scope).also { subscription ->
-            scope.daemon {
-                batch(this, subscription, minPeriod).consumeEach { func(it) }
-            }
-        }
+        subscribe(scope) { batch(scope, minPeriod, func) }
 }

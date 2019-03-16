@@ -15,30 +15,22 @@
  */
 
 import io.gladed.watchable.Change
-import io.gladed.watchable.MutableWatchable
 import io.gladed.watchable.Watchable
-import io.gladed.watchable.bind
-import io.gladed.watchable.subscribe
 import io.gladed.watchable.watch
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.TimeoutCancellationException
-import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.yield
 import org.junit.Assert
 import org.junit.Assert.fail
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
 import java.time.format.DateTimeFormatter
-import kotlin.system.measureTimeMillis
-
 
 private val clockTimeFormat = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
 
@@ -138,19 +130,16 @@ fun <T : Any> cover(obj: T) {
     }
 }
 
+/** Monitor events until func does not throw. */
 suspend fun <T, C: Change<T>> Watchable<T, C>.watchUntil(scope: CoroutineScope, func: () -> Unit) {
-    val rx = scope.subscribe(this)
-    withTimeout(250) {
-        while(true) {
-            rx.receive()
-            try {
-                func()
-                // Did not throw so exit
-                break
-            } catch (t: Throwable) {
-                // Keep watching because func is still throwing
-            }
-        }
-        rx.cancel()
+    val mutex = Mutex(locked = true)
+    val handle = scope.watch(this) {
+        try {
+            func()
+            mutex.unlock()
+        } catch (t: Throwable) { }
     }
+    mutex.lock()
+    handle.cancel()
+    func()
 }

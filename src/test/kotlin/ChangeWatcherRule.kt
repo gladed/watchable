@@ -77,16 +77,9 @@ class ChangeWatcherRule<C> : TestRule, CoroutineScope {
         }
     }
 
-    suspend fun expectNone() {
-        delay(25)
+    suspend fun expectNone(delayMillis: Long = 25) {
+        delay(delayMillis)
         assertEquals(null, changes.poll())
-    }
-
-    fun mustHaveLists(vararg mustChangeLists: List<C>) {
-        for (mustChangeList in mustChangeLists) {
-            assertEquals(mustChangeList, changeLists.poll())
-        }
-        assertEquals(null, changeLists.poll())
     }
 
     override fun apply(base: Statement, description: Description) = object : Statement() {

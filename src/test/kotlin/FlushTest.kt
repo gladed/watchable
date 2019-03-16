@@ -14,14 +14,11 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.GroupChange
-import io.gladed.watchable.ListChange
 import io.gladed.watchable.ValueChange
 import io.gladed.watchable.batch
-import io.gladed.watchable.subscribe
+import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 
@@ -31,26 +28,27 @@ class FlushTest : ScopeTest() {
     @Test(timeout = 500)
     fun `receive events while flushing`() {
         val value = watchableValueOf(1)
-        val handle = subscribe(value)
+        val handle = watch(value) { changes += it }
         runBlocking {
-            assertEquals(listOf(ValueChange(1, 1)), handle.receive())
+            changes.expect(ValueChange(1, 1))
             value.set(2)
             handle.close()
-            assertEquals(listOf(ValueChange(1, 2)), handle.receive())
+            changes.expect(ValueChange(1, 2))
             handle.join()
         }
     }
-
 
     @Test(timeout = 500)
     fun `get final batch`() {
         runBlocking {
             val value = watchableValueOf(1)
-            val handle = batch(value) { changes += it }
+            val handle = batch(value, 1000) { changes += it }
             changes.expect(ValueChange(1, 1))
             value.set(2)
+            // close should cause an immediate flush of outstanding batch items regardless of its timeout.
+            changes.expectNone()
             handle.close()
-            changes.expect(ValueChange(1, 2))
+            changes.expect(ValueChange(1, 2), timeout = 100)
             handle.join()
         }
     }

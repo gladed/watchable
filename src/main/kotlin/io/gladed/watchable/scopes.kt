@@ -20,68 +20,41 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.channels.produce
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.selects.select
-import kotlin.coroutines.CoroutineContext
-import kotlin.coroutines.EmptyCoroutineContext
-
-/**
- * For a given receive channel of lists of items, emit combined lists of items no more frequently than every
- * [periodMillis], starting now. If [periodMillis] is non-positive, returns [input] as-is (unbatched).
- */
-@UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
-    kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-@Suppress("ComplexMethod")
-fun <U> batch(scope: CoroutineScope, input: ReceiveChannel<List<U>>, periodMillis: Long = 0): ReceiveChannel<List<U>> =
-    if (periodMillis <= 0L) input else scope.produce {
-        var lastSend = 0L
-        val buffer = mutableListOf<U>()
-
-        // The amount of time remaining before we can deliver again
-        fun remaining() = periodMillis - (System.currentTimeMillis() - lastSend)
-
-        suspend fun deliver() {
-            if (remaining() <= 0 && buffer.isNotEmpty()) {
-                send(buffer.toList())
-                lastSend = System.currentTimeMillis()
-                buffer.clear()
-            }
-        }
-
-        loop@ while (true) {
-            deliver()
-            select<Any?> {
-                input.onReceiveOrNull { received ->
-                    if (received != null) {
-                        buffer += SubscriptionBase.compile(received, input)
-                    }
-                }
-                remaining().takeIf { it > 0 }?.also { onTimeout(it) { } }
-            } ?: break
-        }
-        lastSend = 0
-        deliver()
-    }
 
 /**
  * Similar to [launch] but does not block parent's ability to [Job.join]. Cancels when parent cancels.
  */
-fun CoroutineScope.daemon(
-    context: CoroutineContext = EmptyCoroutineContext,
+internal fun CoroutineScope.daemon(
     block: suspend CoroutineScope.() -> Unit
 ): Job {
     // Launch a new job into the caller's coroutine context, but don't block it up forever.
     val parentJob = coroutineContext[Job]!!
     val daemonScope = CoroutineScope(coroutineContext + SupervisorJob())
-    return daemonScope.launch(context, block = block).apply {
+    return daemonScope.launch(block = block).apply {
         // Cancel this job if parent completes
         parentJob.invokeOnCompletion { cancel() }
-    }.apply {
-        start()
         invokeOnCompletion {
             // Close the daemon if job is cancelled
             daemonScope.coroutineContext.cancel()
         }
+        start()
     }
+}
+
+/**
+ * Return a list of items include [received] and any outstanding items already received on this channel.
+ */
+internal fun <C> ReceiveChannel<List<C>>.appendPolled(received: List<C>): List<C> {
+    var compiled: MutableList<C>? = null
+
+    // Drain out additional events if any
+    while (true) poll()?.also {
+        if (compiled == null) {
+            compiled = received.toMutableList()
+        }
+        compiled!!.addAll(it)
+    } ?: break
+
+    return compiled ?: received
 }

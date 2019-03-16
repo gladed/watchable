@@ -16,31 +16,20 @@
 
 import io.gladed.watchable.Change
 import io.gladed.watchable.MutableWatchable
-import io.gladed.watchable.Watchable
 import io.gladed.watchable.bind
-import io.gladed.watchable.subscribe
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
-import io.gladed.watchable.watchableValueOf
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.cancel
-import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.yield
-import org.junit.Assert
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Before
-import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -123,7 +112,7 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
         }
     }
 
-    @Test(timeout = 500) fun `unbound changes not applied`() {
+    @Test fun `unbound changes not applied`() {
         runBlocking {
             log("bind")
             bind(watchable2, watchable1)
@@ -213,7 +202,7 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
 
     @Test fun stress() {
         val start = System.currentTimeMillis()
-        val count = 5000
+        val count = 2000
         bind(watchable2, watchable1)
         val allJobs = (0 until count).map {
             launch {
@@ -246,35 +235,6 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
         assertEquals(watchable1.hashCode(), watchable2.hashCode())
         val elapsed = System.currentTimeMillis() - start
         log("$count in $elapsed ms. ${elapsed * 1000 / count} μs per iteration.")
-    }
-
-    @Test(timeout = 1000) fun `first scope does not stop second`() {
-        val scope1 = LocalScope(Dispatchers.Default)
-        val scope2 = LocalScope(Dispatchers.Default)
-
-        val job1 = scope1.launch {
-            val sub1 = subscribe(watchable1)
-            log(sub1.receive())
-            // Stuff the broadcaster with events
-            (0 until 100).forEach { _ ->
-                watchable1.use { modify() }
-            }
-            // do not receive, the subscription should die anyway
-        }
-
-        runBlocking { job1.join() }
-
-        val job2 = scope2.launch {
-            val sub2 = subscribe(watchable1)
-            log(sub2.receive())
-            (0 until 100).forEach { _ ->
-                watchable1.use { modify() }
-            }
-            // No obstructions to receiving this data
-            log(sub2.receive())
-        }
-
-        runBlocking { job2.join() }
     }
 
     companion object {

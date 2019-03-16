@@ -68,42 +68,44 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     private var isOnBoundChange: Boolean = false
 
     @Suppress("UNUSED_VARIABLE")
-    override fun subscribe(scope: CoroutineScope): Subscription<C> =
-        object : SubscriptionBase<C>() {
-            override val daemon: Job = scope.daemon {
-                // Atomically grab initial state and broadcast subscription
-                val (initial, subscription) = mutableMutex.withLock {
-                    value.toInitialChange() to broadcaster.openSubscription()
-                }
-
-                // Clean up subscription on exit
-                coroutineContext[Job]?.invokeOnCompletion {
-                    subscription.cancel()
-                }
-
-                // Deliver data as long as we can
-                if (!isClosedForSend) {
-                    send(listOf(initial))
-                    process(subscription)
-                }
+    override fun subscribe(
+        scope: CoroutineScope,
+        consumer: Subscription<C>.() -> SubscriptionHandle
+    ) = object : SubscriptionBase<C>() {
+        override val daemon: Job = scope.daemon {
+            // Atomically grab initial state and an rxChannel containing change events
+            val (initial, subscription) = mutableMutex.withLock {
+                value.toInitialChange() to broadcaster.openSubscription()
             }
 
-            private suspend fun process(subscription: ReceiveChannel<List<C>>) {
-                whileSelect {
-                    // If data arrives pass it along
-                    subscription.onReceive { changes ->
-                        if (isClosedForSend) false else {
-                            send(compile(changes, subscription))
-                            true
-                        }
+            // Clean up subscription on exit
+            coroutineContext[Job]?.invokeOnCompletion {
+                subscription.cancel()
+            }
+
+            // Deliver data as long as we can
+            if (!isClosedForSend) {
+                send(listOf(initial))
+                process(subscription)
+            }
+        }
+
+        private suspend fun process(subscription: ReceiveChannel<List<C>>) {
+            whileSelect {
+                // If any data arrives pass along as much as we can get
+                subscription.onReceive { changes ->
+                    if (isClosedForSend) false else {
+                        send(subscription.appendPolled(changes))
+                        true
                     }
-                    // If subscription closure is requested, close it
-                    daemonMonitor.onJoin {
-                        false
-                    }
+                }
+                // If subscription closure is requested, close it
+                daemonMonitor.onJoin {
+                    false
                 }
             }
         }
+    }.consumer()
 
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
     protected fun <U> doChange(func: () -> U): U =

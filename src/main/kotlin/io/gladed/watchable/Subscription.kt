@@ -16,7 +16,11 @@
 
 package io.gladed.watchable
 
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.channels.ReceiveChannel
 
 /** A subscription to a channel of events that can be closed or cancelled. */
-interface Subscription<C> : SubscriptionHandle, ReceiveChannel<List<C>>
+interface Subscription<C> : SubscriptionHandle, ReceiveChannel<List<C>> {
+    /** Consume batches of values from this subscription. */
+    fun batch(scope: CoroutineScope, periodMillis: Long = 0, block: suspend (List<C>) -> Unit): SubscriptionHandle
+}

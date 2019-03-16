@@ -16,10 +16,8 @@
 
 import io.gladed.watchable.ListChange
 import io.gladed.watchable.batch
-import io.gladed.watchable.bind
-import io.gladed.watchable.subscribe
+import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
@@ -47,8 +45,8 @@ class WatchableListTest : ScopeTest() {
         runBlocking {
             val list = watchableListOf(1)
             val readOnlyList = list.readOnly()
-            val rx = subscribe(readOnlyList)
-            assertEquals(listOf(ListChange.Initial(listOf(1))), rx.receive())
+            watch(readOnlyList) { changes += it }
+            changes.expect(ListChange.Initial(listOf(1)))
             assertThat(list.toString(), startsWith("WatchableList("))
             assertThat(readOnlyList.toString(), startsWith("ReadOnlyWatchableList("))
         }

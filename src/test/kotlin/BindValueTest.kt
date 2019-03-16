@@ -16,7 +16,9 @@
 
 import io.gladed.watchable.ValueChange
 import io.gladed.watchable.bind
+import io.gladed.watchable.toWatchableList
 import io.gladed.watchable.watch
+import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.asCoroutineDispatcher
@@ -35,7 +37,7 @@ import java.util.concurrent.Executors
 import java.util.concurrent.Executors.newSingleThreadExecutor
 
 @UseExperimental(ObsoleteCoroutinesApi::class)
-class BindValueTest {
+class BindValueTest : ScopeTest() {
     @Rule @JvmField val changes = ChangeWatcherRule<ValueChange<Int>>()
 
     @Test fun `bind value`() {
@@ -47,14 +49,25 @@ class BindValueTest {
         }
     }
 
+    @Test fun `example from readme`() {
+        val from = listOf(4, 5).toWatchableList()
+        val into = watchableListOf<Int>()
+        bind(into, from)
+        runBlocking {
+            eventually { assertEquals(from, into) }
+        }
+    }
+
     @Test fun `bind then change`() {
         runBlocking {
+
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             watch(dest) { changes += it }
             changes.expect(ValueChange(6, 6))
             bind(dest, origin)
             origin.set(7)
+            // Was dest ever 5?
             changes.expect(ValueChange(6, 7))
             assertEquals(7, dest.value)
         }
@@ -126,13 +139,13 @@ class BindValueTest {
     }
 
     private val scope1 = LocalScope(newSingleThreadContext("scope1"))
-    private val scope2 = LocalScope(newSingleThreadContext("scope2"))
 
     @Test fun `watch from different scope`() {
         runBlocking {
             val origin = watchableValueOf(5)
-            scope2.watch(origin) {
-                assertThat(Thread.currentThread().name, containsString("scope2"))
+            scope1.watch(origin) {
+                log(it)
+                assertThat(Thread.currentThread().name, containsString("scope1"))
                 changes += it
             }
             changes.expect(ValueChange(5, 5))
@@ -146,10 +159,10 @@ class BindValueTest {
             val origin = watchableValueOf(5)
             val dest = watchableValueOf(6)
             watch(dest) { changes += it }
-            scope2.bind(dest, origin)
+            scope1.bind(dest, origin)
             origin.set(7)
             eventually { assertEquals(7, dest.value) }
-            scope2.close() // Kill the destination value's scope
+            scope1.close() // Kill the destination value's scope
 
             // Changing origin has no effect on bound thing, though it is still bound
             origin.set(8)

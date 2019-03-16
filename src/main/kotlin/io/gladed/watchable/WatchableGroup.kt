@@ -18,7 +18,6 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.selects.whileSelect
 
 /**
@@ -31,33 +30,25 @@ class WatchableGroup(
     override val value: List<Watchable<out Any, out Change<Any>>> = watchables
 
     @UseExperimental(ExperimentalCoroutinesApi::class)
-    override fun subscribe(scope: CoroutineScope): Subscription<GroupChange> =
-        object : SubscriptionBase<GroupChange>() {
-            override val daemon: Job = scope.daemon {
-                // Watch all subscriptions until they are all closed
-                val subscriptions = watchables.map { it to it.subscribe(scope) }.toMap()
+    override fun subscribe(
+        scope: CoroutineScope,
+        consumer: Subscription<GroupChange>.() -> SubscriptionHandle
+    ) = object : SubscriptionBase<GroupChange>() {
 
-                // Clean up subscription on exit
-                coroutineContext[Job]?.invokeOnCompletion {
-                    subscriptions.values.forEach { it.cancel() }
-                }
-                val remaining = subscriptions.toMutableMap()
+        // Start watching other subscriptions, delivering their changes here.
+        val subscriptions = watchables.map { watchable ->
+            watchable.batch(scope) { changes ->
+                send(changes.map { GroupChange(watchable, it) })
+            }
+        }.toMutableList()
 
-                whileSelect {
-                    remaining.forEach { (watchable, sub) ->
-                        sub.onReceiveOrNull { changes ->
-                            if (changes == null) {
-                                remaining -= watchable
-                                // exit daemon if no remaining subscriptions
-                                remaining.isNotEmpty()
-                            } else {
-                                send(compile(changes, sub).map { GroupChange(watchable, it) })
-                                true
-                            }
-                        }
-                    }
-                    daemonMonitor.onJoin { false }
+        override val daemon = scope.daemon {
+            whileSelect {
+                daemonMonitor.onJoin {
+                    subscriptions.forEach { it.closeAndJoin() }
+                    false
                 }
             }
         }
+    }.consumer()
 }
