@@ -1,7 +1,6 @@
 #!/bin/bash -e
 
-# TODO: WRONG
-EXPECTED_BRANCH=tighten
+EXPECTED_BRANCH=master
 BRANCH=$(git rev-parse --abbrev-ref HEAD)
 
 if [[ "$BRANCH" != "$EXPECTED_BRANCH" ]]; then
@@ -32,7 +31,7 @@ read -p "Have you updated HISTORY.md (y/n)? " CONT
 sed -i "s@\(io.gladed:watchable:\|download.svg?version=\|watchable/watchable/\)[0-9\.]\+@\1$VERSION@g" README.md
 
 echo "Building"
-./gradlew clean detekt check dokkaGfm bintrayUpload
+./gradlew clean detekt check dokkaGfm bintrayUpload bintrayUpload
 
 echo "Pushing to git"
 git add README.md
@@ -41,11 +40,17 @@ git tag $VERSION
 git push --tags
 git push
 
-echo "Releasing docs"
+echo "Releasing docs..."
 mv build/gfm $VERSION
 git checkout gh-pages
 git rm latest
 ln -s $VERSION latest
-echo "  * [$VERSION](/$VERSION)" >>index.md
+git pull
+echo "* [$VERSION]($VERSION/index.md)" >>index.md
 git add latest index.md $VERSION
+git commit -m "$VERSION"
+git push
 
+git checkout master
+
+echo "Now visit https://bintray.com/gladed/watchable/watchable to publish"
