@@ -18,25 +18,28 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 
-/** Return a new [WatchableValue] wrapping [value], living on this [CoroutineScope]. */
-fun <T : Any> watchableValueOf(value: T) = WatchableValue(value)
+/** Return a new [WatchableValue] wrapping [value]. */
+fun <T> watchableValueOf(value: T) = WatchableValue(value)
+
+/** Convert this [T] to a watchable value of [T]. */
+fun <T> T.toWatchableValue() = WatchableValue(this)
 
 /** Return a new [WatchableSet] containing the elements of this [Collection]. */
-fun <T : Any> Collection<T>.toWatchableSet() = WatchableSet(this)
+fun <T> Collection<T>.toWatchableSet() = WatchableSet(this)
 
-/** Return a new [WatchableSet] containing [values], living on this [CoroutineScope]. */
-fun <T : Any> watchableSetOf(vararg values: T) = values.toSet().toWatchableSet()
+/** Return a new [WatchableSet] containing [values]. */
+fun <T> watchableSetOf(vararg values: T) = values.toSet().toWatchableSet()
 
 /** Return a new [WatchableList] containing the elements of this [Collection]. */
-fun <T : Any> Collection<T>.toWatchableList() = WatchableList(this)
+fun <T> Collection<T>.toWatchableList() = WatchableList(this)
 
-/** Return a new [WatchableList] containing [values], living on this [CoroutineScope]. */
-fun <T : Any> watchableListOf(vararg values: T) = values.toList().toWatchableList()
+/** Return a new [WatchableList] containing [values]. */
+fun <T> watchableListOf(vararg values: T) = values.toList().toWatchableList()
 
 /** Return a new [WatchableMap] containing the elements of this [Map]. */
 fun <K, V> Map<K, V>.toWatchableMap() = WatchableMap(this)
 
-/** Return a new [WatchableMap] containing a map of [values], living on this [CoroutineScope]. */
+/** Return a new [WatchableMap] containing a map of [values]. */
 fun <K, V> watchableMapOf(vararg values: Pair<K, V>) = values.toMap().toWatchableMap()
 
 /** Bind [dest] so that it receives values from [origin] as long as this [CoroutineScope] lives. */

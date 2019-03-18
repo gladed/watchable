@@ -16,6 +16,7 @@
 
 import io.gladed.watchable.ValueChange
 import io.gladed.watchable.WatchableValue
+import io.gladed.watchable.toWatchableValue
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.runBlocking
@@ -47,7 +48,7 @@ class WatchableValueTest {
 
     @Test fun setSameValue() {
         runBlocking {
-            intValue = watchableValueOf(5)
+            intValue = 5.toWatchableValue()
             watch(intValue) {
                 changes += it
             }
