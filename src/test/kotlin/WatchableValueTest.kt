@@ -22,6 +22,7 @@ import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertThat
 import org.junit.Rule
 import org.junit.Test
@@ -57,6 +58,26 @@ class WatchableValueTest {
             // Both announcements because value is NOT compared for equality
             changes.expect(ValueChange(5, 5))
         }
+    }
+
+    @Test fun `equality with similar`() {
+        val watchable1 = 1.toWatchableValue()
+        val watchable2 = 1.toWatchableValue()
+        assertEquals(watchable1, watchable2)
+    }
+
+    @Test fun `equality with null`() {
+        val watchable = (null as Int?).toWatchableValue()
+        assertEquals(watchable, null)
+        assertNotEquals(null, watchable) // Unfortunately value tests cannot be symmetric
+        assertEquals(watchable.hashCode(), null.hashCode())
+    }
+
+    @Test fun `equality and hash`() {
+        val watchable = 5.toWatchableValue()
+        assertEquals(watchable, 5)
+        assertNotEquals(5, watchable) // Unfortunately value tests cannot be symmetric
+        assertEquals(watchable.hashCode(), 5.hashCode())
     }
 
     @Test fun watchUnmodifiable() {

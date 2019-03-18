@@ -1,6 +1,8 @@
 # Version History
 
 ## 0.6.x
+* Support null in list, value, and set.
+* Support equality tests for value as much as possible.
 * Removed `subscribe` APIs (too dangerous)
 * Handles coming back from `watch` etc support `close` which flushes current contents.
 * Replaced suspending `get()` with `value` for direct immutable access without suspension.

@@ -64,6 +64,17 @@ class WatchableListTest : ScopeTest() {
         }
     }
 
+    @Test fun `equality with null`() {
+        val list = watchableListOf(1, null, 2)
+        assertEquals(listOf(1, null, 2), list)
+        assertEquals(list, listOf(1, null, 2))
+    }
+
+    @Test fun `hashcode with null`() {
+        val list = watchableListOf(1, null, 2)
+        assertEquals(listOf(1, null, 2).hashCode(), list.hashCode())
+    }
+
     @Test fun listApis() {
         val list = watchableListOf(1, 2)
         assertEquals(2, list.size)

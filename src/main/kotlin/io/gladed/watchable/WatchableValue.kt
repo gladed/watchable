@@ -45,5 +45,8 @@ class WatchableValue<T> internal constructor(
         override fun toString() = "ReadOnlyWatchableValue($value)"
     }
 
+    override fun equals(other: Any?) =
+        if (other is WatchableValue<*>) value == other.value else value == other
+    override fun hashCode() = value.hashCode()
     override fun toString() = "WatchableValue($value)"
 }

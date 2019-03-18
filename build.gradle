@@ -5,7 +5,7 @@ buildscript {
         jvm_version = '1.8'
         detekt_version = '1.0.0-RC14'
         // Version to publish
-        watchable_version = '0.6.3'
+        watchable_version = '0.6.4'
     }
 
     repositories {

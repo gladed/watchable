@@ -164,7 +164,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     }
 
     private tailrec fun throwIfAlreadyBoundTo(other: Watchable<*, *>) {
-        if (this == other) throw IllegalStateException("Circular binding not permitted")
+        if (this === other) throw IllegalStateException("Circular binding not permitted")
         throwIfAlreadyBoundTo((other as? MutableWatchable<*, *, *>)?.boundTo ?: return)
     }
 
