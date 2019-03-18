@@ -1,0 +1,56 @@
+#!/bin/bash -e
+
+EXPECTED_BRANCH=master
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+if [[ "$BRANCH" != "$EXPECTED_BRANCH" ]]; then
+  echo "FAIL: Not on master (on $BRANCH)"
+  exit -1
+fi
+
+git diff-index --quiet --cached HEAD -- || {
+  echo "FAIL: Uncommitted changes at head"
+  exit -1
+}
+
+LAST_TAG=$(git describe --abbrev=0 --tags)
+VERSION=$(./gradlew --quiet printVersion)
+
+if [[ "$LAST_TAG" == "$VERSION" ]]; then
+  echo "FAIL: Last tag was $LAST_TAG and $VERSION are the same. Update build.gradle."
+  exit -1
+fi
+
+echo "Releasing $VERSION (most recent tag was $LAST_TAG)"
+read -p "Continue (y/n)? " CONT
+[[ "$CONT" = "y" ]] || exit -1
+
+read -p "Have you updated HISTORY.md (y/n)? " CONT
+[[ "$CONT" = "y" ]] || exit -1
+
+sed -i "s@\(io.gladed:watchable:\|download.svg?version=\|watchable/watchable/\)[0-9\.]\+@\1$VERSION@g" README.md
+
+echo "Building"
+./gradlew clean detekt check dokkaGfm bintrayUpload bintrayUpload
+
+echo "Pushing to git"
+git add README.md
+git commit -m "$VERSION"
+git tag $VERSION
+git push --tags
+git push
+
+echo "Releasing docs..."
+mv build/gfm $VERSION
+git checkout gh-pages
+git rm latest
+ln -s $VERSION latest
+git pull
+echo "* [$VERSION]($VERSION/index.md)" >>index.md
+git add latest index.md $VERSION
+git commit -m "$VERSION"
+git push
+
+git checkout master
+
+echo "Now visit https://bintray.com/gladed/watchable/watchable to publish"

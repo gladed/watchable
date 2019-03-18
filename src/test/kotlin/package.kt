@@ -139,7 +139,6 @@ suspend fun <T, C: Change<T>> Watchable<T, C>.watchUntil(scope: CoroutineScope, 
             mutex.unlock()
         } catch (t: Throwable) { }
     }
-    mutex.lock()
-    handle.cancel()
-    func()
+    mutex.lock() // Suspend until success
+    handle.cancel() // Cancel listening
 }

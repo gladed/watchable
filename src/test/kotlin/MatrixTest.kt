@@ -25,6 +25,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
@@ -114,32 +115,26 @@ class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
 
     @Test fun `unbound changes not applied`() {
         runBlocking {
-            log("bind")
-            bind(watchable2, watchable1)
-            for (i in 0 until 100) {
-                watchable1.use {
-                    modify()
+            withTimeout(1000) {
+                bind(watchable2, watchable1)
+                for (i in 0 until 100) {
+                    watchable1.use { modify() }
                 }
-            }
+                watchable1.use(finalMod)
 
-            log("wait around for match")
-            watchable2.watchUntil(this) {
-                assertEquals(watchable1, watchable2)
-            }
+                watchable2.watchUntil(this) {
+                    assertEquals(watchable1, watchable2)
+                }
 
-            log("unbind")
-            watchable2.unbind()
-            watchable2.unbind() // Safe
+                watchable2.unbind()
+                watchable2.unbind() // Safe
 
-            log("modify again")
-            for (i in 0 until 100) {
-                watchable1.use { modify() }
+                for (i in 0 until 100) {
+                    watchable1.use { modify() }
+                }
+                delay(50) // No changes arrive
+                assertNotEquals(watchable1, watchable2)
             }
-            log("delay")
-            delay(50) // No changes arrive
-            log("ensure no changes")
-            assertNotEquals(watchable1, watchable2)
-            log("done")
         }
     }
 

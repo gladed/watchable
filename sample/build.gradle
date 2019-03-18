@@ -22,8 +22,8 @@ dependencies {
     compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.10.0"
     compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.1'
 
-    compile "io.gladed:watchable:0.6.2"  // Downloaded version
-    //    compile rootProject  // Local version
+    compile rootProject  // Local version
+    // compile "io.gladed:watchable:x.y.z"  // Use this line instead for downloaded version
     testCompile 'junit:junit:4.12'
 }
 

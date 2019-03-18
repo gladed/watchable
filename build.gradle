@@ -5,7 +5,7 @@ buildscript {
         jvm_version = '1.8'
         detekt_version = '1.0.0-RC14'
         // Version to publish
-        watchable_version = '0.6.2'
+        watchable_version = '0.6.3'
     }
 
     repositories {
@@ -156,6 +156,10 @@ task sourcesJar(type: Jar) {
 task javadocJar(type: Jar, dependsOn: dokka) {
     classifier = "javadoc"
     from dokka.outputDirectory
+}
+
+task printVersion {
+    println(version)
 }
 
 artifacts {

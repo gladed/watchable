@@ -14,7 +14,9 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.SetChange
 import io.gladed.watchable.bind
+import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
@@ -22,9 +24,13 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
+import org.junit.Rule
 import org.junit.Test
 
 class WatchableSetTest : ScopeTest() {
+
+    @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
+
     @Test
     fun replace() {
         runBlocking {
@@ -39,12 +45,27 @@ class WatchableSetTest : ScopeTest() {
         }
     }
 
-    @Test fun listApis() {
+    @Test
+    fun listApis() {
         val set = watchableSetOf(1, 2)
         assertEquals(2, set.size)
         assertTrue(set.contains(2))
         assertFalse(set.containsAll(listOf(2, 3)))
         assertFalse(set.isEmpty())
         assertEquals(1, set.iterator().next())
+    }
+
+    @Test
+    fun `slow bind`() {
+        runBlocking {
+            val set = watchableSetOf(1)
+            val set2 = watchableSetOf(2)
+            watch(set) { changes += it }
+            changes.expect(SetChange.Initial(setOf(1)))
+            bind(set2, set)
+            set.set(setOf(3))
+            set.use { add(2) }
+            changes.expect(SetChange.Remove(1), SetChange.Add(3), SetChange.Add(2))
+        }
     }
 }
