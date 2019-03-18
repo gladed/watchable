@@ -1,4 +1,4 @@
-[ ![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.6.2) ](https://bintray.com/gladed/watchable/watchable/0.6.2/link)
+[![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.6.3)](https://bintray.com/gladed/watchable/watchable/0.6.3/link)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=gladed_watchable&metric=alert_status)](https://sonarcloud.io/dashboard?id=gladed_watchable)
 [![CircleCI](https://circleci.com/gh/gladed/watchable.svg?style=svg)](https://circleci.com/gh/gladed/watchable)
 [![CodeCov](https://codecov.io/github/gladed/watchable/coverage.svg?branch=master)](https://codecov.io/github/gladed/watchable)
@@ -43,7 +43,7 @@ repositories {
 }
 
 dependencies {
-    compile 'io.gladed:watchable:0.6.2'
+    compile 'io.gladed:watchable:0.6.3'
 }
 ```
 
@@ -147,7 +147,7 @@ set.use { add("b") }
 
 The initiating `CoroutineScope` lifetime is respected: `watch` or `bind` will automatically stop operating when the initiating scope completes. No additional cleanup code is required.
 
-`watch` etc do return a handle which can be used to stop watching with more granular control. For example, calling `close` on the handle returned by `watch` allows any pending changes to be processed.
+`watch` etc do return a `SubscriptionHandle` which can be used to stop watching with more granular control. For example, calling `close` on the handle returned by `watch` allows any pending changes to be processed to completion.
 
 # Sample
 
