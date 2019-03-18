@@ -19,7 +19,6 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
-import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.launch
 
 /**
@@ -40,21 +39,4 @@ internal fun CoroutineScope.daemon(
         }
         start()
     }
-}
-
-/**
- * Return a list of items include [received] and any outstanding items already received on this channel.
- */
-internal fun <C> ReceiveChannel<List<C>>.appendPolled(received: List<C>): List<C> {
-    var compiled: MutableList<C>? = null
-
-    // Drain out additional events if any
-    while (true) poll()?.also {
-        if (compiled == null) {
-            compiled = received.toMutableList()
-        }
-        compiled!!.addAll(it)
-    } ?: break
-
-    return compiled ?: received
 }

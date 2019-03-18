@@ -1,0 +1,12 @@
+#!/bin/bash -e
+
+VERSION=$(./gradlew printVersion --quiet)
+echo "Releasing $VERSION"
+
+git diff-index --quiet --cached HEAD -- || {
+  echo "FAIL: Uncommitted changes at head"
+  exit -1
+}
+
+echo "Testing build"
+./gradlew clean detekt check dokkaGfm

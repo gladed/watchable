@@ -17,12 +17,11 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.selects.whileSelect
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.yield
 
 /** Base for implementing a type that is watchable, mutable, and bindable. */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
@@ -53,8 +52,10 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     /** Collects changes applied during any mutation of [mutable]. */
     protected val changes = mutableListOf<C>()
 
-    /** The latest immutable [T] form of [M] if currently known. */
+    /** The latest immutable [T] form of [M] when known. */
     private var immutable: T? = null
+
+    override val value: T get() = immutable ?: mutable.toImmutable().also { immutable = it }
 
     /** The mutex protecting to [mutable]. */
     private val mutableMutex = Mutex()
@@ -68,52 +69,41 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     private var isOnBoundChange: Boolean = false
 
     @Suppress("UNUSED_VARIABLE")
-    override fun subscribe(
+    override fun batch(
         scope: CoroutineScope,
-        consumer: Subscription<C>.() -> SubscriptionHandle
-    ) = object : SubscriptionBase<C>() {
-        override val daemon: Job = scope.daemon {
-            // Atomically grab initial state and an rxChannel containing change events
-            val (initial, subscription) = mutableMutex.withLock {
-                value.toInitialChange() to broadcaster.openSubscription()
-            }
-
-            // Clean up subscription on exit
-            coroutineContext[Job]?.invokeOnCompletion {
-                subscription.cancel()
-            }
-
-            // Deliver data as long as we can
-            if (!isClosedForSend) {
-                send(listOf(initial))
-                process(subscription)
-            }
+        minPeriod: Long,
+        consumer: suspend (List<C>) -> Unit
+    ) = scope.subscription { closeMutex ->
+        // Simultaneously get first change and an upstream subscription
+        val (initial, subscription) = mutableMutex.withLock {
+            value.toInitialChange() to broadcaster.openSubscription()
         }
 
-        private suspend fun process(subscription: ReceiveChannel<List<C>>) {
-            whileSelect {
-                // If any data arrives pass along as much as we can get
-                subscription.onReceive { changes ->
-                    if (isClosedForSend) false else {
-                        send(subscription.appendPolled(changes))
-                        true
-                    }
-                }
-                // If subscription closure is requested, close it
-                daemonMonitor.onJoin {
+        // Batch the subscription contents
+        val rxChannel = batch(subscription, minPeriod, listOf(initial))
+        whileSelect {
+            rxChannel.onReceiveOrNull {
+                if (it != null) {
+                    consumer(it)
+                    true
+                } else {
                     false
                 }
             }
+            closeMutex.onLock {
+                // Cancel upstream of rxChannel
+                subscription.cancel()
+                yield()
+                true
+            }
         }
-    }.consumer()
+    }
 
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
     protected fun <U> doChange(func: () -> U): U =
         if (boundTo != null && !isOnBoundChange) {
             throw IllegalStateException("A bound object may not be modified.")
         } else func()
-
-    override val value: T get() = immutable ?: mutable.toImmutable().also { immutable = it }
 
     override suspend fun <U> use(func: M.() -> U): U =
         mutableMutex.withLock {
@@ -132,6 +122,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
         }
     }
 
+    /** Push outstanding changes, if any, into the broadcast channel. */
     private suspend fun deliverChanges() {
         if (changes.isNotEmpty()) {
             // Clear the immutable form, allow it to be repopulated later
@@ -155,12 +146,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     override fun <T2, C2 : Change<T2>> bind(scope: CoroutineScope, origin: Watchable<T2, C2>, apply: M.(C2) -> Unit) {
         if (binding != null) throw IllegalStateException("Object already bound")
 
-        // Chase up the parent stack to make sure it's not circular
-        var parent = origin as? MutableWatchable<*, *, *>
-        while (parent != null) {
-            if (parent === this) throw IllegalStateException("Circular binding not permitted")
-            parent = parent.boundTo as? MutableWatchable<*, *, *>
-        }
+        throwIfAlreadyBoundTo(origin)
 
         // Start watching
         val job = scope.batch(origin) {
@@ -175,6 +161,11 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
 
         // Store the binding
         binding = Binding(origin, job)
+    }
+
+    private tailrec fun throwIfAlreadyBoundTo(other: Watchable<*, *>) {
+        if (this == other) throw IllegalStateException("Circular binding not permitted")
+        throwIfAlreadyBoundTo((other as? MutableWatchable<*, *, *>)?.boundTo ?: return)
     }
 
     override fun unbind() {

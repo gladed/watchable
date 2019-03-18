@@ -18,7 +18,6 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.selects.whileSelect
 
 /**
  * A group of [Watchable] objects that can be watched for any change.
@@ -30,25 +29,19 @@ class WatchableGroup(
     override val value: List<Watchable<out Any, out Change<Any>>> = watchables
 
     @UseExperimental(ExperimentalCoroutinesApi::class)
-    override fun subscribe(
+    override fun batch(
         scope: CoroutineScope,
-        consumer: Subscription<GroupChange>.() -> SubscriptionHandle
-    ) = object : SubscriptionBase<GroupChange>() {
-
+        minPeriod: Long,
+        consumer: suspend (List<GroupChange>) -> Unit
+    ) = scope.subscription { closeMutex ->
         // Start watching other subscriptions, delivering their changes here.
         val subscriptions = watchables.map { watchable ->
             watchable.batch(scope) { changes ->
-                send(changes.map { GroupChange(watchable, it) })
+                consumer(changes.map { GroupChange(watchable, it) })
             }
         }.toMutableList()
 
-        override val daemon = scope.daemon {
-            whileSelect {
-                daemonMonitor.onJoin {
-                    subscriptions.forEach { it.closeAndJoin() }
-                    false
-                }
-            }
-        }
-    }.consumer()
+        closeMutex.lock()
+        subscriptions.forEach { it.closeAndJoin() }
+    }
 }

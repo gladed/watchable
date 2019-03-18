@@ -158,6 +158,10 @@ task javadocJar(type: Jar, dependsOn: dokka) {
     from dokka.outputDirectory
 }
 
+task printVersion {
+    println(version)
+}
+
 artifacts {
     archives sourcesJar
     archives javadocJar

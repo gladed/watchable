@@ -25,10 +25,10 @@ interface SubscriptionHandle {
     /** Close the subscription, allowing all outstanding events to be delivered first. */
     fun close()
 
-    /** Suspend until the subscription is complete. */
+    /** Suspend until the subscription is closed and all events are drained. */
     suspend fun join()
 
-    /** Flush all events and close the channel (shorthand for [close] then [join]). */
+    /** Close the subscription and wait for all events to be processed (shorthand for [close] then [join]). */
     suspend fun closeAndJoin() {
         close()
         join()
