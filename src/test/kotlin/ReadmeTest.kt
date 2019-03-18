@@ -15,10 +15,7 @@
  */
 
 import io.gladed.watchable.batch
-import io.gladed.watchable.group
 import io.gladed.watchable.toWatchableList
-import io.gladed.watchable.toWatchableSet
-import io.gladed.watchable.watch
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import org.junit.Test

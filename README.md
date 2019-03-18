@@ -31,7 +31,7 @@ Adding listeners for changes is easy. But it's hard to remember and unregister a
 
 `Watchable` object actions (like `watch`, `bind`, etc as explained below) are limited to the lifetime of the calling `CoroutineScope`. When the scope completes, its watchable operations also die and are cleaned up automatically.
 
-This can be useful in [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html). The data model lives at the center, and everyone points in. If the data model is defined as Watchable objects, then other components (having their own lifecycles) can simply watch for changes and react accordingly, without coupling directly to each other.
+This can be useful in [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html). The data model lives at the center, and everyone points in. If the data model is defined in terms of `Watchable` objects, then other components (having their own lifecycles) can simply watch for changes and react accordingly, without coupling directly to each other.
 
 # Usage
 
@@ -60,11 +60,11 @@ val set = watchableSetOf(5.0, 6.0)
 val value = watchableValueOf(URI.create("https://github.com"))
 ```
 
-Each data type can be accessed, modified, watched, and bound, etc.
+Each data type can be accessed, modified, watched, bound, etc. as described below.
 
 ## Reading Data
 
-You can obtain a read-only, immutable copy of the underlying data with `value` (https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/value.html). In the case of `WatchableList`, `WatchableSet`, and `WatchableMap` can also be treated as read-only views of the underlying content, but be warned that this content may change at any time.
+You can obtain a read-only, immutable copy of the underlying data with [`value`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/value.html). In the case of `WatchableList`, `WatchableSet`, and `WatchableMap` can also be treated as read-only views of the underlying content, but be warned that this content may change at any time.
 
 ```kotlin
 val list = watchableListOf(1, 2, 3)
@@ -74,7 +74,7 @@ println(list.value) // Prints [1, 2, 3]
 
 ## Modifying Contents
 
-Any [`MutableWatchable`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/) can be modified with [`use`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/use.html), which receives a modifiable form of the underlying data:
+Any [`MutableWatchable`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/) can be modified with [`use`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/use.html), which receives a temporary, modifiable form of the underlying data. Any changes to this data are captured and delivered to watchers.
 
 ```kotlin
 val list = watchableListOf(1, 2)
@@ -82,7 +82,7 @@ list.use { add(3) }
 println(list.value) // Prints [1, 2, 3]
 ```  
 
-If other coroutines are already using the object, `use()` will suspend until they are done, then execute your code. In this way, all modifications run sequentially.
+NOTE: Your `use` function must NOT block.
 
 ## Watching for Changes
 
@@ -93,10 +93,6 @@ val set = watchableSetOf(1, 2)
 watch(set) { println(it) } // Prints: Initial(initial=[1, 2])
 set.use { add(3) } // Prints: Add(added=3)
 ```
-
-## Read-Only Watchable
-
-You can use a `MutableWatchable`'s `.readOnly()` function to return a `Watchable` copy, which cannot be changed externally. The copy may still be watched normally.
 
 ## Binding
 
@@ -123,9 +119,13 @@ batch(list, 50) { println(it) } // Prints: [Initial(initial=[4, 5])]
 list.use { add(6); add(7) } // Prints: [Add(index=2, added=6), Add(index=3, added=7)]
 ```
 
+## Read-Only Watchables
+
+You can use a `MutableWatchable`'s `.readOnly()` function to return a `Watchable` copy, which cannot be changed externally. The copy may still be watched normally.
+
 ## Grouping
 
-You can [`group`](https://gladed.github.io/watchable/latest/io.gladed.watchable/group.html) several watchables into a `WatchableGroup` so that you receive changes for both:
+You can [`group`](https://gladed.github.io/watchable/latest/io.gladed.watchable/group.html) several watchables into a [`WatchableGroup`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-group/) so that you receive changes for both:
 
 ```kotlin
 val list = listOf(4).toWatchableList()
@@ -145,9 +145,9 @@ set.use { add("b") }
 
 ## Object Lifetime
 
-The initiating `CoroutineScope` lifetime is respected: `watch` or `bind` will automatically stop operating when the initiating scope completes. No additional cleanup code is required.
+The initiating `CoroutineScope` lifetime is respected. Operations such as `watch` or `bind` will automatically stop when the initiating scope completes. No additional cleanup code is required.
 
-`watch` etc do return a `SubscriptionHandle` which can be used to stop watching with more granular control. For example, calling `close` on the handle returned by `watch` allows any pending changes to be processed to completion.
+Some operations return return a `SubscriptionHandle` which can be used to stop the operation with more granular control. For example, calling `close` on the [`SubscriptionHandle`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-subscription-handle/) returned by `watch` allows any pending changes to be processed to completion.
 
 # Sample
 

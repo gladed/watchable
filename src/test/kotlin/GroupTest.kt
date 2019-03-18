@@ -25,7 +25,6 @@ import io.gladed.watchable.watchableSetOf
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 

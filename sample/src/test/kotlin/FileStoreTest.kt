@@ -1,10 +1,8 @@
 import external.FileStore
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
-import org.junit.Before
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
@@ -57,7 +55,7 @@ class FileStoreTest {
             robin.id to wren.id
         }
 
-        // New filestore instance must load from disk
+        // New file store instance must load from disk
         withFileStore {
             val robin = findBird(robinId)!!
             assertEquals(listOf(wrenId), robin.following)

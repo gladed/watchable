@@ -17,13 +17,10 @@
 import io.gladed.watchable.Change
 import io.gladed.watchable.Watchable
 import io.gladed.watchable.watch
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert
@@ -37,17 +34,6 @@ private val clockTimeFormat = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
 fun log(message: Any?) {
     val now = ZonedDateTime.now( ZoneOffset.UTC ).format( clockTimeFormat )
     println("$now ${Thread.currentThread().name}: $message")
-}
-
-/** Launch block on the current scope then block until it completes. */
-fun CoroutineScope.runToEnd(block: suspend () -> Unit) {
-    launch { block() }.also {
-        runBlocking {
-            it.join()
-        }
-    }.invokeOnCompletion { cause ->
-        if (cause != null && cause !is CancellationException) throw cause
-    }
 }
 
 suspend fun eventually(timeout: Int = 250, delay: Int = 10, test: suspend () -> Unit) {
