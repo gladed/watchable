@@ -35,7 +35,7 @@ echo "Building"
 
 echo "Pushing to git"
 git add README.md
-git commit -m "$VERSION"
+git commit -m "$VERSION" || true # Maybe no change
 git tag $VERSION
 git push --tags
 git push
@@ -43,9 +43,9 @@ git push
 echo "Releasing docs..."
 mv build/gfm $VERSION
 git checkout gh-pages
-git rm latest
-ln -s $VERSION latest
 git pull
+rm latest
+ln -s $VERSION latest
 echo "* [$VERSION]($VERSION/index.md)" >>index.md
 git add latest index.md $VERSION
 git commit -m "$VERSION"
