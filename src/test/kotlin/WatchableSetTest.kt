@@ -52,6 +52,15 @@ class WatchableSetTest : ScopeTest() {
         assertEquals(1, set.iterator().next())
     }
 
+    @Test fun `add and remove`() = runBlocking {
+        val set = watchableSetOf(1, null, 2)
+        assertFalse(set.add(null))
+        assertTrue(set.remove(null))
+        assertFalse(set.remove(null))
+        set.clear()
+        assertTrue(set.isEmpty())
+    }
+
     @Test
     fun `slow bind`() = runBlocking {
         val set = watchableSetOf(1)

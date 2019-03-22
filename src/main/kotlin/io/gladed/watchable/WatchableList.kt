@@ -67,6 +67,17 @@ class WatchableList<T> internal constructor(
         }
     }
 
+    /** Add a [value] to the end of this list. */
+    suspend fun add(value: T) {
+        use { add(value) }
+    }
+
+    /** Remove [value] from this set, returning true if it was present and false if it was not. */
+    suspend fun remove(value: T) = use { remove(value) }
+
+    /** Clear all values from this list. */
+    suspend fun clear() = use { clear() }
+
     override fun MutableList<T>.toImmutable() = toList()
 
     override fun List<T>.toInitialChange() = ListChange.Initial(this)

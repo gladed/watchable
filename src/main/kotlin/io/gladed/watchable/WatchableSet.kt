@@ -55,12 +55,22 @@ class WatchableSet<T> internal constructor(
             override fun remove() {
                 doChange {
                     realIterator.remove()
-                    // Last cannot be null if remove() succeeded
-                    changes.add(SetChange.Remove(last!!))
+                    // Last must be OK if remove() didn't throw
+                    @Suppress("UNCHECKED_CAST")
+                    changes.add(SetChange.Remove(last as T))
                 }
             }
         }
     }
+
+    /** Add a [value] to this set, returning true if the element was added and false if it was already present. */
+    suspend fun add(value: T) = use { add(value) }
+
+    /** Remove [value] from this set, returning true if it was present and false if it was not. */
+    suspend fun remove(value: T) = use { remove(value) }
+
+    /** Clear all values from this set. */
+    suspend fun clear() = use { clear() }
 
     override fun MutableSet<T>.toImmutable() = toSet()
 

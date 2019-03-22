@@ -92,6 +92,19 @@ class WatchableMap<K, V> internal constructor(
         }
     }
 
+    /**
+     * Associate the [value] with the [key] in this map, returning the previous value for this [key] if any.
+     */
+    suspend fun put(key: K, value: V): V? = use { put(key, value) }
+
+    /**
+     * Remove the value associated with [key], returning it if it was present.
+     */
+    suspend fun remove(key: K): V? = use { remove(key) }
+
+    /** Clear all values from this map. */
+    suspend fun clear() = use { clear() }
+
     override fun MutableMap<K, V>.toImmutable() = toMap()
 
     override fun Map<K, V>.toInitialChange() = MapChange.Initial(this)

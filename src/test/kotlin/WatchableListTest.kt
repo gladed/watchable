@@ -76,6 +76,16 @@ class WatchableListTest : ScopeTest() {
         assertEquals(listOf(1, null, 2).hashCode(), list.hashCode())
     }
 
+    @Test fun `add and remove`() = runBlocking {
+        val list = watchableListOf(1, null, 2)
+        list.add(null)
+        assertTrue(list.remove(null))
+        assertTrue(list.remove(null))
+        assertFalse(list.remove(null))
+        list.clear()
+        assertTrue(list.isEmpty())
+    }
+
     @Test fun listApis() {
         val list = watchableListOf(1, 2)
         assertEquals(2, list.size)
