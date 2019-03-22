@@ -1,5 +1,9 @@
 # Version History
 
+## 0.7.x
+* `watchSimple` allows for simplified handling of add/removes when efficiency and completeness aren't as important.
+* `MutableWatchable` objects support suspending modifiers for one-shot operations like add/remove/clear.
+
 ## 0.6.x
 * Support null in list, value, and set.
 * Support equality tests for value as much as possible.

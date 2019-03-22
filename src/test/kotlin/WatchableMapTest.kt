@@ -66,13 +66,19 @@ class WatchableMapTest : ScopeTest() {
         val map2 = watchableMapOf(2 to "2")
         val map3 = map.readOnly()
         bind(map2, map3)
-        map.use {
-            put(3, "3")
-        }
+        map.put(3, "3")
 
         map3.watchUntil(this) {
             assertEquals(map, map3)
         }
+    }
+
+    @Test fun `put and remove`() = runBlocking {
+        val map = watchableMapOf(1 to "1", 2 to "2")
+        assertEquals("1", map.put(1, "11"))
+        assertEquals("11", map.remove(1))
+        map.clear()
+        assertTrue(map.isEmpty())
     }
 
     @Test fun listApis() {
