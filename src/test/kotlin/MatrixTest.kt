@@ -64,120 +64,106 @@ class MatrixTest<T, V, M : T, C: Change<T, V>>: ScopeTest() {
         watchable2 = maker2()
     }
 
-    @Test fun `bind works`() {
-        runBlocking {
-            assertFalse(watchable2.isBound())
-            bind(watchable2, watchable1)
-            assertTrue(watchable2.isBound())
-            watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
+    @Test fun `bind works`() = runBlocking {
+        assertFalse(watchable2.isBound())
+        bind(watchable2, watchable1)
+        assertTrue(watchable2.isBound())
+        watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
+    }
+
+    @Test fun `bind then make changes`() = runBlocking {
+        bind(watchable2, watchable1)
+        for (i in 0 until 200) {
+            watchable1.use { modify() }
+        }
+        assertNotEquals(watchable1, watchable2)
+        watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
+        log(watchable1)
+    }
+
+    @Test fun `no self-bind`() = runBlocking {
+        mustThrow(IllegalStateException::class.java) {
+            bind(watchable1, watchable1)
         }
     }
 
-    @Test fun `bind then make changes`() {
-        runBlocking {
+    @Test fun `no circular-bind`() = runBlocking {
+        mustThrow(IllegalStateException::class.java) {
             bind(watchable2, watchable1)
-            for (i in 0 until 200) {
+            bind(watchable1, watchable2)
+        }
+    }
+
+    @Test fun `no write when bound`() = runBlocking {
+        mustThrow(IllegalStateException::class.java) {
+            bind(watchable2, watchable1)
+            for (i in 0 until 20) {
+                watchable2.use { modify() }
+            }
+        }
+    }
+
+    @Test fun `unbound changes not applied`() = runBlocking {
+        withTimeout(1000) {
+            bind(watchable2, watchable1)
+            for (i in 0 until 100) {
                 watchable1.use { modify() }
             }
-            assertNotEquals(watchable1, watchable2)
-            watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
-            log(watchable1)
-        }
-    }
+            watchable1.use(finalMod)
 
-    @Test fun `no self-bind`() {
-        runBlocking {
-            mustThrow(IllegalStateException::class.java) {
-                bind(watchable1, watchable1)
-            }
-        }
-    }
-
-    @Test fun `no circular-bind`() {
-        runBlocking {
-            mustThrow(IllegalStateException::class.java) {
-                bind(watchable2, watchable1)
-                bind(watchable1, watchable2)
-            }
-        }
-    }
-
-    @Test fun `no write when bound`() {
-        runBlocking {
-            mustThrow(IllegalStateException::class.java) {
-                bind(watchable2, watchable1)
-                for (i in 0 until 20) {
-                    watchable2.use { modify() }
-                }
-            }
-        }
-    }
-
-    @Test fun `unbound changes not applied`() {
-        runBlocking {
-            withTimeout(1000) {
-                bind(watchable2, watchable1)
-                for (i in 0 until 100) {
-                    watchable1.use { modify() }
-                }
-                watchable1.use(finalMod)
-
-                watchable2.watchUntil(this) {
-                    assertEquals(watchable1, watchable2)
-                }
-
-                watchable2.unbind()
-                watchable2.unbind() // Safe
-
-                for (i in 0 until 100) {
-                    watchable1.use { modify() }
-                }
-                delay(50) // No changes arrive
-                assertNotEquals(watchable1, watchable2)
-            }
-        }
-    }
-
-    @Test fun `batch changes together`() {
-        runBlocking {
-            val changes = mutableListOf<C>()
-            val batches = mutableListOf<List<C>>()
-            bind(watchable2, watchable1)
-
-            log("watch()")
-
-            // Timing output here proves that modifications are held up.
-            // Provide a non-0 batch amount
-            watchable1.watch(this) {
-                changes += it
-            }
-
-            // Provide a non-0 batch amount
-            watchable1.batch(this, 50) {
-                batches += it
-            }
-
-            // The first batch should arrive quickly and contain initial
-            eventually { assertTrue(batches.size > 0) }
-
-            // Throw many modifications at watchable1
-            for (i in 0 until 100) {
-                watchable1.use {
-                    modify()
-                }
-            }
-
-            // Wait for everything to arrive at watchable2
             watchable2.watchUntil(this) {
                 assertEquals(watchable1, watchable2)
             }
 
-            eventually {
-                log("changes: ${changes.size}, batches: ${batches.size}")
-                assertTrue(changes.size > 0)
-                assertEquals(changes, batches.flatten())
-                assertNotEquals(changes.size, batches.size)
+            watchable2.unbind()
+            watchable2.unbind() // Safe
+
+            for (i in 0 until 100) {
+                watchable1.use { modify() }
             }
+            delay(50) // No changes arrive
+            assertNotEquals(watchable1, watchable2)
+        }
+    }
+
+    @Test fun `batch changes together`() = runBlocking {
+        val changes = mutableListOf<C>()
+        val batches = mutableListOf<List<C>>()
+        bind(watchable2, watchable1)
+
+        log("watch()")
+
+        // Timing output here proves that modifications are held up.
+        // Provide a non-0 batch amount
+        watchable1.watch(this) {
+            changes += it
+        }
+
+        // Provide a non-0 batch amount
+        watchable1.batch(this, 50) {
+            batches += it
+        }
+
+        // The first batch should arrive quickly and contain initial
+        eventually { assertTrue(batches.size > 0) }
+
+        // Throw many modifications at watchable1
+        for (i in 0 until 100) {
+            watchable1.use {
+                modify()
+            }
+        }
+
+        // Wait for everything to arrive at watchable2
+        watchable2.watchUntil(this) {
+            assertEquals(watchable1, watchable2)
+        }
+
+        eventually {
+            log("changes: ${changes.size}, batches: ${batches.size}")
+            assertTrue(changes.size > 0)
+            assertEquals(changes, batches.flatten())
+            assertNotEquals(changes.size, batches.size)
         }
     }
 
@@ -188,11 +174,9 @@ class MatrixTest<T, V, M : T, C: Change<T, V>>: ScopeTest() {
         assertNotEquals(watchable2, watchable1.value)
     }
 
-    @Test fun replace() {
-        runBlocking {
-            watchable1.set(watchable2.value)
-            assertEquals(watchable1, watchable2)
-        }
+    @Test fun replace() = runBlocking {
+        watchable1.set(watchable2.value)
+        assertEquals(watchable1, watchable2)
     }
 
     @Test fun stress() {

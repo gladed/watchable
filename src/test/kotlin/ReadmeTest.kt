@@ -22,19 +22,16 @@ import org.junit.Test
 
 /** Check certain doc comments are accurate. */
 class ReadmeTest {
-    @Test fun `batching docs`() {
+    @Test fun `batching docs`() = runBlocking {
         val list = listOf(4, 5).toWatchableList()
-        runBlocking {
-            batch(list) { println(it) }
-            delay(25)
-            // Prints: [Initial(initial=[4, 5])]
-            list.use {
-                add(6)
-                add(7)
-            }
-            delay(25)
-            // Prints: [Add(index=2, added=6), Add(index=3, added=7)]
+        batch(list) { println(it) }
+        delay(25)
+        // Prints: [Initial(initial=[4, 5])]
+        list.use {
+            add(6)
+            add(7)
         }
+        delay(25)
+        // Prints: [Add(index=2, added=6), Add(index=3, added=7)]
     }
-
 }

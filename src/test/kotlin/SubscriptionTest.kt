@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.SetChange
+import io.gladed.watchable.ValueChange
 import io.gladed.watchable.batch
 import io.gladed.watchable.collect
 import io.gladed.watchable.watch
@@ -31,18 +32,18 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-fun <T> runThenCancel(func: suspend CoroutineScope.() -> T) = runBlocking {
-    func().also { coroutineContext.cancelChildren() }
-}
-
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class SubscriptionTest {
-    @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
+    val changes = Channel<SetChange<Int>>(Channel.UNLIMITED)
     private val set = watchableSetOf(1)
+
+    private fun <T> runThenCancel(func: suspend CoroutineScope.() -> T) = runBlocking {
+        func().also { coroutineContext.cancelChildren() }
+    }
 
     @Test fun `cancel immediately`() {
         runThenCancel {
-            val handle = watch(set) { changes += it }
+            val handle = watch(set) { changes.send(it) }
             changes.expect(SetChange.Initial(setOf(1)))
             handle.cancel() // Instantly cancel, no more changes!
             set.use { add(2) }
@@ -52,7 +53,7 @@ class SubscriptionTest {
 
     @Test fun `close drains all pending changes`() {
         runThenCancel {
-            val handle = watch(set) { changes += it }
+            val handle = watch(set) { changes.send(it) }
             changes.expect(SetChange.Initial(setOf(1)))
             set.use { add(2) }
             log("Close watch handle")

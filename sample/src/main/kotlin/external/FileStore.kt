@@ -49,7 +49,7 @@ class FileStore(
     }
 
     override suspend fun findBird(id: String): Bird? {
-        val handle: Handle<Bird>? = birds[id]?.also { it += coroutineContext}
+        val handle: Handle<Bird>? = birds[id]?.also { it += coroutineContext }
             ?: load(id)?.let { newHandle(it) }
         return handle?.value
     }

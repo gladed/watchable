@@ -18,17 +18,18 @@ import io.gladed.watchable.ValueChange
 import io.gladed.watchable.batch
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 
 class FlushTest : ScopeTest() {
-    @Rule @JvmField val changes = ChangeWatcherRule<ValueChange<Int>>()
 
     @Test(timeout = 500)
     fun `receive events while flushing`() {
+        val changes = Channel<ValueChange<Int>>(Channel.UNLIMITED)
         val value = watchableValueOf(1)
-        val handle = watch(value) { changes += it }
+        val handle = watch(value) { changes.send(it) }
         runBlocking {
             changes.expect(ValueChange(1, 1))
             value.set(2)
@@ -41,14 +42,15 @@ class FlushTest : ScopeTest() {
     @Test(timeout = 500)
     fun `get final batch`() {
         runBlocking {
+            val changes = Channel<List<ValueChange<Int>>>(Channel.UNLIMITED)
             val value = watchableValueOf(1)
-            val handle = batch(value, 1000) { changes += it }
-            changes.expect(ValueChange(1, 1))
+            val handle = batch(value, 1000) { changes.send(it) }
+            changes.expect(listOf((ValueChange(1, 1))))
             value.set(2)
             // close should cause an immediate flush of outstanding batch items regardless of its timeout.
             changes.expectNone()
             handle.close()
-            changes.expect(ValueChange(1, 2), timeout = 100)
+            changes.expect(listOf(ValueChange(1, 2)), timeout = 100)
             handle.join()
         }
     }

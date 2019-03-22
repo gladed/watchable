@@ -18,31 +18,28 @@ import io.gladed.watchable.SetChange
 import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
 
 class WatchableSetTest : ScopeTest() {
-
-    @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
+    val changes = Channel<SetChange<Int>>(Channel.UNLIMITED)
 
     @Test
-    fun replace() {
-        runBlocking {
-            val set = watchableSetOf(1)
-            val set2 = watchableSetOf<Int>()
-            bind(set2, set)
-            val set3 = set2.readOnly()
-            assertThat(set.toString(), startsWith("WatchableSet("))
-            assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
-            set.set(setOf(3))
-            eventually { assertEquals(setOf(3), set3.value) }
-        }
+    fun replace() = runBlocking {
+        val set = watchableSetOf(1)
+        val set2 = watchableSetOf<Int>()
+        bind(set2, set)
+        val set3 = set2.readOnly()
+        assertThat(set.toString(), startsWith("WatchableSet("))
+        assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
+        set.set(setOf(3))
+        eventually { assertEquals(setOf(3), set3.value) }
     }
 
     @Test
@@ -56,16 +53,14 @@ class WatchableSetTest : ScopeTest() {
     }
 
     @Test
-    fun `slow bind`() {
-        runBlocking {
-            val set = watchableSetOf(1)
-            val set2 = watchableSetOf(2)
-            watch(set) { changes += it }
-            changes.expect(SetChange.Initial(setOf(1)))
-            bind(set2, set)
-            set.set(setOf(3))
-            set.use { add(2) }
-            changes.expect(SetChange.Remove(1), SetChange.Add(3), SetChange.Add(2))
-        }
+    fun `slow bind`() = runBlocking {
+        val set = watchableSetOf(1)
+        val set2 = watchableSetOf(2)
+        watch(set) { changes.send(it) }
+        changes.expect(SetChange.Initial(setOf(1)))
+        bind(set2, set)
+        set.set(setOf(3))
+        set.use { add(2) }
+        changes.expect(SetChange.Remove(1), SetChange.Add(3), SetChange.Add(2))
     }
 }

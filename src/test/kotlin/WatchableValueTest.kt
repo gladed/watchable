@@ -19,40 +19,35 @@ import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.toWatchableValue
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertThat
-import org.junit.Rule
 import org.junit.Test
 
 class WatchableValueTest {
 
     private lateinit var intValue: WatchableValue<Int>
-    @Rule @JvmField val changes = ChangeWatcherRule<ValueChange<Int>>()
+    val changes = Channel<ValueChange<Int>>(Channel.UNLIMITED)
 
     @Test fun simple() {
         runBlocking {
             intValue = watchableValueOf(5)
             watch(intValue) {
-                log("Updating received with $it, was ${it.oldValue}")
-                changes += it
+                changes.send(it)
             }
-            log("Waiting for value change")
             changes.expect(ValueChange(5, 5))
             intValue.set(17)
             changes.expect(ValueChange(5, 17))
-            log("At end, shutting down")
         }
     }
 
     @Test fun setSameValue() {
         runBlocking {
             intValue = 5.toWatchableValue()
-            watch(intValue) {
-                changes += it
-            }
+            watch(intValue) { changes.send(it) }
             changes.expect(ValueChange(5, 5))
             intValue.set(5)
             // Both announcements because value is NOT compared for equality
@@ -87,7 +82,7 @@ class WatchableValueTest {
             assertThat(readOnly.toString(), startsWith("ReadOnlyWatchableValue("))
             assertThat(intValue.toString(), startsWith("WatchableValue("))
             watch(readOnly) {
-                changes += it
+                changes.send(it)
             }
             changes.expect(ValueChange(4, 4))
             intValue.set(5)

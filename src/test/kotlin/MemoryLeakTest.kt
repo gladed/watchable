@@ -23,12 +23,11 @@ import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.delay
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNull
 import org.junit.Ignore
-import org.junit.Rule
 import org.junit.Test
 import java.lang.ref.WeakReference
 
@@ -36,68 +35,58 @@ import java.lang.ref.WeakReference
 @Ignore // These tests simply aren't reliable since gc behavior can vary
 class MemoryLeakTest {
     private val scope1 = CoroutineScope(Dispatchers.Default)
-    @Rule @JvmField val changes = ChangeWatcherRule<ListChange<Int>>()
+    val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
 
-    @Test fun `gc is detectable`() {
-        runBlocking {
-            var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
-            val ref = WeakReference(list1!!)
-            list1 = null
-            scour {
-                assertNull(ref.get())
-            }
+    @Test fun `gc is detectable`() = runBlocking {
+        var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
+        val ref = WeakReference(list1!!)
+        list1 = null
+        scour {
+            assertNull(ref.get())
         }
     }
 
-    @Test fun `cancel of watch scope allows gc`() {
-        runBlocking {
-            // Create a var in scope1
-            var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
-            val ref = WeakReference(list1!!)
+    @Test fun `cancel of watch scope allows gc`() = runBlocking {
+        // Create a var in scope1
+        var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
+        val ref = WeakReference(list1!!)
 
-            // Watch it from scope 2
-            scope1.watch(list1) {
-                changes += it
-            }
+        // Watch it from scope 2
+        scope1.watch(list1) { changes.send(it) }
 
-            // Cancel both scopes and drop the var
-            scope1.coroutineContext[Job]?.cancel()
-            list1 = null
-            assertNull(list1)
+        // Cancel both scopes and drop the var
+        scope1.coroutineContext[Job]?.cancel()
+        list1 = null
+        assertNull(list1)
 
-            scour { assertNull(ref.get()) }
-        }
+        scour { assertNull(ref.get()) }
     }
 
-    @Test fun `cancel of handle allows gc`() {
-        runBlocking {
-            var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
-            val ref = WeakReference(list1!!)
-            var sub: WatchHandle? = scope1.watch(list1) { changes += it }
-            // Cancel the sub and drop vars
-            sub?.cancel()
-            sub = null
-            list1 = null
+    @Test fun `cancel of handle allows gc`() = runBlocking {
+        var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
+        val ref = WeakReference(list1!!)
+        var sub: WatchHandle? = scope1.watch(list1) { changes.send(it) }
+        // Cancel the sub and drop vars
+        sub?.cancel()
+        sub = null
+        list1 = null
 
-            scour { assertNull(ref.get()) }
-        }
+        scour { assertNull(ref.get()) }
     }
 
-    @Test fun `join on scope used to bind allows gc`() {
-        runBlocking {
-            // Create a var in scope1
-            var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
-            val ref = WeakReference(list1!!)
+    @Test fun `join on scope used to bind allows gc`() = runBlocking {
+        // Create a var in scope1
+        var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
+        val ref = WeakReference(list1!!)
 
-            scope1.launch {
-                val list2 = watchableListOf(4)
-                bind(list2, list1!!)
-            }.join() // join returns when scope is complete (and therefore bind should be dead)
+        scope1.launch {
+            val list2 = watchableListOf(4)
+            bind(list2, list1!!)
+        }.join() // join returns when scope is complete (and therefore bind should be dead)
 
-            list1 = null
-            assertNull(list1)
+        list1 = null
+        assertNull(list1)
 
-            scour { assertNull(ref.get()) }
-        }
+        scour { assertNull(ref.get()) }
     }
 }

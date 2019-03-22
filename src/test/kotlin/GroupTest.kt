@@ -24,13 +24,13 @@ import io.gladed.watchable.toWatchableSet
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import io.gladed.watchable.watchableValueOf
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
-import org.junit.Rule
 import org.junit.Test
 
 class GroupTest {
-    @Rule @JvmField val changes = ChangeWatcherRule<GroupChange<Any, Any, Change<Any, Any>>>()
+    val changes = Channel<GroupChange<Any, Any, Change<Any, Any>>>(Channel.UNLIMITED)
 
     @Test fun coverage() {
         val intValue = watchableValueOf(1)
@@ -41,7 +41,7 @@ class GroupTest {
         runBlocking {
             val intValue = watchableValueOf(1)
             val setValue = watchableSetOf("1")
-            group(intValue, setValue).watch(this) { changes += it }
+            group(intValue, setValue).watch(this) { changes.send(it) }
             changes.expect(GroupChange(intValue, ValueChange(1, 1)))
             changes.expect(GroupChange(setValue, SetChange.Initial(setOf("1"))))
         }
@@ -51,9 +51,7 @@ class GroupTest {
         runBlocking {
             val intValue = watchableValueOf(1)
             val setValue = watchableSetOf("1")
-            watch(group(intValue, setValue)) {
-                changes += it
-            }
+            watch(group(intValue, setValue)) { changes.send(it) }
             changes.expect(
                 GroupChange(intValue, ValueChange(1, 1)),
                 GroupChange(setValue, SetChange.Initial(setOf("1"))))
@@ -64,9 +62,7 @@ class GroupTest {
         runBlocking {
             val intValue = watchableValueOf(1)
             val setValue = watchableSetOf("1")
-            val handle = watch(group(intValue, setValue)) {
-                changes += it
-            }
+            val handle = watch(group(intValue, setValue)) { changes.send(it) }
             changes.expect(
                 GroupChange(intValue, ValueChange(1, 1)),
                 GroupChange(setValue, SetChange.Initial(setOf("1"))))
@@ -93,5 +89,4 @@ class GroupTest {
             delay(25)
         }
     }
-
 }

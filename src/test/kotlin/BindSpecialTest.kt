@@ -20,60 +20,55 @@ import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Rule
 import org.junit.Test
 
 class BindSpecialTest {
-    @Rule @JvmField val changes = ChangeWatcherRule<ListChange<Int>>()
+    @Test fun specialBinding() = runBlocking {
+        // Show how we can transform data types into each other
+        val origin = watchableListOf(4, 5)
+        val dest = watchableMapOf(0 to 0)
 
-    @Test fun specialBinding() {
-        runBlocking {
-            // Show how we can transform data types into each other
-            val origin = watchableListOf(4, 5)
-            val dest = watchableMapOf(0 to 0)
-
-            fun MutableMap<Int, Int>.increment(key: Int) {
-                val addCount = this[key]
-                when(addCount) {
-                    null -> this[key] = 1
-                    else -> this[key] = addCount + 1
-                }
+        fun MutableMap<Int, Int>.increment(key: Int) {
+            val addCount = this[key]
+            when(addCount) {
+                null -> this[key] = 1
+                else -> this[key] = addCount + 1
             }
+        }
 
-            fun MutableMap<Int, Int>.decrement(key: Int) {
-                val removeCount = this[key]
-                when(removeCount) {
-                    null -> remove(key) // Shouldn't happen really
-                    1 -> remove(key)
-                    else -> this[key] = removeCount - 1
-                }
+        fun MutableMap<Int, Int>.decrement(key: Int) {
+            val removeCount = this[key]
+            when(removeCount) {
+                null -> remove(key) // Shouldn't happen really
+                1 -> remove(key)
+                else -> this[key] = removeCount - 1
             }
+        }
 
-            bind(dest, origin) {
-                when(it) {
-                    is ListChange.Initial -> {
-                        clear()
-                        for (key in it.initial) {
-                            increment(key)
-                        }
-                    }
-                    is ListChange.Add -> increment(it.added)
-                    is ListChange.Remove -> decrement(it.removed)
-                    is ListChange.Replace -> {
-                        increment(it.added)
-                        decrement(it.removed)
+        bind(dest, origin) {
+            when(it) {
+                is ListChange.Initial -> {
+                    clear()
+                    for (key in it.initial) {
+                        increment(key)
                     }
                 }
+                is ListChange.Add -> increment(it.added)
+                is ListChange.Remove -> decrement(it.removed)
+                is ListChange.Replace -> {
+                    increment(it.added)
+                    decrement(it.removed)
+                }
             }
+        }
 
-            origin.use {
-                add(4)
-                set(1, 6)
-            }
+        origin.use {
+            add(4)
+            set(1, 6)
+        }
 
-            eventually {
-                assertEquals(mapOf(4 to 2, 6 to 1), dest.value)
-            }
+        eventually {
+            assertEquals(mapOf(4 to 2, 6 to 1), dest.value)
         }
     }
 }

@@ -18,66 +18,60 @@ import io.gladed.watchable.MapChange
 import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
 
 class WatchableMapTest : ScopeTest() {
-    @Rule @JvmField val changes = ChangeWatcherRule<MapChange<Int, String>>()
+    val changes = Channel<MapChange<Int, String>>(Channel.UNLIMITED)
 
-    @Test fun entries() {
-        runBlocking {
-            val map = watchableMapOf(1 to "1")
-            map.use {
-                val first = entries.first()
-                assertEquals(first, first)
-                log("Entry: $entries has hash ${entries.hashCode()}") // Coverage
-                mustThrow(UnsupportedOperationException::class.java) {
-                    entries.add(object : MutableMap.MutableEntry<Int, String> {
-                        override val key: Int = 1
-                        override val value: String = "1"
-                        override fun setValue(newValue: String) = throw Error()
-                    })
-                }
-                first.setValue("2")
+    @Test fun entries() = runBlocking {
+        val map = watchableMapOf(1 to "1")
+        map.use {
+            val first = entries.first()
+            assertEquals(first, first)
+            log("Entry: $entries has hash ${entries.hashCode()}") // Coverage
+            mustThrow(UnsupportedOperationException::class.java) {
+                entries.add(object : MutableMap.MutableEntry<Int, String> {
+                    override val key: Int = 1
+                    override val value: String = "1"
+                    override fun setValue(newValue: String) = throw Error()
+                })
             }
-            assertEquals(mapOf(1 to "2"), map)
+            first.setValue("2")
         }
+        assertEquals(mapOf(1 to "2"), map)
     }
 
-    @Test fun readOnly() {
-        runBlocking {
-            val map = watchableMapOf(1 to "1")
-            val map2 = watchableMapOf(2 to "2")
-            val map3 = map2.readOnly()
-            watch(map3) { changes += it }
-            changes.expect(MapChange.Initial(mapOf(2 to "2")))
-            bind(map2, map)
-            assertThat(map.toString(), startsWith("WatchableMap("))
-            assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
-            map.set(mapOf(3 to "3"))
-            changes.expect(MapChange.Remove(2, "2"), MapChange.Add(3, "3"))
-        }
+    @Test fun readOnly() = runBlocking {
+        val map = watchableMapOf(1 to "1")
+        val map2 = watchableMapOf(2 to "2")
+        val map3 = map2.readOnly()
+        watch(map3) { changes.send(it) }
+        changes.expect(MapChange.Initial(mapOf(2 to "2")))
+        bind(map2, map)
+        assertThat(map.toString(), startsWith("WatchableMap("))
+        assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
+        map.set(mapOf(3 to "3"))
+        changes.expect(MapChange.Remove(2, "2"), MapChange.Add(3, "3"))
     }
 
-    @Test fun bindReadOnly() {
-        runBlocking {
-            val map = watchableMapOf(1 to "1")
-            val map2 = watchableMapOf(2 to "2")
-            val map3 = map.readOnly()
-            bind(map2, map3)
-            map.use {
-                put(3, "3")
-            }
+    @Test fun bindReadOnly() = runBlocking {
+        val map = watchableMapOf(1 to "1")
+        val map2 = watchableMapOf(2 to "2")
+        val map3 = map.readOnly()
+        bind(map2, map3)
+        map.use {
+            put(3, "3")
+        }
 
-            map3.watchUntil(this) {
-                assertEquals(map, map3)
-            }
+        map3.watchUntil(this) {
+            assertEquals(map, map3)
         }
     }
 
