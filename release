@@ -13,6 +13,11 @@ git diff-index --quiet --cached HEAD -- || {
   exit -1
 }
 
+git diff-index --quiet HEAD -- || {
+  echo "FAIL: Uncommitted modifications at head"
+  exit -1
+}
+
 LAST_TAG=$(git describe --abbrev=0 --tags)
 VERSION=$(./gradlew --quiet printVersion)
 
@@ -31,7 +36,7 @@ read -p "Have you updated HISTORY.md (y/n)? " CONT
 sed -i "s@\(io.gladed:watchable:\|download.svg?version=\|watchable/watchable/\)[0-9\.]\+@\1$VERSION@g" README.md
 
 echo "Building"
-./gradlew clean detekt check dokkaGfm bintrayUpload bintrayUpload
+./gradlew clean detekt check dokkaGfm bintrayUpload
 
 echo "Pushing to git"
 git add README.md
