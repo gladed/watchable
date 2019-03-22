@@ -20,7 +20,7 @@ package io.gladed.watchable
 @Suppress("TooManyFunctions")
 class WatchableSet<T> internal constructor(
     initial: Collection<T>
-) : MutableWatchableBase<Set<T>, MutableSet<T>, SetChange<T>>(), ReadOnlyWatchableSet<T> {
+) : MutableWatchableBase<Set<T>, T, MutableSet<T>, SetChange<T>>(), ReadOnlyWatchableSet<T> {
 
     override val size get() = value.size
     override fun contains(element: T) = value.contains(element)

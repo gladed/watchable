@@ -22,4 +22,8 @@ data class ValueChange<T>(
     val oldValue: T,
     /** The new object value. */
     val newValue: T
-) : Change<T>
+) : Change<T, T> {
+    override val simple by lazy {
+        listOf(SimpleChange(add = newValue, remove = if (newValue == oldValue) null else oldValue))
+    }
+}

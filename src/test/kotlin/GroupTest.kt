@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.Change
 import io.gladed.watchable.GroupChange
 import io.gladed.watchable.SetChange
 import io.gladed.watchable.ValueChange
@@ -29,7 +30,7 @@ import org.junit.Rule
 import org.junit.Test
 
 class GroupTest {
-    @Rule @JvmField val changes = ChangeWatcherRule<GroupChange>()
+    @Rule @JvmField val changes = ChangeWatcherRule<GroupChange<Any, Any, Change<Any, Any>>>()
 
     @Test fun coverage() {
         val intValue = watchableValueOf(1)

@@ -16,5 +16,5 @@
 
 package io.gladed.watchable
 
-/** A [Watchable] [Set] which may not be modified by the reference holder. */
-interface ReadOnlyWatchableSet<T> : Watchable<Set<T>, T, SetChange<T>>, Set<T>
+/** Describes a change in the simplest possible form. */
+data class SimpleChange<out T>(val remove: T? = null, val add: T? = null)

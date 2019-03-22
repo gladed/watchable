@@ -17,16 +17,24 @@
 package io.gladed.watchable
 
 /** Describes a change to a [List]. */
-sealed class ListChange<T> : Change<List<T>> {
+sealed class ListChange<T> : Change<List<T>, T> {
     /** The initial state of the list at the time watching began. */
-    data class Initial<T>(val initial: List<T>) : ListChange<T>()
+    data class Initial<T>(val initial: List<T>) : ListChange<T>() {
+        override val simple by lazy { initial.map { SimpleChange(add = it) } }
+    }
 
     /** An addition of an element to the list. */
-    data class Add<T>(val index: Int, val added: T) : ListChange<T>()
+    data class Add<T>(val index: Int, val added: T) : ListChange<T>() {
+        override val simple by lazy { listOf(SimpleChange(add = added)) }
+    }
 
     /** A removal of an element in the list. */
-    data class Remove<T>(val index: Int, val removed: T) : ListChange<T>()
+    data class Remove<T>(val index: Int, val removed: T) : ListChange<T>() {
+        override val simple by lazy { listOf(SimpleChange(remove = removed)) }
+    }
 
     /** A replacement of the element at a specific place in the list. */
-    data class Replace<T>(val index: Int, val removed: T, val added: T) : ListChange<T>()
+    data class Replace<T>(val index: Int, val removed: T, val added: T) : ListChange<T>() {
+        override val simple by lazy { listOf(SimpleChange(remove = removed, add = added)) }
+    }
 }

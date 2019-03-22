@@ -22,7 +22,7 @@ package io.gladed.watchable
 @Suppress("TooManyFunctions")
 class WatchableList<T> internal constructor(
     initial: Collection<T>
-) : MutableWatchableBase<List<T>, MutableList<T>, ListChange<T>>(), ReadOnlyWatchableList<T> {
+) : MutableWatchableBase<List<T>, T, MutableList<T>, ListChange<T>>(), ReadOnlyWatchableList<T> {
 
     override val size: Int get() = value.size
     override fun contains(element: T) = value.contains(element)

@@ -58,9 +58,9 @@ class WatchableListTest : ScopeTest() {
             val list = watchableListOf(1, null)
             val channel = Channel<ListChange<Int?>>(20)
             watch(list) { channel.send(it) }
-            assertEquals(ListChange.Initial(listOf(1, null)), channel.receive())
+            channel.expect(ListChange.Initial(listOf(1, null)))
             list.use { remove(null) }
-            assertEquals(ListChange.Remove(1, null), channel.receive())
+            channel.expect(ListChange.Remove(1, null))
         }
     }
 

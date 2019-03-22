@@ -19,11 +19,14 @@ import io.gladed.watchable.Watchable
 import io.gladed.watchable.watch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.TimeoutCancellationException
+import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert
+import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import java.time.ZoneOffset
 import java.time.ZonedDateTime
@@ -117,7 +120,7 @@ fun <T : Any> cover(obj: T) {
 }
 
 /** Monitor events until func does not throw. */
-suspend fun <T, C: Change<T>> Watchable<T, C>.watchUntil(scope: CoroutineScope, func: () -> Unit) {
+suspend fun <T, V, C: Change<T, V>> Watchable<T, V, C>.watchUntil(scope: CoroutineScope, func: () -> Unit) {
     val mutex = Mutex(locked = true)
     val handle = scope.watch(this) {
         try {
@@ -127,4 +130,29 @@ suspend fun <T, C: Change<T>> Watchable<T, C>.watchUntil(scope: CoroutineScope, 
     }
     mutex.lock() // Suspend until success
     handle.cancel() // Cancel listening
+}
+
+suspend fun <C> ReceiveChannel<C>.expect(vararg expected: C, timeout: Long = 250, strict: Boolean = true) {
+    val expectedList = expected.toList()
+    val current = mutableListOf<C>()
+
+    val result = withTimeoutOrNull(timeout) {
+        while (expectedList != current) {
+            if (strict && current.isNotEmpty()) {
+                Assert.assertEquals(expectedList.take(current.size), current)
+            }
+            current.add(receive())
+            if (!strict && current.size > expectedList.size) {
+                current.removeAt(0)
+            }
+        }
+    }
+    if (result == null) {
+        Assert.assertEquals(expectedList, current)
+    }
+}
+
+suspend fun <C> ReceiveChannel<C>.expectNone(delayMillis: Long = 25) {
+    delay(delayMillis)
+    assertNull(poll())
 }

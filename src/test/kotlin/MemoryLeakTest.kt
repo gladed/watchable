@@ -15,7 +15,7 @@
  */
 
 import io.gladed.watchable.ListChange
-import io.gladed.watchable.SubscriptionHandle
+import io.gladed.watchable.WatchHandle
 import io.gladed.watchable.WatchableList
 import io.gladed.watchable.bind
 import io.gladed.watchable.watch
@@ -38,6 +38,17 @@ class MemoryLeakTest {
     private val scope1 = CoroutineScope(Dispatchers.Default)
     @Rule @JvmField val changes = ChangeWatcherRule<ListChange<Int>>()
 
+    @Test fun `gc is detectable`() {
+        runBlocking {
+            var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
+            val ref = WeakReference(list1!!)
+            list1 = null
+            scour {
+                assertNull(ref.get())
+            }
+        }
+    }
+
     @Test fun `cancel of watch scope allows gc`() {
         runBlocking {
             // Create a var in scope1
@@ -58,49 +69,16 @@ class MemoryLeakTest {
         }
     }
 
-    @Test fun `cancel of subscription allows gc`() {
+    @Test fun `cancel of handle allows gc`() {
         runBlocking {
             var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
             val ref = WeakReference(list1!!)
-            var sub: SubscriptionHandle? = scope1.watch(list1) { changes += it }
+            var sub: WatchHandle? = scope1.watch(list1) { changes += it }
             // Cancel the sub and drop vars
             sub?.cancel()
             sub = null
             list1 = null
 
-            scour { assertNull(ref.get()) }
-        }
-    }
-
-    @Test fun `cancel of nothing allows gc`() {
-        runBlocking {
-            var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
-            val ref = WeakReference(list1!!)
-            list1 = null
-            scour {
-                assertNull(ref.get())
-            }
-        }
-    }
-
-    @Test fun `cancel of watch job allows gc`() {
-        runBlocking {
-            // Create a var in scope1
-            var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
-            val ref = WeakReference(list1!!)
-
-            // Watch it from the current scope
-            var job: SubscriptionHandle? = watch(list1) {
-            }
-
-            // Cancel and forget the job but leave the scope running.
-            job?.cancel()
-            log(job)
-            job = null
-            list1 = null
-
-            log("Scouring now, $coroutineContext")
-            delay(50)
             scour { assertNull(ref.get()) }
         }
     }

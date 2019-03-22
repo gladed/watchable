@@ -17,7 +17,7 @@
 package io.gladed.watchable
 
 /** A handle allowing for management of a subscription to a channel of events. */
-interface SubscriptionHandle {
+interface WatchHandle {
 
     /** Cancel the subscription immediately so that no further events are reported. */
     fun cancel()

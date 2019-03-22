@@ -38,20 +38,20 @@ import org.junit.runners.Parameterized.Parameter
 import org.junit.runners.Parameterized.Parameters
 
 @RunWith(Parameterized::class)
-class MatrixTest<T, M : T, C: Change<T>>: ScopeTest() {
+class MatrixTest<T, V, M : T, C: Change<T, V>>: ScopeTest() {
 
     private val chooser = Chooser()
 
     @Suppress("unused")
     @Parameter(0) lateinit var name: String
-    @Parameter(1) lateinit var maker1: () -> MutableWatchable<T, M, C>
-    @Parameter(2) lateinit var maker2: () -> MutableWatchable<T, M, C>
+    @Parameter(1) lateinit var maker1: () -> MutableWatchable<T, V, M, C>
+    @Parameter(2) lateinit var maker2: () -> MutableWatchable<T, V, M, C>
     @Parameter(3) lateinit var modificationMaker: (M, Chooser) -> ((M) -> Unit)
     @Parameter(4) lateinit var finalMod: (M) -> Unit
 
 
-    private lateinit var watchable1: MutableWatchable<T, M, C>
-    private lateinit var watchable2: MutableWatchable<T, M, C>
+    private lateinit var watchable1: MutableWatchable<T, V, M, C>
+    private lateinit var watchable2: MutableWatchable<T, V, M, C>
 
     /** Apply a random modification to this [M]. */
     private fun M.modify() {

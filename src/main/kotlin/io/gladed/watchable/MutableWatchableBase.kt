@@ -27,7 +27,7 @@ import kotlinx.coroutines.yield
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Suppress("TooManyFunctions") // Useful
-abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<T, M, C> {
+abstract class MutableWatchableBase<T, V, M : T, C : Change<T, V>> : MutableWatchable<T, V, M, C> {
 
     /** The underlying mutable form of the data this object. When changes are applied, [changes] must be updated. */
     protected abstract val mutable: M
@@ -72,7 +72,7 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     override fun batch(
         scope: CoroutineScope,
         minPeriod: Long,
-        consumer: suspend (List<C>) -> Unit
+        func: suspend (List<C>) -> Unit
     ) = scope.subscription { closeMutex ->
         // Simultaneously get first change and an upstream subscription
         val (initial, subscription) = mutableMutex.withLock {
@@ -80,11 +80,11 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
         }
 
         // Batch the subscription contents
-        val rxChannel = batch(subscription, minPeriod, listOf(initial))
+        val rxChannel = collect(subscription, minPeriod, listOf(initial))
         whileSelect {
             rxChannel.onReceiveOrNull {
                 if (it != null) {
-                    consumer(it)
+                    func(it)
                     true
                 } else {
                     false
@@ -135,21 +135,25 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
     }
 
     /** Wrapper for a binding. */
-    private class Binding(val other: Watchable<*, *>, val handle: SubscriptionHandle)
+    private class Binding(val other: Watchable<*, *, *>, val handle: WatchHandle)
 
-    override fun bind(scope: CoroutineScope, origin: Watchable<T, C>) {
+    override fun bind(scope: CoroutineScope, origin: Watchable<T, V, C>) {
         bind(scope, origin) {
             applyBoundChange(it)
         }
     }
 
-    override fun <T2, C2 : Change<T2>> bind(scope: CoroutineScope, origin: Watchable<T2, C2>, apply: M.(C2) -> Unit) {
+    override fun <T2, V2, C2 : Change<T2, V2>> bind(
+        scope: CoroutineScope,
+        origin: Watchable<T2, V2, C2>,
+        apply: M.(C2) -> Unit
+    ) {
         if (binding != null) throw IllegalStateException("Object already bound")
 
         throwIfAlreadyBoundTo(origin)
 
         // Start watching
-        val job = scope.batch(origin) {
+        val job = origin.batch(scope) {
             use {
                 isOnBoundChange = true
                 for (change in it) {
@@ -163,9 +167,9 @@ abstract class MutableWatchableBase<T, M : T, C : Change<T>> : MutableWatchable<
         binding = Binding(origin, job)
     }
 
-    private tailrec fun throwIfAlreadyBoundTo(other: Watchable<*, *>) {
+    private tailrec fun throwIfAlreadyBoundTo(other: Watchable<*, *, *>) {
         if (this === other) throw IllegalStateException("Circular binding not permitted")
-        throwIfAlreadyBoundTo((other as? MutableWatchable<*, *, *>)?.boundTo ?: return)
+        throwIfAlreadyBoundTo((other as? MutableWatchable<*, *, *, *>)?.boundTo ?: return)
     }
 
     override fun unbind() {
