@@ -19,7 +19,7 @@ package io.gladed.watchable
 /** A [Watchable] value of [T] which may also be replaced or bound. Use [watchableValueOf] to create. */
 class WatchableValue<T> internal constructor(
     initial: T
-) : MutableWatchableBase<T, T, ValueChange<T>>(), ReadOnlyWatchableValue<T> {
+) : MutableWatchableBase<T, T, T, ValueChange<T>>(), ReadOnlyWatchableValue<T> {
 
     override var mutable: T = initial
 

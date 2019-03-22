@@ -14,24 +14,7 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.batch
-import io.gladed.watchable.toWatchableList
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import org.junit.Test
+package io.gladed.watchable
 
-/** Check certain doc comments are accurate. */
-class ReadmeTest {
-    @Test fun `batching docs`() = runBlocking {
-        val list = listOf(4, 5).toWatchableList()
-        batch(list) { println(it) }
-        delay(25)
-        // Prints: [Initial(initial=[4, 5])]
-        list.use {
-            add(6)
-            add(7)
-        }
-        delay(25)
-        // Prints: [Add(index=2, added=6), Add(index=3, added=7)]
-    }
-}
+/** Describes a change in the simplest possible form. */
+data class SimpleChange<out T>(val remove: T? = null, val add: T? = null)

@@ -34,7 +34,7 @@ import java.time.Clock
  * ```
  */
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
-internal fun <C> CoroutineScope.batch(
+internal fun <C> CoroutineScope.collect(
     input: ReceiveChannel<List<C>>,
     periodMillis: Long = 0,
     initial: List<C> = listOf(),

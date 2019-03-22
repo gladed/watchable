@@ -20,16 +20,16 @@ import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers
 import org.junit.Assert
-import org.junit.Rule
 import org.junit.Test
 import java.util.concurrent.Executors
 
 class CancelTest {
     private lateinit var intValue: WatchableValue<Int>
-    @Rule @JvmField val changes = ChangeWatcherRule<ValueChange<Int>>()
+    val changes = Channel<ValueChange<Int>>(Channel.UNLIMITED)
 
     private val dispatcher = Executors.newSingleThreadExecutor {
         task -> Thread(task, "scope1")
@@ -40,9 +40,7 @@ class CancelTest {
     @Test fun `callbacks stop when scope joined`() {
         runBlocking {
             intValue = watchableValueOf(5)
-            watch(intValue) {
-                changes += it
-            }
+            watch(intValue) { changes.send(it) }
             changes.expect(ValueChange(5, 5))
         }
 
@@ -55,69 +53,58 @@ class CancelTest {
         }
     }
 
-    @Test fun `callbacks stop when scope cancelled`() {
-        runBlocking {
-            intValue = watchableValueOf(5)
-            scope1.watch(intValue) {
-                Assert.assertThat(Thread.currentThread().name, CoreMatchers.containsString("scope1"))
-                changes += it
-            }
-            changes.expect(ValueChange(5, 5))
-            intValue.set(17)
-            changes.expect(ValueChange(5, 17))
-
-            // Shut down the watching scope
-            scope1.coroutineContext.cancel()
-            intValue.set(88)
-            changes.expectNone()
+    @Test fun `callbacks stop when scope cancelled`() = runBlocking {
+        intValue = watchableValueOf(5)
+        scope1.watch(intValue) {
+            Assert.assertThat(Thread.currentThread().name, CoreMatchers.containsString("scope1"))
+            changes.send(it)
         }
+        changes.expect(ValueChange(5, 5))
+        intValue.set(17)
+        changes.expect(ValueChange(5, 17))
+
+        // Shut down the watching scope
+        scope1.coroutineContext.cancel()
+        intValue.set(88)
+        changes.expectNone()
     }
 
     @Test
-    fun `callbacks stop when job cancelled`() {
-        runBlocking {
-            intValue = watchableValueOf(5)
-            val job = scope1.watch(intValue) {
-                Assert.assertThat(Thread.currentThread().name, CoreMatchers.containsString("scope1"))
-                // Because we're watching from this scope it should be named here
-                changes += it
-            }
-
-            changes.expect(ValueChange(5, 5))
-            intValue.set(17)
-            changes.expect(ValueChange(5, 17))
-
-            // Shut down the job
-            job.cancel()
-            intValue.set(88)
-            changes.expectNone()
+    fun `callbacks stop when job cancelled`() = runBlocking {
+        intValue = watchableValueOf(5)
+        val job = scope1.watch(intValue) {
+            Assert.assertThat(Thread.currentThread().name, CoreMatchers.containsString("scope1"))
+            // Because we're watching from this scope it should be named here
+            changes.send(it)
         }
+
+        changes.expect(ValueChange(5, 5))
+        intValue.set(17)
+        changes.expect(ValueChange(5, 17))
+
+        // Shut down the job
+        job.cancel()
+        intValue.set(88)
+        changes.expectNone()
     }
 
     @Test
-    fun `watch allows parent scope to join`() {
-        runBlocking {
-            intValue = watchableValueOf(5)
-            watch(intValue) {
-                changes += it
-            }
-            changes.expect(ValueChange(5, 5))
-        }
+    fun `watch allows parent scope to join`() = runBlocking {
+        intValue = watchableValueOf(5)
+        watch(intValue) { changes.send(it) }
+        changes.expect(ValueChange(5, 5))
     }
 
     @Test
-    fun `throw during watch cancels job`() {
-        runBlocking {
-            intValue = watchableValueOf(5)
-            val handle = watch(intValue) {
-                changes += it
-                throw IllegalStateException("Whoops!")
-            }
-            changes.expect(ValueChange(5, 5))
-            intValue.set(7)
-            changes.expectNone()
-            handle.cancel()
+    fun `throw during watch cancels job`() = runBlocking {
+        intValue = watchableValueOf(5)
+        val handle = watch(intValue) {
+            changes.send(it)
+            throw IllegalStateException("Whoops!")
         }
+        changes.expect(ValueChange(5, 5))
+        intValue.set(7)
+        changes.expectNone()
+        handle.cancel()
     }
-
 }

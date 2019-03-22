@@ -20,7 +20,7 @@ package io.gladed.watchable
 @Suppress("TooManyFunctions")
 class WatchableMap<K, V> internal constructor(
     initial: Map<K, V>
-) : MutableWatchableBase<Map<K, V>, MutableMap<K, V>, MapChange<K, V>>(), ReadOnlyWatchableMap<K, V> {
+) : MutableWatchableBase<Map<K, V>, V, MutableMap<K, V>, MapChange<K, V>>(), ReadOnlyWatchableMap<K, V> {
 
     override val entries get() = value.entries
     override val keys get() = value.keys

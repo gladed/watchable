@@ -16,8 +16,6 @@
 
 package io.gladed.watchable
 
-import kotlinx.coroutines.CoroutineScope
-
 /** Return a new [WatchableValue] wrapping [value]. */
 fun <T> watchableValueOf(value: T) = WatchableValue(value)
 
@@ -42,41 +40,8 @@ fun <K, V> Map<K, V>.toWatchableMap() = WatchableMap(this)
 /** Return a new [WatchableMap] containing a map of [values]. */
 fun <K, V> watchableMapOf(vararg values: Pair<K, V>) = values.toMap().toWatchableMap()
 
-/** Bind [dest] so that it receives values from [origin] as long as this [CoroutineScope] lives. */
-fun <T, M : T, C : Change<T>> CoroutineScope.bind(dest: MutableWatchable<T, M, C>, origin: Watchable<T, C>) =
-    dest.bind(this, origin)
-
-/**
- * Deliver changes for this [Watchable] to [func], starting with its initial state, until
- * the returned [SubscriptionHandle] is closed or this [CoroutineScope] completes.
- */
-fun <T, C : Change<T>> CoroutineScope.watch(
-    watchable: Watchable<T, C>,
-    func: suspend (C) -> Unit
-) = watchable.watch(this@watch, func)
-
-/**
- * Deliver multiple changes for this [Watchable] to [func], starting with its initial state, until
- * the returned [SubscriptionHandle] is closed or this [CoroutineScope] completes.
- */
-fun <T, C : Change<T>> CoroutineScope.batch(
-    watchable: Watchable<T, C>,
-    /** The minimum time between change notifications in milliseconds, or 0 for no delay. */
-    minPeriod: Long = 0,
-    func: suspend (List<C>) -> Unit
-) = watchable.batch(this@batch, minPeriod, func)
-
-/**
- * Bind [dest] so that it receives changes from [origin] and applies them with [apply] for as long as
- * this [CoroutineScope] lives.
- */
-fun <T, M : T, C : Change<T>, T2, C2 : Change<T2>> CoroutineScope.bind(
-    dest: MutableWatchable<T, M, C>,
-    origin: Watchable<T2, C2>,
-    apply: M.(C2) -> Unit
-) = dest.bind(this, origin, apply)
-
 /**
  * Create and return a group of watchable objects that itself is watchable.
  */
-fun group(vararg watchables: Watchable<out Any, out Change<Any>>) = WatchableGroup(watchables.toList())
+fun <T, V, C : Change<T, V>> group(vararg watchables: Watchable<T, V, C>) =
+    WatchableGroup(watchables.toList())

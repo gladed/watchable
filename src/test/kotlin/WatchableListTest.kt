@@ -25,19 +25,20 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
-import org.junit.Rule
 import org.junit.Test
 
 class WatchableListTest : ScopeTest() {
-    @Rule @JvmField val changes = ChangeWatcherRule<ListChange<Int>>()
+    val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
 
     @Test fun clear() {
+        val changes = Channel<List<ListChange<Int>>>(Channel.UNLIMITED)
+
         runBlocking {
             val list = watchableListOf(3, 4)
-            batch(list) { changes += it }
-            changes.expect(ListChange.Initial(listOf(3, 4)))
+            batch(list) { changes.send(it) }
+            changes.expect(listOf(ListChange.Initial(listOf(3, 4))))
             list.use { clear() }
-            changes.expect(ListChange.Remove(0, 3), ListChange.Remove(0, 4))
+            changes.expect(listOf(ListChange.Remove(0, 3), ListChange.Remove(0, 4)))
             changes.expectNone()
         }
     }
@@ -46,7 +47,7 @@ class WatchableListTest : ScopeTest() {
         runBlocking {
             val list = watchableListOf(1)
             val readOnlyList = list.readOnly()
-            watch(readOnlyList) { changes += it }
+            watch(readOnlyList) { changes.send(it) }
             changes.expect(ListChange.Initial(listOf(1)))
             assertThat(list.toString(), startsWith("WatchableList("))
             assertThat(readOnlyList.toString(), startsWith("ReadOnlyWatchableList("))
@@ -58,9 +59,9 @@ class WatchableListTest : ScopeTest() {
             val list = watchableListOf(1, null)
             val channel = Channel<ListChange<Int?>>(20)
             watch(list) { channel.send(it) }
-            assertEquals(ListChange.Initial(listOf(1, null)), channel.receive())
+            channel.expect(ListChange.Initial(listOf(1, null)))
             list.use { remove(null) }
-            assertEquals(ListChange.Remove(1, null), channel.receive())
+            channel.expect(ListChange.Remove(1, null))
         }
     }
 

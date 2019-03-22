@@ -15,46 +15,35 @@
  */
 
 import io.gladed.watchable.ListChange
+import io.gladed.watchable.MapChange
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
-import org.junit.Rule
 import org.junit.Test
 
 class OverloadTest {
-    @Rule
-    @JvmField val changes = ChangeWatcherRule<ListChange<Int>>()
+    val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
 
     @Test
-    fun manyChanges() {
-        runBlocking {
-            val list = watchableListOf(1)
-            watch(list) {
-                if (it is ListChange.Add && (it.added % 2 == 0)) {
-                    // If we could `use` here we could cause a deadlock. But we can't because
-                    // `watch` takes a non-suspending lambda. So we must launch, which keeps things rolling.
-                    launch {
-                        list.use {
-                            remove(it.added)
-                        }
-                    }
-                }
-                changes += it
+    fun manyChanges() = runBlocking {
+        val list = watchableListOf(1)
+        watch(list) {
+            if (it is ListChange.Add && (it.added % 2 == 0)) {
+                list.use { remove(it.added) }
             }
-            changes.expect(ListChange.Initial(listOf(1)))
-
-            // Generate more changes than will fit in the channel at once
-            val range = 0 until 20
-            range.forEach { value ->
-                list.use {
-                    log("Adding $value")
-                    add(value)
-                }
-            }
-
-            // Wait until 18 (the last even item) is removed
-            changes.expect(ListChange.Remove(10, 18), strict = false)
+            changes.send(it)
         }
+        changes.expect(ListChange.Initial(listOf(1)))
+
+        // Generate more changes than will fit in the channel at once
+        val range = 0 until 20
+        range.forEach { value ->
+            list.use { add(value) }
+        }
+
+        // Wait until 18 (the last even item) is removed
+        changes.expect(ListChange.Remove(10, 18), strict = false)
     }
 }

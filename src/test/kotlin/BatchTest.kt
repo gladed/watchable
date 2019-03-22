@@ -18,26 +18,23 @@ import io.gladed.watchable.SetChange
 import io.gladed.watchable.batch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.junit.Rule
 import org.junit.Test
 
 class BatchTest : ScopeTest() {
     @Rule @JvmField val scope1 = ScopeRule(Dispatchers.Default)
-    @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
+    val changes = Channel<List<SetChange<Int>>>(Channel.UNLIMITED)
     private val set = watchableSetOf(1)
 
-    @Test fun `batch changes arrive slowly`() {
-        runBlocking {
-            batch(set, 150) {
-                changes += it
-            }
-            changes.expect(SetChange.Initial(setOf(1)))
+    @Test fun `batch changes arrive slowly`() = runBlocking {
+        batch(set, 150) { changes.send(it) }
+        changes.expect(listOf(SetChange.Initial(setOf(1))))
 
-            set.use { add(2) }
-            // Nothing shows up immediately
-            changes.expectNone(25)
-            changes.expect(SetChange.Add(2), timeout = 250)
-        }
+        set.use { add(2) }
+        // Nothing shows up immediately but eventually it comes by
+        changes.expectNone(25)
+        changes.expect(listOf(SetChange.Add(2)), timeout = 250)
     }
 }

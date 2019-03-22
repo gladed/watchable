@@ -24,8 +24,8 @@ import kotlinx.coroutines.sync.Mutex
 internal fun CoroutineScope.subscription(
     /** Work to perform, stopping as soon as the supplied Mutex can be locked. */
     work: suspend CoroutineScope.(Mutex) -> Unit
-): SubscriptionHandle =
-    object : SubscriptionHandle {
+): WatchHandle =
+    object : WatchHandle {
         /** Closed to signal the daemon should finish outstanding work and exit. */
         protected val daemonClose = Mutex(locked = true)
 

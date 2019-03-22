@@ -15,7 +15,9 @@
  */
 
 import io.gladed.watchable.SetChange
+import io.gladed.watchable.ValueChange
 import io.gladed.watchable.batch
+import io.gladed.watchable.collect
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.CoroutineScope
@@ -30,18 +32,18 @@ import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
 
-fun <T> runThenCancel(func: suspend CoroutineScope.() -> T) = runBlocking {
-    func().also { coroutineContext.cancelChildren() }
-}
-
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class SubscriptionTest {
-    @Rule @JvmField val changes = ChangeWatcherRule<SetChange<Int>>()
+    val changes = Channel<SetChange<Int>>(Channel.UNLIMITED)
     private val set = watchableSetOf(1)
+
+    private fun <T> runThenCancel(func: suspend CoroutineScope.() -> T) = runBlocking {
+        func().also { coroutineContext.cancelChildren() }
+    }
 
     @Test fun `cancel immediately`() {
         runThenCancel {
-            val handle = watch(set) { changes += it }
+            val handle = watch(set) { changes.send(it) }
             changes.expect(SetChange.Initial(setOf(1)))
             handle.cancel() // Instantly cancel, no more changes!
             set.use { add(2) }
@@ -51,7 +53,7 @@ class SubscriptionTest {
 
     @Test fun `close drains all pending changes`() {
         runThenCancel {
-            val handle = watch(set) { changes += it }
+            val handle = watch(set) { changes.send(it) }
             changes.expect(SetChange.Initial(setOf(1)))
             set.use { add(2) }
             log("Close watch handle")
@@ -71,10 +73,8 @@ class SubscriptionTest {
         runThenCancel {
             val tx = Channel<List<Int>>(5)
             tx.send(listOf(1))
-            val rx = batch(tx, 1000)
-            withTimeout(150) {
-                assertEquals(listOf(1), rx.receive())
-            }
+            val rx = collect(tx, 1000)
+            rx.expect(listOf(1))
         }
     }
 
@@ -83,8 +83,8 @@ class SubscriptionTest {
             val tx = Channel<List<Int>>(5)
             tx.send(listOf(1))
             tx.send(listOf(2))
-            val rx = batch(tx, 1000)
-            assertEquals(listOf(1, 2), rx.receive())
+            val rx = collect(tx, 1000)
+            rx.expect(listOf(1, 2))
         }
     }
 
@@ -93,15 +93,13 @@ class SubscriptionTest {
             val tx = Channel<List<Int>>(5)
             tx.send(listOf(1))
             tx.send(listOf(2))
-            val rx = batch(tx, 150)
-            assertEquals(listOf(1, 2), rx.receive())
+            val rx = collect(tx, 150)
+            rx.expect(listOf(1, 2))
             tx.send(listOf(3))
             tx.send(listOf(4))
             delay(100)
             assertEquals(null, rx.poll()) // Nothing there yet
-            withTimeout(150) {
-                assertEquals(listOf(3, 4), rx.receive())
-            }
+            rx.expect(listOf(3, 4))
         }
     }
 
@@ -109,14 +107,12 @@ class SubscriptionTest {
         runBlocking {
             val tx = Channel<List<Int>>(5)
             tx.send(listOf(1))
-            val rx = batch(tx, 1000)
-            assertEquals(listOf(1), rx.receive())
+            val rx = collect(tx, 1000)
+            rx.expect(listOf(1))
             tx.send(listOf(2))
             tx.close()
-            withTimeout(150) {
-                assertEquals(listOf(2), rx.receive())
-                assertTrue(rx.isClosedForReceive)
-            }
+            rx.expect(listOf(2))
+            assertTrue(rx.isClosedForReceive)
         }
     }
 }
