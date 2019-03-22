@@ -31,13 +31,7 @@ class OverloadTest {
         val list = watchableListOf(1)
         watch(list) {
             if (it is ListChange.Add && (it.added % 2 == 0)) {
-                // If we could `use` here we could cause a deadlock. But we can't because
-                // `watch` takes a non-suspending lambda. So we must launch, which keeps things rolling.
-                launch {
-                    list.use {
-                        remove(it.added)
-                    }
-                }
+                list.use { remove(it.added) }
             }
             changes.send(it)
         }
@@ -46,10 +40,7 @@ class OverloadTest {
         // Generate more changes than will fit in the channel at once
         val range = 0 until 20
         range.forEach { value ->
-            list.use {
-                log("Adding $value")
-                add(value)
-            }
+            list.use { add(value) }
         }
 
         // Wait until 18 (the last even item) is removed
