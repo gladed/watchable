@@ -92,14 +92,10 @@ class WatchableMap<K, V> internal constructor(
         }
     }
 
-    /**
-     * Associate the [value] with the [key] in this map, returning the previous value for this [key] if any.
-     */
+    /** Associate the [value] with the [key] in this map, returning the previous value for this [key] if any. */
     suspend fun put(key: K, value: V): V? = use { put(key, value) }
 
-    /**
-     * Remove the value associated with [key], returning it if it was present.
-     */
+    /** Remove the value associated with [key], returning it if it was present. */
     suspend fun remove(key: K): V? = use { remove(key) }
 
     /** Clear all values from this map. */

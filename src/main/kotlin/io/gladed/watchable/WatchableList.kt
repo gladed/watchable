@@ -72,7 +72,7 @@ class WatchableList<T> internal constructor(
         use { add(value) }
     }
 
-    /** Remove [value] from this set, returning true if it was present and false if it was not. */
+    /** Remove [value] from this list, returning true if it was present and false if it was not. */
     suspend fun remove(value: T) = use { remove(value) }
 
     /** Clear all values from this list. */
