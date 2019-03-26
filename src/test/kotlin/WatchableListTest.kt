@@ -86,6 +86,18 @@ class WatchableListTest : ScopeTest() {
         assertTrue(list.isEmpty())
     }
 
+    @Test fun `addAll etc`() = runBlocking {
+        val list = watchableListOf(1, 2)
+        list.addAll(setOf(3, 4))
+        list.addAll(arrayOf(5, 6))
+        list.addAll(sequenceOf(7, 8))
+        list.addAll(sequenceOf(9, 10).asIterable())
+        list.removeAll(setOf(6, 7))
+        list.retainAll(listOf(1, 3, 5, 7, 8, 9))
+        assertEquals(listOf(1, 3, 5, 8, 9), list)
+        Unit
+    }
+
     @Test fun listApis() {
         val list = watchableListOf(1, 2)
         assertEquals(2, list.size)

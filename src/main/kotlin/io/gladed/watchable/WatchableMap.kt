@@ -95,6 +95,22 @@ class WatchableMap<K, V> internal constructor(
     /** Associate the [value] with the [key] in this map, returning the previous value for this [key] if any. */
     suspend fun put(key: K, value: V): V? = use { put(key, value) }
 
+    suspend fun putAll(from: Map<K, V>) {
+        use { putAll(from) }
+    }
+
+    suspend fun putAll(pairs: Array<out Pair<K, V>>) {
+        use { putAll(pairs) }
+    }
+
+    suspend fun putAll(pairs: Iterable<Pair<K, V>>) {
+        use { putAll(pairs) }
+    }
+
+    suspend fun putAll(pairs: Sequence<Pair<K, V>>) {
+        use { putAll(pairs) }
+    }
+
     /** Remove the value associated with [key], returning it if it was present. */
     suspend fun remove(key: K): V? = use { remove(key) }
 

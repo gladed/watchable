@@ -17,4 +17,4 @@
 package io.gladed.watchable
 
 /** A [Watchable] [Map] which may not be modified by the reference holder. */
-interface ReadOnlyWatchableMap<K, V> : Watchable<Map<K, V>, V, MapChange<K, V>>, Map<K, V>
+interface ReadOnlyWatchableMap<K, out V> : Watchable<Map<K, V>, V, MapChange<K, V>>, Map<K, V>

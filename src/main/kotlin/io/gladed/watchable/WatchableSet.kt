@@ -63,11 +63,39 @@ class WatchableSet<T> internal constructor(
         }
     }
 
-    /** Add a [value] to this set, returning true if the element was added and false if it was already present. */
-    suspend fun add(value: T) = use { add(value) }
+    /** Add a [value] to the end of this set, returning true if the set was changed. */
+    suspend fun add(value: T): Boolean =
+        use { add(value) }
+
+    /** Add all elements of the collection to the end of this set, returning true if the set was changed. */
+    suspend fun addAll(elements: Collection<T>): Boolean =
+        use { addAll(elements) }
+
+    /** Add all elements of the iterable to the end of this set, returning true if the set was changed. */
+    suspend fun addAll(elements: Iterable<T>): Boolean =
+        use { addAll(elements) }
+
+    /** Add all elements of the array to the end of this set, returning true if the set was changed. */
+    suspend fun addAll(elements: Array<T>): Boolean =
+        use { addAll(elements) }
+
+    /** Add all elements of the sequence to the end of this set, returning true if the set was changed. */
+    suspend fun addAll(elements: Sequence<T>): Boolean =
+        use { addAll(elements) }
 
     /** Remove [value] from this set, returning true if it was present and false if it was not. */
     suspend fun remove(value: T) = use { remove(value) }
+
+    /** Remove all matching elements in the collection from the set, returning true if the set was changed. */
+    suspend fun removeAll(elements: Collection<T>): Boolean =
+        use { removeAll(elements) }
+
+    /**
+     * Retains only the elements in this set that are found in the collection, returning true if the set was
+     * changed.
+     */
+    suspend fun retainAll(elements: Collection<T>): Boolean =
+        use { retainAll(elements) }
 
     /** Clear all values from this set. */
     suspend fun clear() = use { clear() }
