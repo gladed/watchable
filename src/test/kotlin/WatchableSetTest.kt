@@ -61,6 +61,18 @@ class WatchableSetTest : ScopeTest() {
         assertTrue(set.isEmpty())
     }
 
+    @Test fun `addAll etc`() = runBlocking {
+        val set = watchableSetOf(1, 2)
+        set.addAll(setOf(3, 4))
+        set.addAll(arrayOf(5, 6))
+        set.addAll(sequenceOf(7, 8))
+        set.addAll(sequenceOf(9, 10).asIterable())
+        set.removeAll(setOf(6, 7))
+        set.retainAll(setOf(1, 3, 5, 7, 8, 9))
+        assertEquals(setOf(1, 3, 5, 8, 9), set)
+        Unit
+    }
+
     @Test
     fun `slow bind`() = runBlocking {
         val set = watchableSetOf(1)

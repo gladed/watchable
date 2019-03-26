@@ -81,6 +81,18 @@ class WatchableMapTest : ScopeTest() {
         assertTrue(map.isEmpty())
     }
 
+    @Test fun `putAll cases`() = runBlocking {
+        val map = watchableMapOf(1 to "1", 2 to "2")
+        map.putAll(listOf(3 to "3"))
+        map.putAll(arrayOf(4 to "4"))
+        map.putAll(sequenceOf(5 to "5"))
+        map.putAll(mapOf(6 to "6"))
+        map.forEach { entry ->
+            assertEquals(entry.key.toString(), entry.value)
+        }
+        assertEquals("123456", map.values.joinToString(""))
+    }
+
     @Test fun listApis() {
         val map = watchableMapOf(1 to "1", 2 to "2")
         assertEquals(2, map.size)

@@ -17,7 +17,7 @@
 package io.gladed.watchable
 
 /** Describes a change to a [Map]. */
-sealed class MapChange<K, V> : Change<Map<K, V>, V> {
+sealed class MapChange<K, out V> : Change<Map<K, V>, V> {
     /** The initial state of the map at the time watching began. */
     data class Initial<K, V>(val initial: Map<K, V>) : MapChange<K, V>() {
         override val simple by lazy { initial.values.map { SimpleChange(add = it) } }
