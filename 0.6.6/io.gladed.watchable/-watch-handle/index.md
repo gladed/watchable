@@ -1,0 +1,17 @@
+[io.gladed.watchable](../index.md) / [WatchHandle](./index.md)
+
+# WatchHandle
+
+`interface WatchHandle`
+
+A handle allowing for management of a subscription to a channel of events.
+
+### Functions
+
+| Name | Summary |
+|---|---|
+| [cancel](cancel.md) | `abstract fun cancel(): `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)<br>Cancel the subscription immediately so that no further events are reported. |
+| [close](close.md) | `abstract fun close(): `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)<br>Close the subscription, allowing all outstanding events to be delivered first. |
+| [closeAndJoin](close-and-join.md) | `open suspend fun closeAndJoin(): `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)<br>Close the subscription and wait for all events to be processed (shorthand for [close](close.md) then [join](join.md)). |
+| [join](join.md) | `abstract suspend fun join(): `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)<br>Suspend until the subscription is closed and all events are drained. |
+| [plus](plus.md) | `open operator fun plus(right: `[`WatchHandle`](./index.md)`): `[`WatchHandle`](./index.md)<br>Merge two [WatchHandle](./index.md) objects, returning a single one that spans both. |
