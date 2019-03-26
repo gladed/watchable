@@ -8,7 +8,7 @@
 
 # Watchable
 
-This library provides listenable data structures using [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html).
+This library provides lock-free, concurrent, listenable data structures using [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html).
 
 ```kotlin
 // Inside of CoroutineScope...
@@ -27,11 +27,11 @@ set.use { add(3) }
 
 ## Why?
 
-Adding listeners for changes is easy. But it's hard to remember and unregister all of those listeners. If you don't, lots of objects will be kept in memory indefinitely.
+Sometimes, you want a data structure that can be shared between objects and listen for changes to that data. But it's hard to remember and unregister all of those listeners. If you don't, you'll leak memory.
 
-`Watchable` object actions (like `watch`, `bind`, etc as explained below) are limited to the lifetime of the calling `CoroutineScope`. When the scope completes, its watchable operations also die and are cleaned up automatically.
+`Watchable` solves this by allowing operations (like `watch` and`bind`) which are limited to the lifetime of the `CoroutineScope` where they are created. When the scope completes, its watchable operations also stop and cleaned up automatically.
 
-This can be useful in [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html). The data model lives at the center, and everyone points in. If the data model is defined in terms of `Watchable` objects, then other components (having their own lifecycles) can simply watch for changes and react accordingly, without coupling directly to each other.
+This is useful in [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) designs, in which the data model lives at the center, and everyone depends on it. If the data model is defined in terms of `Watchable` objects, then other components (having their own lifecycles) can simply watch for changes and react accordingly, without coupling directly to each other.
 
 # Usage
 

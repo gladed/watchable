@@ -32,6 +32,9 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change<T, V>> : MutableWatc
     /** The underlying mutable form of the data this object. When changes are applied, [changes] must be updated. */
     protected abstract val mutable: M
 
+    /** The mutex protecting [mutable]. */
+    private val mutableMutex = Mutex()
+
     /** Copy a mutable [M] to an immutable [T]. */
     protected abstract fun M.toImmutable(): T
 
@@ -56,9 +59,6 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change<T, V>> : MutableWatc
     private var immutable: T? = null
 
     override val value: T get() = immutable ?: mutable.toImmutable().also { immutable = it }
-
-    /** The mutex protecting to [mutable]. */
-    private val mutableMutex = Mutex()
 
     /** The current binding if any. */
     private var binding: Binding? = null

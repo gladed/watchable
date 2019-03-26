@@ -23,7 +23,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.newSingleThreadContext
-import kotlinx.coroutines.withContext
+import kotlinx.serialization.DeserializationStrategy
+import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.Json
 import model.Bird
 import store.Store
@@ -37,7 +38,6 @@ class FileStore(
     dir: File,
     private val fileDelayMillis: Long = DEFAULT_FILE_DELAY_MILLIS
 ) : Store, CoroutineScope {
-
     private val birdsDir = File(dir, BIRDS_DIR)
     private val birds = mutableMapOf<String, Handle<Bird>>()
 
@@ -48,11 +48,10 @@ class FileStore(
         return bird
     }
 
-    override suspend fun findBird(id: String): Bird? {
-        val handle: Handle<Bird>? = birds[id]?.also { it += coroutineContext }
-            ?: load(id)?.let { newHandle(it) }
-        return handle?.value
-    }
+    override suspend fun findBird(id: String): Bird? =
+        (birds[id]?.also { it += coroutineContext }
+            ?: load(id)?.let { newHandle(it) })
+            ?.value
 
     /** Create a handle for the bird, shutting it down when we're finished with it. */
     private suspend fun newHandle(bird: Bird): Handle<Bird> {
@@ -68,30 +67,29 @@ class FileStore(
         }
     }
 
-    private suspend fun save(bird: Bird) {
-        withContext(coroutineContext) {
-            val birdDir = File(birdsDir, bird.id)
-            birdDir.mkdirs()
-            File(birdDir, BIRD_FILE_NAME).bufferedWriter().use {
-                it.write(Json.stringify(Bird.serializer(), bird))
-            }
-        }
+    private fun save(bird: Bird) {
+        val birdDir = File(birdsDir, bird.id).apply { mkdirs() }
+        File(birdDir, BIRD_FILE_NAME).writeJson(Bird.serializer(), bird)
     }
 
-    private suspend fun load(id: String): Bird? =
-        withContext(coroutineContext) {
-            val file = File(File(birdsDir, id), BIRD_FILE_NAME)
-            if (!file.isFile) null else {
-                // Create a new storable bird in the originating context
-                Json.parse(Bird.serializer(), file.bufferedReader().use { it.readText() })
-            }
-        }
+    private fun load(id: String): Bird? =
+        File(File(birdsDir, id), BIRD_FILE_NAME).takeIf { it.isFile }?.readJson(Bird.serializer())
 
     companion object {
         // Wait .5 seconds before persisting to disk to prevent thrash
         const val DEFAULT_FILE_DELAY_MILLIS = 500L
         const val BIRD_FILE_NAME = "bird.json"
         const val BIRDS_DIR = "birds"
+
+        /** Return this suspending function's current context. */
         private suspend fun callerContext() = coroutineContext
+
+        private fun <T: Any> File.writeJson(strategy: SerializationStrategy<T>, value: T) {
+            bufferedWriter().use { it.write(Json.stringify(strategy, value)) }
+        }
+
+        private fun <T: Any> File.readJson(strategy: DeserializationStrategy<T>): T =
+            bufferedReader().use { (Json.parse(strategy, it.readText())) }
+
     }
 }

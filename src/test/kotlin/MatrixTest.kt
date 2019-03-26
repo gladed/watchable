@@ -30,6 +30,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -79,6 +80,16 @@ class MatrixTest<T, V, M : T, C: Change<T, V>>: ScopeTest() {
         assertNotEquals(watchable1, watchable2)
         watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
         log(watchable1)
+    }
+
+    @Test fun `no change on bound`() = runBlocking {
+        bind(watchable2, watchable1)
+        try {
+            watchable2.use { modify() }
+            fail("Should not have worked")
+        } catch (e: IllegalStateException) {
+            log("Correct failure: $e")
+        }
     }
 
     @Test fun `no self-bind`() = runBlocking {
