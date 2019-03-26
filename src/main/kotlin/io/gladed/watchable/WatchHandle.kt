@@ -33,4 +33,25 @@ interface WatchHandle {
         close()
         join()
     }
+
+    /** Merge two [WatchHandle] objects, returning a single one that spans both. */
+    operator fun plus(right: WatchHandle): WatchHandle {
+        val left = this
+        return object : WatchHandle {
+            override fun cancel() {
+                left.cancel()
+                right.cancel()
+            }
+
+            override fun close() {
+                left.close()
+                right.close()
+            }
+
+            override suspend fun join() {
+                left.join()
+                right.join()
+            }
+        }
+    }
 }

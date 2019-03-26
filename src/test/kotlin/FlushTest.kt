@@ -14,9 +14,11 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.ListChange
 import io.gladed.watchable.ValueChange
 import io.gladed.watchable.batch
 import io.gladed.watchable.watch
+import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
@@ -52,6 +54,26 @@ class FlushTest : ScopeTest() {
             handle.close()
             changes.expect(listOf(ValueChange(1, 2)), timeout = 100)
             handle.join()
+        }
+    }
+
+    @Test(timeout = 500) fun `flush two`() {
+        runBlocking {
+            val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
+            val list = watchableListOf(1)
+            val handle = watch(list) { changes.send(it) } + watch(list) { changes.send(it) }
+            handle.closeAndJoin()
+            changes.expect(ListChange.Initial(listOf(1)), ListChange.Initial(listOf(1)))
+        }
+    }
+
+    @Test(timeout = 500) fun `cancel two`() {
+        runBlocking {
+            val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
+            val list = watchableListOf(1)
+            val handle = watch(list) { changes.send(it) } + watch(list) { changes.send(it) }
+            handle.cancel()
+            changes.expectNone()
         }
     }
 }
