@@ -143,11 +143,37 @@ set.use { add("b") }
 //   GroupChange(watchable=WatchableSet(), change=Add(added=b))
 ```
 
+## Simple Watches
+
+You may not really care about the details of a change, or just want to respond to simple adds and removes of values. A simplified syntax allows you to see just these changes.
+
+```kotlin
+val map = watchableMapOf(1 to "2")
+watchSimple(map) {
+  println("Remove=$remove, Add=$add")
+}
+map[1] = "3"
+// Prints:
+// Remove=null, Add=2
+// Remove=2, Add=3
+```
+
 ## Object Lifetime
 
 The initiating `CoroutineScope` lifetime is respected. Operations such as `watch` or `bind` will automatically stop when the initiating scope completes. No additional cleanup code is required.
 
-Some operations return return a `SubscriptionHandle` which can be used to stop the operation with more granular control. For example, calling `close` on the [`SubscriptionHandle`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-subscription-handle/) returned by `watch` allows any pending changes to be processed to completion.
+Some operations return return a `WatchHandle` which can be used to stop the operation with more granular control. For example, calling `close` on the [`WatchHandle`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watch-handle/) returned by `watch` operation allows any pending changes to be processed to completion.
+
+```kotlin
+val list = watchableListOf(1)
+val handle = watch(list) { println(it) }
+list.add(2)
+handle.closeAndJoin()
+list.add(3)
+// Prints:
+// Initial(initial=[1]
+// Add(index=1, added=2)
+```
 
 # Sample
 

@@ -16,22 +16,43 @@
 
 import io.gladed.watchable.batch
 import io.gladed.watchable.toWatchableList
+import io.gladed.watchable.watch
+import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 /** Check certain doc comments are accurate. */
 class ReadmeTest {
+    val out = mutableListOf<String>()
+
     @Test fun `batching docs`() = runBlocking {
         val list = listOf(4, 5).toWatchableList()
-        batch(list) { println(it) }
+        batch(list) { out += it.toString() }
         delay(25)
-        // Prints: [Initial(initial=[4, 5])]
         list.use {
             add(6)
             add(7)
         }
         delay(25)
+        assertEquals("""
+            [Initial(initial=[4, 5])]
+            [Add(index=2, added=6), Add(index=3, added=7)]""".trimIndent(), out.joinToString("\n"))
+
         // Prints: [Add(index=2, added=6), Add(index=3, added=7)]
+    }
+
+    @Test fun `close watch handle`() = runBlocking {
+        val list = watchableListOf(1)
+        val handle = watch(list) { out += it.toString() }
+        delay(10)
+        list.add(2)
+        handle.closeAndJoin()
+        list.add(3)
+        delay(10)
+        assertEquals("""
+            Initial(initial=[1])
+            Add(index=1, added=2)""".trimIndent(), out.joinToString("\n"))
     }
 }
