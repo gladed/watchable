@@ -71,7 +71,7 @@ suspend fun always(timeout: Int = 100, delay: Int = 10, test: suspend () -> Unit
 }
 
 /** Keep garbage collecting and running [untilSuccess] until it doesn't throw or until we exhaust attempts. */
-suspend fun scour(maxIterations: Int = 50, delay: Int = 50, untilSuccess: () -> Unit) {
+suspend fun scour(maxIterations: Int = 20, delay: Int = 50, untilSuccess: () -> Unit) {
     val runtime = Runtime.getRuntime()
     for (i in 0 until maxIterations) {
         runtime.runFinalization()

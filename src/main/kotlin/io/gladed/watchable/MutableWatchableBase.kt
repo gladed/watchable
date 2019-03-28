@@ -73,7 +73,7 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change<T, V>> : MutableWatc
         scope: CoroutineScope,
         minPeriod: Long,
         func: suspend (List<C>) -> Unit
-    ) = scope.subscription { closeMutex ->
+    ) = scope.operate { closeMutex ->
         // Simultaneously get first change and an upstream subscription
         val (initial, subscription) = mutableMutex.withLock {
             value.toInitialChange() to broadcaster.openSubscription()

@@ -40,8 +40,6 @@ fun <K, V> Map<K, V>.toWatchableMap() = WatchableMap(this)
 /** Return a new [WatchableMap] containing a map of [values]. */
 fun <K, V> watchableMapOf(vararg values: Pair<K, V>) = values.toMap().toWatchableMap()
 
-/**
- * Create and return a group of watchable objects that itself is watchable.
- */
+/** Create and return a group of watchable objects that itself is watchable. */
 fun <T, V, C : Change<T, V>> group(vararg watchables: Watchable<T, V, C>) =
     WatchableGroup(watchables.toList())

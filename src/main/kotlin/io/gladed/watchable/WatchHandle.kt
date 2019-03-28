@@ -16,19 +16,19 @@
 
 package io.gladed.watchable
 
-/** A handle allowing for management of a subscription to a channel of events. */
+/** Allows management over a watch operation. */
 interface WatchHandle {
 
-    /** Cancel the subscription immediately so that no further events are reported. */
+    /** Cancel the watch operation immediately so that no further changes are handled. */
     fun cancel()
 
-    /** Close the subscription, allowing all outstanding events to be delivered first. */
+    /** Close the watch operation, allowing all outstanding changes to be delivered first. */
     fun close()
 
-    /** Suspend until the subscription is closed and all events are drained. */
+    /** Suspend until all outstanding changes are drained and the watch operation is completed. */
     suspend fun join()
 
-    /** Close the subscription and wait for all events to be processed (shorthand for [close] then [join]). */
+    /** Close the subscription with [close] and wait for all events to be processed with [join]. */
     suspend fun closeAndJoin() {
         close()
         join()

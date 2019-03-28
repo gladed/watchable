@@ -17,6 +17,10 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
 
 /** Bind [dest] so that it receives values from [origin] as long as this [CoroutineScope] lives. */
 fun <T, V, M : T, C : Change<T, V>> CoroutineScope.bind(
@@ -62,3 +66,32 @@ fun <T, V, M : T, C : Change<T, V>, T2, V2, C2 : Change<T2, V2>> CoroutineScope.
     origin: Watchable<T2, V2, C2>,
     apply: M.(C2) -> Unit
 ) = dest.bind(this, origin, apply)
+
+/**
+ * Perform some work in the background until the returned handle is closed or cancelled.
+ */
+internal fun CoroutineScope.operate(
+    /** Work to perform, stopping as soon as the supplied Mutex can be locked. */
+    work: suspend CoroutineScope.(Mutex) -> Unit
+): WatchHandle {
+
+    // May be unlocked to allow [work] to shut down gently.
+    val mutex = Mutex(locked = true)
+
+    // Uses supervisor to allow the parent scope to complete without waiting
+    val operationScope = CoroutineScope(coroutineContext + SupervisorJob())
+    val operation = operationScope.launch {
+        work(mutex)
+    }
+
+    // When the current scope completes, cancel the operation
+    coroutineContext[Job]?.invokeOnCompletion { operation.cancel() }
+
+    return object : WatchHandle {
+        override fun cancel() { operation.cancel() }
+        override suspend fun join() { operation.join() }
+        override fun close() {
+            if (mutex.isLocked) mutex.unlock()
+        }
+    }
+}

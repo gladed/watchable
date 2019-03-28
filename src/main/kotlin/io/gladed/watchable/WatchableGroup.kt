@@ -33,7 +33,7 @@ class WatchableGroup<out T, out V, C : Change<T, V>>(
         scope: CoroutineScope,
         minPeriod: Long,
         func: suspend (List<GroupChange<T, V, C>>) -> Unit
-    ) = scope.subscription { closeMutex ->
+    ) = scope.operate { closeMutex ->
         // Start watching other subscriptions, delivering their changes here.
         val subscriptions = watchables.map { watchable ->
             watchable.batch(scope) { changes ->

@@ -24,6 +24,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNull
@@ -32,7 +33,7 @@ import org.junit.Test
 import java.lang.ref.WeakReference
 
 @Suppress("UNUSED_VALUE") // We mean to release items when we are done with them.
-@Ignore // These tests simply aren't reliable since gc behavior can vary
+//@Ignore // These tests simply aren't reliable since gc behavior can vary
 class MemoryLeakTest {
     private val scope1 = CoroutineScope(Dispatchers.Default)
     val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
@@ -41,9 +42,7 @@ class MemoryLeakTest {
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)
         list1 = null
-        scour {
-            assertNull(ref.get())
-        }
+        scour { assertNull(ref.get()) }
     }
 
     @Test fun `cancel of watch scope allows gc`() = runBlocking {
@@ -65,12 +64,11 @@ class MemoryLeakTest {
     @Test fun `cancel of handle allows gc`() = runBlocking {
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)
-        var sub: WatchHandle? = scope1.watch(list1) { changes.send(it) }
-        // Cancel the sub and drop vars
-        sub?.cancel()
-        sub = null
+        // Watch and then cancel
+        scope1.watch(list1) { changes.send(it) }.cancel()
         list1 = null
 
+        // Detect gc of list1
         scour { assertNull(ref.get()) }
     }
 
