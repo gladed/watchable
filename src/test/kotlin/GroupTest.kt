@@ -14,7 +14,6 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.Change
 import io.gladed.watchable.GroupChange
 import io.gladed.watchable.SetChange
 import io.gladed.watchable.ValueChange
@@ -30,7 +29,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
 class GroupTest {
-    val changes = Channel<GroupChange<Any, Any, Change>>(Channel.UNLIMITED)
+    val changes = Channel<GroupChange<Any, Any>>(Channel.UNLIMITED)
 
     @Test fun coverage() {
         val intValue = watchableValueOf(1)
@@ -43,7 +42,7 @@ class GroupTest {
             val setValue = watchableSetOf("1")
             group(intValue, setValue).watch(this) { changes.send(it) }
             changes.expect(GroupChange(intValue, ValueChange(1)))
-            changes.expect(GroupChange(setValue, SetChange(setOf("1"))))
+            changes.expect(GroupChange(setValue, SetChange.Add(listOf("1"))))
         }
     }
 
@@ -54,7 +53,7 @@ class GroupTest {
             watch(group(intValue, setValue)) { changes.send(it) }
             changes.expect(
                 GroupChange(intValue, ValueChange(1)),
-                GroupChange(setValue, SetChange(setOf("1"))))
+                GroupChange(setValue, SetChange.Add(listOf("1"))))
         }
     }
 
@@ -65,7 +64,7 @@ class GroupTest {
             val handle = watch(group(intValue, setValue)) { changes.send(it) }
             changes.expect(
                 GroupChange(intValue, ValueChange(1)),
-                GroupChange(setValue, SetChange(setOf("1"))))
+                GroupChange(setValue, SetChange.Add(listOf("1"))))
             handle.close()
             changes.expectNone()
             setValue.use { add("2") }

@@ -16,5 +16,17 @@
 
 package io.gladed.watchable
 
-/** A [Watchable] [Set] which may not be modified by the reference holder. */
-interface ReadOnlyWatchableSet<T> : SimpleWatchable<Set<T>, T, SetChange.Simple<T>, SetChange<T>>, Set<T>
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.isActive
+
+/**
+ * A [Watchable] that allows for a more verbose series of simpler changes.
+ */
+interface SimpleWatchable<out T, out V, S, out C : HasSimpleChange<S>> : Watchable<T, V, C> {
+    fun simple(scope: CoroutineScope, func: suspend (S) -> Unit): WatchHandle =
+        watch(scope) {
+            for (simpleChange in it.simple) {
+                if (scope.isActive) func(simpleChange) else break
+            }
+        }
+}

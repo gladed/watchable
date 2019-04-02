@@ -26,6 +26,7 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import java.time.ZoneOffset
@@ -120,7 +121,7 @@ fun <T : Any> cover(obj: T) {
 }
 
 /** Monitor events until func does not throw. */
-suspend fun <T, V, C: Change> Watchable<T, V, C>.watchUntil(scope: CoroutineScope, func: () -> Unit) {
+suspend fun <T, V, C: Change> Watchable<T, V, C>.waitFor(scope: CoroutineScope, func: () -> Unit) {
     val mutex = Mutex(locked = true)
     val handle = scope.watch(this) {
         try {
@@ -139,7 +140,8 @@ suspend fun <C> ReceiveChannel<C>.expect(vararg expected: C, timeout: Long = 250
     val result = withTimeoutOrNull(timeout) {
         while (expectedList != current) {
             if (strict && current.isNotEmpty()) {
-                Assert.assertEquals(expectedList.take(current.size), current)
+                println("Comparing $expectedList with $current")
+                assertEquals(expectedList.take(current.size), current)
             }
             current.add(receive())
             if (!strict && current.size > expectedList.size) {
@@ -148,7 +150,7 @@ suspend fun <C> ReceiveChannel<C>.expect(vararg expected: C, timeout: Long = 250
         }
     }
     if (result == null) {
-        Assert.assertEquals(expectedList, current)
+        assertEquals(expectedList, current)
     }
 }
 

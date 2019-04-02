@@ -39,7 +39,7 @@ class BindValueTest : ScopeTest() {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         bind(dest, origin)
-        eventually { assertEquals(5, dest.value) }
+        eventually { assertEquals(5, dest.get()) }
     }
 
     @Test fun `example from readme`() = runBlocking {
@@ -55,10 +55,10 @@ class BindValueTest : ScopeTest() {
         watch(dest) { changes.send(it) }
         changes.expect(ValueChange(6))
         bind(dest, origin)
-        origin.assign(7)
+        origin.set(7)
         // Was dest ever 5?
         changes.expect(ValueChange(7))
-        assertEquals(7, dest.value)
+        assertEquals(7, dest.get())
     }
 
     @Test fun `bind to self`() {
@@ -105,9 +105,9 @@ class BindValueTest : ScopeTest() {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
                 bind(dest, origin)
-                dest.assign(7)
+                dest.set(7)
                 fail("Modification should not be permitted")
-                assertEquals(6, dest.value)
+                assertEquals(6, dest.get())
             }
         } catch (e: IllegalStateException) {
             // Expected
@@ -118,10 +118,10 @@ class BindValueTest : ScopeTest() {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         bind(dest, origin)
-        eventually { assertEquals(5, dest.value) }
+        eventually { assertEquals(5, dest.get()) }
         dest.unbind()
-        origin.assign(7)
-        always { assertEquals(5, dest.value) }
+        origin.set(7)
+        always { assertEquals(5, dest.get()) }
     }
 
     private val scope1 = LocalScope(newSingleThreadContext("scope1"))
@@ -134,7 +134,7 @@ class BindValueTest : ScopeTest() {
             changes.send(it)
         }
         changes.expect(ValueChange(5))
-        origin.assign(6)
+        origin.set(6)
         changes.expect(ValueChange(6))
     }
 
@@ -143,13 +143,13 @@ class BindValueTest : ScopeTest() {
         val dest = watchableValueOf(6)
         watch(dest) { changes.send(it) }
         scope1.bind(dest, origin)
-        origin.assign(7)
-        eventually { assertEquals(7, dest.value) }
+        origin.set(7)
+        eventually { assertEquals(7, dest.get()) }
         scope1.close() // Kill the destination value's scope
 
         // Changing origin has no effect on bound thing, though it is still bound
-        origin.assign(8)
-        always { assertEquals(7, dest.value) }
+        origin.set(8)
+        always { assertEquals(7, dest.get()) }
         assertTrue(dest.isBound())
     }
 }

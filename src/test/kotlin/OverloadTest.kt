@@ -30,14 +30,14 @@ class OverloadTest {
     fun manyChanges() = runBlocking {
         val list = watchableListOf(1)
         watch(list) {
-            if (it is ListChange.Add) {
-                it.added.forEach { added ->
+            if (it is ListChange.Insert) {
+                it.items.forEach { added ->
                     if (added % 2 == 0) list.use { remove(added) }
                 }
             }
             changes.send(it)
         }
-        changes.expect(ListChange.Add(0, listOf(1)))
+        changes.expect(ListChange.Insert(0, listOf(1)))
 
         // Generate more changes than will fit in the channel at once
         val range = 0 until 20

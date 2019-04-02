@@ -46,8 +46,8 @@ class CancelTest {
 
         runBlocking {
             // intValue can still be set
-            intValue.assign(88)
-            Assert.assertEquals(88, intValue.value)
+            intValue.set(88)
+            Assert.assertEquals(88, intValue.get())
             // And it generates no changes
             changes.expectNone()
         }
@@ -60,12 +60,12 @@ class CancelTest {
             changes.send(it)
         }
         changes.expect(ValueChange(5))
-        intValue.assign(17)
+        intValue.set(17)
         changes.expect(ValueChange(17))
 
         // Shut down the watching scope
         scope1.coroutineContext.cancel()
-        intValue.assign(88)
+        intValue.set(88)
         changes.expectNone()
     }
 
@@ -79,12 +79,12 @@ class CancelTest {
         }
 
         changes.expect(ValueChange(5))
-        intValue.assign(17)
+        intValue.set(17)
         changes.expect(ValueChange(17))
 
         // Shut down the job
         job.cancel()
-        intValue.assign(88)
+        intValue.set(88)
         changes.expectNone()
     }
 
@@ -103,7 +103,7 @@ class CancelTest {
             throw IllegalStateException("Whoops!")
         }
         changes.expect(ValueChange(5))
-        intValue.assign(7)
+        intValue.set(7)
         changes.expectNone()
         handle.cancel()
     }

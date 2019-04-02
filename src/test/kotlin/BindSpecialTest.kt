@@ -31,7 +31,7 @@ class BindSpecialTest {
 
         bind(dest, origin) {
             when(it) {
-                is ListChange.Add -> value += it.added.size
+                is ListChange.Insert -> value += it.items.size
                 is ListChange.Remove -> value -= 1
                 is ListChange.Replace -> { }
             }
@@ -40,10 +40,10 @@ class BindSpecialTest {
         origin.use {
             add(4)
             set(1, 6)
+            remove(4)
         }
 
-        eventually {
-            assertEquals(mapOf(4 to 2, 6 to 1), dest.value)
-        }
+        // The size ends up 2
+        eventually { assertEquals(2, dest.get()) }
     }
 }

@@ -46,12 +46,12 @@ internal fun <C> CoroutineScope.collect(
     // If this scope dies be sure to close our channel
     invokeOnClose { input.cancel() }
 
-    fun remaining() = periodMillis - (clock.millis() - lastSend)
+    fun millisRemaining() = periodMillis - (clock.millis() - lastSend)
 
     // Send everything currently in buffer, if any
     suspend fun deliver(force: Boolean = false) {
         while (true) input.poll()?.also { buffer += it } ?: break
-        if (buffer.isNotEmpty() && (remaining() <= 0 || force)) {
+        if (buffer.isNotEmpty() && (millisRemaining() <= 0 || force)) {
             send(buffer.toList())
             lastSend = clock.millis()
             buffer.clear()
@@ -74,7 +74,7 @@ internal fun <C> CoroutineScope.collect(
             }
         }
 
-        remaining().also {
+        millisRemaining().also {
             if (it > 0) onTimeout(it) {
                 deliver(false)
                 true

@@ -16,52 +16,49 @@
 
 package io.gladed.watchable
 
-interface MutableContains<T> : Contains<T> {
+interface MutableValue<T> : Value<T> {
     override var value: T
 }
 
-interface Contains<T> {
+interface Value<T> {
     val value: T
 }
 
 /** A [Watchable] value of [T] which may also be replaced or bound. Use [watchableValueOf] to create. */
 class WatchableValue<T> internal constructor(
     initial: T
-) : MutableWatchableBase<Contains<T>, T, MutableContains<T>, ValueChange<T>>(), ReadOnlyWatchableValue<T> {
+) : MutableWatchableBase<Value<T>, T, MutableValue<T>, ValueChange<T>>(), ReadOnlyWatchableValue<T> {
 
-    override var mutable: MutableContains<T> = object : MutableContains<T> {
-        // TODO: Launch changes when this happens
+    override var mutable: MutableValue<T> = object : MutableValue<T> {
         override var value: T = initial
+            set(value) {
+                doChange {
+                    changes += ValueChange(value)
+                    field = value
+                }
+            }
+
+        override fun toString() = "MutableValue($value)"
     }
 
-    /** Direct access to the current object. */
-    override val value: Contains<T> get() = mutable
+    /** Direct access to the container. */
+    override val value: Value<T> get() = mutable
 
-    override fun MutableContains<T>.toImmutable(): Contains<T> = object : Contains<T> {
+    override fun MutableValue<T>.toImmutable(): Value<T> = object : Value<T> {
         override val value = this@toImmutable.value
+        override fun toString() = "Value($value)"
     }
 
-    override fun Contains<T>.toInitialChange(): ValueChange<T> = ValueChange(value)
+    override fun Value<T>.toInitialChange(): ValueChange<T> = ValueChange(value)
 
-    override fun MutableContains<T>.applyBoundChange(change: ValueChange<T>) {
+    override fun MutableValue<T>.applyBoundChange(change: ValueChange<T>) {
         value = change.value
     }
 
-    //TODO: This can't be set() because that must take a Contains<T> which is terrible-looking
-    suspend fun assign(value: T) {
-        // TODO: Deal with all
-        mutable.value = value
-    }
-    /**
-     * Completely replace the contents of this watchable.
-     */
-    override suspend fun set(value: Contains<T>) {
-        // TODO: Deal with all
-        mutable.value = value.value
-    }
-
-    override fun replace(newValue: Contains<T>) {
-        mutable.value = newValue.value
+    suspend fun set(value: T) {
+        use {
+            mutable.value = value
+        }
     }
 
     override suspend fun clear() {
@@ -74,7 +71,12 @@ class WatchableValue<T> internal constructor(
     }
 
     override fun equals(other: Any?) =
-        if (other is WatchableValue<*>) value == other.value else value == other
-    override fun hashCode() = value.hashCode()
-    override fun toString() = "WatchableValue($value)"
+        when (other) {
+            is WatchableValue<*> -> value.value == other.value.value
+            is Value<*> -> value.value == other.value
+            else -> value.value == other
+        }
+
+    override fun hashCode() = value.value.hashCode()
+    override fun toString() = "WatchableValue($value.value)"
 }

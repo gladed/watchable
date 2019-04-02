@@ -34,11 +34,13 @@ class ReadmeTest {
         list.use {
             add(6)
             add(7)
+            remove(6)
         }
         delay(25)
         assertEquals("""
-            [Initial(initial=[4, 5])]
-            [Add(index=2, added=6), Add(index=3, added=7)]""".trimIndent(), out.joinToString("\n"))
+            [Insert(index=0, items=[4, 5])]
+            [Insert(index=2, items=[6]), Insert(index=3, items=[7]), Remove(range=2..2)]""".trimIndent(),
+            out.joinToString("\n"))
 
         // Prints: [Add(index=2, added=6), Add(index=3, added=7)]
     }
@@ -52,7 +54,7 @@ class ReadmeTest {
         list.add(3)
         delay(10)
         assertEquals("""
-            Initial(initial=[1])
-            Add(index=1, added=2)""".trimIndent(), out.joinToString("\n"))
+            Insert(index=0, items=[1])
+            Insert(index=1, items=[2])""".trimIndent(), out.joinToString("\n"))
     }
 }

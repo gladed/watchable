@@ -17,9 +17,7 @@
 package io.gladed.watchable
 
 /** Describes a change to a [Map]. */
-sealed class MapChange<K, out V> : Change {
-    abstract val simple: List<Simple<K, V>>
-
+sealed class MapChange<K, out V> : HasSimpleChange<MapChange.Simple<K, V>> {
     /** The addition or replacement of values for keys in the map. */
     data class Put<K, V>(val pairs: Collection<Pair<K, V>>) : MapChange<K, V>() {
         override val simple by lazy {
@@ -28,9 +26,9 @@ sealed class MapChange<K, out V> : Change {
     }
 
     /** The removal of elements corresponding to keys in the map. */
-    data class Remove<K, V>(val removed: Collection<K>) : MapChange<K, V>() {
+    data class Remove<K, V>(val keys: Collection<K>) : MapChange<K, V>() {
         override val simple by lazy {
-            removed.map { key -> Simple<K, V>(key) }
+            keys.map { key -> Simple<K, V>(key) }
         }
     }
 

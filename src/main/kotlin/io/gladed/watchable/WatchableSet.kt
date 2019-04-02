@@ -38,7 +38,7 @@ class WatchableSet<T> internal constructor(
 
         override fun add(element: T) = doChange {
             real.add(element).also { success ->
-                if (success) changes.add(SetChange(listOf(element)))
+                if (success) changes.add(SetChange.Add(listOf(element)))
             }
         }
 
@@ -57,7 +57,7 @@ class WatchableSet<T> internal constructor(
                     realIterator.remove()
                     // Last must be OK if remove() didn't throw
                     @Suppress("UNCHECKED_CAST")
-                    changes.add(SetChange(listOf(last as T)))
+                    changes.add(SetChange.Remove(listOf(last as T)))
                 }
             }
         }
@@ -102,16 +102,15 @@ class WatchableSet<T> internal constructor(
 
     override fun MutableSet<T>.toImmutable() = toSet()
 
-    override fun Set<T>.toInitialChange() = SetChange(this)
-
-    override fun MutableSet<T>.applyBoundChange(change: SetChange<T>) {
-        removeAll(change.removed)
-        addAll(change.added)
+    override fun Set<T>.toInitialChange() = takeIf { isNotEmpty() }?.let {
+        SetChange.Add(toList())
     }
 
-    override fun replace(newValue: Set<T>) {
-        mutable.clear()
-        mutable.addAll(newValue)
+    override fun MutableSet<T>.applyBoundChange(change: SetChange<T>) {
+        when (change) {
+            is SetChange.Remove -> removeAll(change.items)
+            is SetChange.Add -> addAll(change.items)
+        }
     }
 
     /** Return an unmodifiable form of this [WatchableSet]. */

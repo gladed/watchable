@@ -48,27 +48,27 @@ class WatchableList<T> internal constructor(
 
         override fun addAll(index: Int, elements: Collection<T>) = doChange {
             real.addAll(index, elements).also {
-                changes.add(ListChange.Add(index, elements.toList()))
+                changes.add(ListChange.Insert(index, elements.toList()))
             }
         }
 
         override fun add(index: Int, element: T) {
             doChange {
                 real.add(index, element).also {
-                    changes.add(ListChange.Add(index, listOf(element)))
+                    changes.add(ListChange.Insert(index, listOf(element)))
                 }
             }
         }
 
         override fun removeAt(index: Int) = doChange {
             real.removeAt(index).also {
-                changes.add(ListChange.Remove(index))
+                changes.add(ListChange.Remove(index..index))
             }
         }
 
         override fun set(index: Int, element: T) = doChange {
             real.set(index, element).also {
-                changes.add(ListChange.Replace(index, element))
+                changes.add(ListChange.Replace(index, listOf(element)))
             }
         }
     }
@@ -111,19 +111,18 @@ class WatchableList<T> internal constructor(
 
     override fun MutableList<T>.toImmutable() = toList()
 
-    override fun List<T>.toInitialChange() = ListChange.Add(0, this)
+    override fun List<T>.toInitialChange() = takeIf { isNotEmpty() }?.let {
+        ListChange.Insert(0, toList())
+    }
 
     override fun MutableList<T>.applyBoundChange(change: ListChange<T>) {
         when (change) {
-            is ListChange.Add -> addAll(change.index, change.added)
-            is ListChange.Remove -> removeAt(change.index)
-            is ListChange.Replace -> this[change.index] = change.replaced
+            is ListChange.Insert -> addAll(change.index, change.items)
+            is ListChange.Remove -> (change.range).forEach { _ -> removeAt(change.range.first) }
+            is ListChange.Replace -> (change.items).forEachIndexed { index, element ->
+                this[change.index + index] = element
+            }
         }
-    }
-
-    override fun replace(newValue: List<T>) {
-        mutable.clear()
-        mutable.addAll(newValue)
     }
 
     /** Return an unmodifiable form of this [WatchableList]. */

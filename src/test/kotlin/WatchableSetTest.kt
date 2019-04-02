@@ -30,15 +30,14 @@ class WatchableSetTest : ScopeTest() {
     val changes = Channel<SetChange<Int>>(Channel.UNLIMITED)
 
     @Test
-    fun replace() = runBlocking {
+    fun readOnly() = runBlocking {
         val set = watchableSetOf(1)
-        val set2 = watchableSetOf<Int>()
-        set2.bind(this, set)
-        val set3 = set2.readOnly()
+        val set2 = set.readOnly()
+        watch(set2) { changes.send(it) }
         assertThat(set.toString(), startsWith("WatchableSet("))
-        assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
-        set.set(setOf(3))
-        eventually { assertEquals(setOf(3), set3.value) }
+        assertThat(set2.toString(), startsWith("ReadOnlyWatchableSet("))
+        set.add(3)
+        eventually { assertEquals(setOf(1, 3), set2.value) }
     }
 
     @Test
@@ -70,20 +69,5 @@ class WatchableSetTest : ScopeTest() {
         set.retainAll(setOf(1, 3, 5, 7, 8, 9))
         assertEquals(setOf(1, 3, 5, 8, 9), set)
         Unit
-    }
-
-    @Test
-    fun `slow bind`() = runBlocking {
-        val set = watchableSetOf(1)
-        val set2 = watchableSetOf(2)
-        watch(set) { changes.send(it) }
-        changes.expect(SetChange(setOf(1)))
-        set2.bind(this, set)
-        set.set(setOf(3))
-        set.use { add(2) }
-        changes.expect(
-            SetChange(removed = listOf(1)),
-            SetChange(added = listOf(3)),
-            SetChange(added = listOf(2)))
     }
 }

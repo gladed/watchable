@@ -33,18 +33,13 @@ interface MutableWatchable<T, V, M : T, C : Change> : Watchable<T, V, C> {
     ): U
 
     /**
-     * Completely replace the contents of this watchable.
-     */
-    suspend fun set(value: T)
-
-    /**
-     * Empty out everything in this mutable collection.
+     * Empty out everything in this container.
      */
     suspend fun clear()
 
     /**
      * Binds this unbound object to [origin], such that when [origin] changes, this object is updated to match
-     * [origin] exactly, until [context] completes. While bound, this object may not be externally modified or
+     * [origin] exactly, until [scope] completes. While bound, this object may not be externally modified or
      * rebound.
      */
     suspend fun bind(scope: CoroutineScope, origin: Watchable<T, V, C>)

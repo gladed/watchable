@@ -28,18 +28,18 @@ suspend fun <T, V, M : T, C : Change> CoroutineScope.bind(
     origin: Watchable<T, V, C>
 ) = dest.bind(this, origin)
 
-///**
-// * Deliver changes for this [Watchable] to [func], starting with its initial state, until
-// * the returned [WatchHandle] is closed or this [CoroutineScope] completes.
-// */
-//fun <T, V, C : Change<T, V>> CoroutineScope.watchSimple(
-//    watchable: Watchable<T, V, C>,
-//    func: suspend SimpleChange<V>.() -> Unit
-//) = watchable.watchSimple(this@watchSimple, func)
+/**
+ * Deliver simplified changes for this [Watchable] as receiver objects to [func] until
+ * the returned [WatchHandle] is closed or this [CoroutineScope] completes.
+ */
+fun <T, V, S, C : HasSimpleChange<S>> CoroutineScope.simple(
+    watchable: SimpleWatchable<T, V, S, C>,
+    func: suspend S.() -> Unit
+) = watchable.simple(this@simple, func)
 
 /**
- * Deliver changes for this [Watchable] to [func], starting with its initial state, until
- * the returned [WatchHandle] is closed or this [CoroutineScope] completes.
+ * Deliver changes for this [Watchable] to [func] until the returned [WatchHandle] is closed or this
+ * [CoroutineScope] completes.
  */
 fun <T, V, C : Change> CoroutineScope.watch(
     watchable: Watchable<T, V, C>,
@@ -47,8 +47,8 @@ fun <T, V, C : Change> CoroutineScope.watch(
 ) = watchable.watch(this@watch, func)
 
 /**
- * Deliver multiple changes for this [Watchable] to [func], starting with its initial state, until
- * the returned [WatchHandle] is closed or this [CoroutineScope] completes.
+ * Deliver multiple changes for this [Watchable] to [func] until the returned [WatchHandle] is closed or this
+ * [CoroutineScope] completes.
  */
 fun <T, V, C : Change> CoroutineScope.batch(
     watchable: Watchable<T, V, C>,

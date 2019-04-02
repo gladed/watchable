@@ -82,14 +82,18 @@ class WatchableMap<K, V> internal constructor(
             }
 
         override fun putAll(from: Map<out K, V>) {
-            real.putAll(from).also {
-                changes += MapChange.Put(from.map { (key, value) -> key to value })
+            doChange {
+                real.putAll(from).also {
+                    changes += MapChange.Put(from.map { (key, value) -> key to value })
+                }
             }
         }
 
         override fun put(key: K, value: V): V? = doChange {
-            real.put(key, value).also {
-                changes += MapChange.Put(listOf(key to value))
+            doChange {
+                real.put(key, value).also {
+                    changes += MapChange.Put(listOf(key to value))
+                }
             }
         }
     }
@@ -116,23 +120,20 @@ class WatchableMap<K, V> internal constructor(
     /** Remove the value associated with [key], returning it if it was present. */
     suspend fun remove(key: K): V? = use { remove(key) }
 
-    /** Clear all values from this map. */
+    /**  all values from this map. */
     override suspend fun clear() = use { clear() }
 
     override fun MutableMap<K, V>.toImmutable() = toMap()
 
-    override fun Map<K, V>.toInitialChange() = MapChange.Put(map { (key, value) -> key to value })
+    override fun Map<K, V>.toInitialChange() = takeIf { isNotEmpty() }?.let {
+        MapChange.Put(map { (key, value) -> key to value })
+    }
 
     override fun MutableMap<K, V>.applyBoundChange(change: MapChange<K, V>) {
         when (change) {
             is MapChange.Put -> putAll(change.pairs)
-            is MapChange.Remove -> minusAssign(change.removed)
+            is MapChange.Remove -> minusAssign(change.keys)
         }
-    }
-
-    override fun replace(newValue: Map<K, V>) {
-        mutable.clear()
-        mutable.putAll(newValue)
     }
 
     /** Return an unmodifiable form of this [WatchableMap]. */

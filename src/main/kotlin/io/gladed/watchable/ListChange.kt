@@ -17,29 +17,36 @@
 package io.gladed.watchable
 
 /** Describes a change to a [List]. */
-sealed class ListChange<T> : Change {
-    abstract val simple: List<Simple<T>>
+sealed class ListChange<T> : HasSimpleChange<ListChange.Simple<T>> {
 
-    /** An insertion of elements to the list at a particular index. */
-    data class Add<T>(val index: Int, val added: List<T>) : ListChange<T>() {
+    /** An insertion of items to the list at a particular index. */
+    data class Insert<T>(val index: Int, val items: List<T>) : ListChange<T>() {
         override val simple by lazy {
-            added.mapIndexed { addIndex, value -> Simple(index + addIndex, value) }
+            items.mapIndexed { addIndex, value -> Simple(index + addIndex, value, insert = true) }
         }
     }
 
     /** A removal of elements at one or more locations */
-    data class Remove<T>(val index: Int) : ListChange<T>() {
+    data class Remove<T>(val range: IntRange) : ListChange<T>() {
+        constructor(index: Int) : this(index..index)
         override val simple by lazy {
-            listOf(Simple<T>(index, add = null))
+            range.map { Simple<T>(it) }
         }
     }
 
-    /** A replacement of a contiguous section of elements starting at a certain index. */
-    data class Replace<T>(val index: Int, val replaced: T) : ListChange<T>() {
+    /** Overwrites a contiguous section of elements already in the list, starting at [index]. */
+    data class Replace<T>(val index: Int, val items: List<T>) : ListChange<T>() {
         override val simple by lazy {
-            listOf(Simple(index, replaced))
+            items.mapIndexed { replaceIndex, element -> Simple(index + replaceIndex, element, insert = false) }
         }
     }
 
-    data class Simple<T>(val index: Int, val add: T? = null)
+    data class Simple<T>(
+        /** Index at which a change occurred. */
+        val index: Int,
+        /** Item added or inserted at [index], or null if the item there was removed. */
+        val item: T? = null,
+        /** If true and [item] is non-null, it was inserted, or if false [item] overwrites existing value. */
+        val insert: Boolean = true
+    )
 }

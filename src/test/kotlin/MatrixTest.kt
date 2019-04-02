@@ -32,7 +32,6 @@ import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Before
-import org.junit.Ignore
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
@@ -70,7 +69,7 @@ class MatrixTest<T, V, M : T, C: Change>: ScopeTest() {
         assertFalse(watchable2.isBound())
         bind(watchable2, watchable1)
         assertTrue(watchable2.isBound())
-        watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
+        watchable2.waitFor(this) { assertEquals(watchable1, watchable2) }
     }
 
     @Test fun `bind then make changes`() = runBlocking {
@@ -79,14 +78,14 @@ class MatrixTest<T, V, M : T, C: Change>: ScopeTest() {
             watchable1.use { modify() }
         }
         assertNotEquals(watchable1, watchable2)
-        watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
+        watchable2.waitFor(this) { assertEquals(watchable1, watchable2) }
         log(watchable1)
     }
 
     @Test fun `no change on bound`() = runBlocking {
         bind(watchable2, watchable1)
         try {
-            watchable2.use { modify() }
+            for (i in 0 until 100) watchable2.use { modify() }
             fail("Should not have worked")
         } catch (e: IllegalStateException) {
             log("Correct failure: $e")
@@ -123,7 +122,7 @@ class MatrixTest<T, V, M : T, C: Change>: ScopeTest() {
             }
             watchable1.use(finalMod)
 
-            watchable2.watchUntil(this) {
+            watchable2.waitFor(this) {
                 assertEquals(watchable1, watchable2)
             }
 
@@ -167,7 +166,7 @@ class MatrixTest<T, V, M : T, C: Change>: ScopeTest() {
         }
 
         // Wait for everything to arrive at watchable2
-        watchable2.watchUntil(this) {
+        watchable2.waitFor(this) {
             assertEquals(watchable1, watchable2)
         }
 
@@ -186,15 +185,9 @@ class MatrixTest<T, V, M : T, C: Change>: ScopeTest() {
         assertNotEquals(watchable2, watchable1.value)
     }
 
-    @Test fun replace() = runBlocking {
-        watchable1.set(watchable2.value)
-        assertEquals(watchable1, watchable2)
-    }
-
-    @Ignore // TODO: Fix, gets all crashy
-    @Test fun stress() = runBlocking {
+    @Test(timeout = 3000) fun stress() = runBlocking {
         val start = System.currentTimeMillis()
-        val count = 2000
+        val count = 10000
         bind(watchable2, watchable1)
         val allJobs = (0 until count).map {
             launch {
@@ -202,11 +195,6 @@ class MatrixTest<T, V, M : T, C: Change>: ScopeTest() {
                     modify()
                 }
             }
-        }
-
-        allJobs.joinAll()
-        watchable1.use {
-            finalMod(this)
         }
 
         watch(watchable2) {
@@ -218,8 +206,16 @@ class MatrixTest<T, V, M : T, C: Change>: ScopeTest() {
             }
         }
 
+        // Join up
+        log("Waiting for all modifications to be done")
+        allJobs.joinAll()
+        watchable1.use {
+            finalMod(this)
+        }
+
         // Eventually w2 will catch up to w1
-        watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
+        log("Waiting for everything to match")
+        watchable2.waitFor(this) { assertEquals(watchable1, watchable2) }
         assertEquals(watchable1.hashCode(), watchable2.hashCode())
         val elapsed = System.currentTimeMillis() - start
         log("$count in $elapsed ms. ${elapsed * 1000 / count} μs per iteration.")

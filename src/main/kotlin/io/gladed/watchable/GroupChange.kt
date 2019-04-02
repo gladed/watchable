@@ -17,7 +17,7 @@
 package io.gladed.watchable
 
 /** A change to a single watchable in a group. */
-data class GroupChange<out T, out V, C : Change>(
-    val watchable: Watchable<T, V, C>,
-    val change: C
+data class GroupChange<out T, out V>(
+    val watchable: Watchable<T, V, Change>,
+    val change: Change
 ) : Change
