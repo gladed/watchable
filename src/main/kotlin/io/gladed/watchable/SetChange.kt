@@ -17,19 +17,18 @@
 package io.gladed.watchable
 
 /** Describes a change to a [Set]. */
-sealed class SetChange<T> : Change<Set<T>, T> {
-    /** The initial state of the set at the time watching began. */
-    data class Initial<T>(val initial: Set<T>) : SetChange<T>() {
-        override val simple by lazy { initial.map { SimpleChange(add = it) } }
+data class SetChange<T>(
+    val added: Collection<T> = emptyList(),
+    val removed: Collection<T> = emptyList()
+) : Change {
+
+    /** This change, in terms of [Simple] changes. */
+    val simple: List<Simple<T>> by lazy {
+        removed.map { Simple(it, false) } + added.map { Simple(it, true) }
     }
 
-    /** A change representing the addition of an element to the set. */
-    data class Add<T>(val added: T) : SetChange<T>() {
-        override val simple by lazy { listOf(SimpleChange(add = added)) }
-    }
-
-    /** A change representing the removal of an element from the set. */
-    data class Remove<T>(val removed: T) : SetChange<T>() {
-        override val simple by lazy { listOf(SimpleChange(remove = removed)) }
+    /** The simplest possible explanation of a change. */
+    data class Simple<T>(val value: T, val add: Boolean) {
+        val remove get() = !add
     }
 }

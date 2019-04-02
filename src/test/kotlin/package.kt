@@ -120,7 +120,7 @@ fun <T : Any> cover(obj: T) {
 }
 
 /** Monitor events until func does not throw. */
-suspend fun <T, V, C: Change<T, V>> Watchable<T, V, C>.watchUntil(scope: CoroutineScope, func: () -> Unit) {
+suspend fun <T, V, C: Change> Watchable<T, V, C>.watchUntil(scope: CoroutineScope, func: () -> Unit) {
     val mutex = Mutex(locked = true)
     val handle = scope.watch(this) {
         try {

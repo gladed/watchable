@@ -46,23 +46,29 @@ class WatchableList<T> internal constructor(
 
         override fun get(index: Int) = real[index]
 
+        override fun addAll(index: Int, elements: Collection<T>) = doChange {
+            real.addAll(index, elements).also {
+                changes.add(ListChange.Add(index, elements.toList()))
+            }
+        }
+
         override fun add(index: Int, element: T) {
             doChange {
                 real.add(index, element).also {
-                    changes.add(ListChange.Add(index, element))
+                    changes.add(ListChange.Add(index, listOf(element)))
                 }
             }
         }
 
         override fun removeAt(index: Int) = doChange {
             real.removeAt(index).also {
-                changes.add(ListChange.Remove(index, it))
+                changes.add(ListChange.Remove(index))
             }
         }
 
         override fun set(index: Int, element: T) = doChange {
             real.set(index, element).also {
-                changes.add(ListChange.Replace(index, it, element))
+                changes.add(ListChange.Replace(index, element))
             }
         }
     }
@@ -101,21 +107,17 @@ class WatchableList<T> internal constructor(
         use { retainAll(elements) }
 
     /** Clear all values from this list. */
-    suspend fun clear() = use { clear() }
+    override suspend fun clear() = use { clear() }
 
     override fun MutableList<T>.toImmutable() = toList()
 
-    override fun List<T>.toInitialChange() = ListChange.Initial(this)
+    override fun List<T>.toInitialChange() = ListChange.Add(0, this)
 
     override fun MutableList<T>.applyBoundChange(change: ListChange<T>) {
         when (change) {
-            is ListChange.Initial -> {
-                clear()
-                addAll(change.initial)
-            }
-            is ListChange.Add -> add(change.index, change.added)
+            is ListChange.Add -> addAll(change.index, change.added)
             is ListChange.Remove -> removeAt(change.index)
-            is ListChange.Replace -> set(change.index, change.added)
+            is ListChange.Replace -> this[change.index] = change.replaced
         }
     }
 

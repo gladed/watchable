@@ -53,12 +53,12 @@ class WatchableMapTest : ScopeTest() {
         val map2 = watchableMapOf(2 to "2")
         val map3 = map2.readOnly()
         watch(map3) { changes.send(it) }
-        changes.expect(MapChange.Initial(mapOf(2 to "2")))
-        bind(map2, map)
+        changes.expect(MapChange.Put(listOf(2 to "2")))
+        map2.bind(this, map)
         assertThat(map.toString(), startsWith("WatchableMap("))
         assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
         map.set(mapOf(3 to "3"))
-        changes.expect(MapChange.Remove(2, "2"), MapChange.Add(3, "3"))
+        changes.expect(MapChange.Remove(listOf(2)), MapChange.Put(listOf(3 to "3")))
     }
 
     @Test fun bindReadOnly() = runBlocking {

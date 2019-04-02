@@ -16,8 +16,5 @@
 
 package io.gladed.watchable
 
-/** Describes a change to an object of type [T] which contains values of type [V]. */
-interface Change<out T, out V> {
-    /** A list of [SimpleChange] objects that describe all parts of this change. */
-    val simple: Collection<SimpleChange<V>>
-}
+/** Describes a change of some kind. */
+interface Change

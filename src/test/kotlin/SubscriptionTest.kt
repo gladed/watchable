@@ -44,7 +44,7 @@ class SubscriptionTest {
     @Test fun `cancel immediately`() {
         runThenCancel {
             val handle = watch(set) { changes.send(it) }
-            changes.expect(SetChange.Initial(setOf(1)))
+            changes.expect(SetChange(setOf(1)))
             handle.cancel() // Instantly cancel, no more changes!
             set.use { add(2) }
             changes.expectNone()
@@ -54,7 +54,7 @@ class SubscriptionTest {
     @Test fun `close drains all pending changes`() {
         runThenCancel {
             val handle = watch(set) { changes.send(it) }
-            changes.expect(SetChange.Initial(setOf(1)))
+            changes.expect(SetChange(setOf(1)))
             set.use { add(2) }
             log("Close watch handle")
             handle.close()
@@ -63,7 +63,7 @@ class SubscriptionTest {
             log("Use")
             set.use { add(3) }
             log("Waiting for 2 to arrive")
-            changes.expect(SetChange.Add(2))
+            changes.expect(SetChange(listOf(2)))
             log("Making sure 3 never arrives")
             changes.expectNone()
         }

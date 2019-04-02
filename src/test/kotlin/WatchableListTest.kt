@@ -36,9 +36,9 @@ class WatchableListTest : ScopeTest() {
         runBlocking {
             val list = watchableListOf(3, 4)
             batch(list) { changes.send(it) }
-            changes.expect(listOf(ListChange.Initial(listOf(3, 4))))
+            changes.expect(listOf(ListChange.Add(0, listOf(3, 4))))
             list.use { clear() }
-            changes.expect(listOf(ListChange.Remove(0, 3), ListChange.Remove(0, 4)))
+            changes.expect(listOf(ListChange.Remove(0), ListChange.Remove(0)))
             changes.expectNone()
         }
     }
@@ -48,7 +48,7 @@ class WatchableListTest : ScopeTest() {
             val list = watchableListOf(1)
             val readOnlyList = list.readOnly()
             watch(readOnlyList) { changes.send(it) }
-            changes.expect(ListChange.Initial(listOf(1)))
+            changes.expect(ListChange.Add(0, listOf(1)))
             assertThat(list.toString(), startsWith("WatchableList("))
             assertThat(readOnlyList.toString(), startsWith("ReadOnlyWatchableList("))
         }
@@ -59,9 +59,9 @@ class WatchableListTest : ScopeTest() {
             val list = watchableListOf(1, null)
             val channel = Channel<ListChange<Int?>>(20)
             watch(list) { channel.send(it) }
-            channel.expect(ListChange.Initial(listOf(1, null)))
+            channel.expect(ListChange.Add(0, listOf(1, null)))
             list.use { remove(null) }
-            channel.expect(ListChange.Remove(1, null))
+            channel.expect(ListChange.Remove(1))
         }
     }
 

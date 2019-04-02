@@ -17,24 +17,29 @@
 package io.gladed.watchable
 
 /** Describes a change to a [List]. */
-sealed class ListChange<T> : Change<List<T>, T> {
-    /** The initial state of the list at the time watching began. */
-    data class Initial<T>(val initial: List<T>) : ListChange<T>() {
-        override val simple by lazy { initial.map { SimpleChange(add = it) } }
+sealed class ListChange<T> : Change {
+    abstract val simple: List<Simple<T>>
+
+    /** An insertion of elements to the list at a particular index. */
+    data class Add<T>(val index: Int, val added: List<T>) : ListChange<T>() {
+        override val simple by lazy {
+            added.mapIndexed { addIndex, value -> Simple(index + addIndex, value) }
+        }
     }
 
-    /** An addition of an element to the list. */
-    data class Add<T>(val index: Int, val added: T) : ListChange<T>() {
-        override val simple by lazy { listOf(SimpleChange(add = added)) }
+    /** A removal of elements at one or more locations */
+    data class Remove<T>(val index: Int) : ListChange<T>() {
+        override val simple by lazy {
+            listOf(Simple<T>(index, add = null))
+        }
     }
 
-    /** A removal of an element in the list. */
-    data class Remove<T>(val index: Int, val removed: T) : ListChange<T>() {
-        override val simple by lazy { listOf(SimpleChange(remove = removed)) }
+    /** A replacement of a contiguous section of elements starting at a certain index. */
+    data class Replace<T>(val index: Int, val replaced: T) : ListChange<T>() {
+        override val simple by lazy {
+            listOf(Simple(index, replaced))
+        }
     }
 
-    /** A replacement of the element at a specific place in the list. */
-    data class Replace<T>(val index: Int, val removed: T, val added: T) : ListChange<T>() {
-        override val simple by lazy { listOf(SimpleChange(remove = removed, add = added)) }
-    }
+    data class Simple<T>(val index: Int, val add: T? = null)
 }

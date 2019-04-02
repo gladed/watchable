@@ -32,10 +32,10 @@ class FlushTest : ScopeTest() {
         val value = watchableValueOf(1)
         val handle = watch(value) { changes.send(it) }
         runBlocking {
-            changes.expect(ValueChange(1, 1))
-            value.set(2)
+            changes.expect(ValueChange(1))
+            value.assign(2)
             handle.close()
-            changes.expect(ValueChange(1, 2))
+            changes.expect(ValueChange(2))
             handle.join()
         }
     }
@@ -47,7 +47,7 @@ class FlushTest : ScopeTest() {
             val value = watchableValueOf(1)
             val handle = batch(value, 1000) { changes.send(it) }
             changes.expect(listOf((ValueChange(1, 1))))
-            value.set(2)
+            value.assign(2)
             // close should cause an immediate flush of outstanding batch items regardless of its timeout.
             changes.expectNone()
             handle.close()

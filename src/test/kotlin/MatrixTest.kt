@@ -39,7 +39,7 @@ import org.junit.runners.Parameterized.Parameter
 import org.junit.runners.Parameterized.Parameters
 
 @RunWith(Parameterized::class)
-class MatrixTest<T, V, M : T, C: Change<T, V>>: ScopeTest() {
+class MatrixTest<T, V, M : T, C: Change>: ScopeTest() {
 
     private val chooser = Chooser()
 
@@ -190,7 +190,7 @@ class MatrixTest<T, V, M : T, C: Change<T, V>>: ScopeTest() {
         assertEquals(watchable1, watchable2)
     }
 
-    @Test fun stress() {
+    @Test fun stress() = runBlocking {
         val start = System.currentTimeMillis()
         val count = 2000
         bind(watchable2, watchable1)
@@ -202,11 +202,9 @@ class MatrixTest<T, V, M : T, C: Change<T, V>>: ScopeTest() {
             }
         }
 
-        runBlocking {
-            allJobs.joinAll()
-            watchable1.use {
-                finalMod(this)
-            }
+        allJobs.joinAll()
+        watchable1.use {
+            finalMod(this)
         }
 
         watch(watchable2) {
@@ -219,9 +217,7 @@ class MatrixTest<T, V, M : T, C: Change<T, V>>: ScopeTest() {
         }
 
         // Eventually w2 will catch up to w1
-        runBlocking {
-            watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
-        }
+        watchable2.watchUntil(this) { assertEquals(watchable1, watchable2) }
         assertEquals(watchable1.hashCode(), watchable2.hashCode())
         val elapsed = System.currentTimeMillis() - start
         log("$count in $elapsed ms. ${elapsed * 1000 / count} μs per iteration.")

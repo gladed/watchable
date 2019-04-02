@@ -30,12 +30,14 @@ class OverloadTest {
     fun manyChanges() = runBlocking {
         val list = watchableListOf(1)
         watch(list) {
-            if (it is ListChange.Add && (it.added % 2 == 0)) {
-                list.use { remove(it.added) }
+            if (it is ListChange.Add) {
+                it.added.forEach { added ->
+                    if (added % 2 == 0) list.use { remove(added) }
+                }
             }
             changes.send(it)
         }
-        changes.expect(ListChange.Initial(listOf(1)))
+        changes.expect(ListChange.Add(0, listOf(1)))
 
         // Generate more changes than will fit in the channel at once
         val range = 0 until 20
@@ -44,6 +46,6 @@ class OverloadTest {
         }
 
         // Wait until 18 (the last even item) is removed
-        changes.expect(ListChange.Remove(10, 18), strict = false)
+        changes.expect(ListChange.Remove(10), strict = false)
     }
 }

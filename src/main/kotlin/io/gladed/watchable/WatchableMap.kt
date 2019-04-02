@@ -60,7 +60,7 @@ class WatchableMap<K, V> internal constructor(
                                 object : MutableMap.MutableEntry<K, V> by original {
                                     override fun setValue(newValue: V): V = doChange {
                                         original.setValue(newValue).also {
-                                            changes += MapChange.Replace(key, it, newValue)
+                                            changes += MapChange.Put(listOf(key to newValue))
                                         }
                                     }
 
@@ -75,19 +75,21 @@ class WatchableMap<K, V> internal constructor(
                         doChange {
                             realIterator.remove()
                             // Last cannot be null if remove() succeeded
-                            changes += MapChange.Remove(last!!.key, last!!.value)
+                            changes += MapChange.Remove(listOf(last!!.key))
                         }
                     }
                 }
             }
 
+        override fun putAll(from: Map<out K, V>) {
+            real.putAll(from).also {
+                changes += MapChange.Put(from.map { (key, value) -> key to value })
+            }
+        }
+
         override fun put(key: K, value: V): V? = doChange {
-            real.put(key, value).also { oldValue ->
-                if (oldValue == null) {
-                    changes += MapChange.Add(key, value)
-                } else {
-                    changes += MapChange.Replace(key, oldValue, value)
-                }
+            real.put(key, value).also {
+                changes += MapChange.Put(listOf(key to value))
             }
         }
     }
@@ -115,21 +117,16 @@ class WatchableMap<K, V> internal constructor(
     suspend fun remove(key: K): V? = use { remove(key) }
 
     /** Clear all values from this map. */
-    suspend fun clear() = use { clear() }
+    override suspend fun clear() = use { clear() }
 
     override fun MutableMap<K, V>.toImmutable() = toMap()
 
-    override fun Map<K, V>.toInitialChange() = MapChange.Initial(this)
+    override fun Map<K, V>.toInitialChange() = MapChange.Put(map { (key, value) -> key to value })
 
     override fun MutableMap<K, V>.applyBoundChange(change: MapChange<K, V>) {
         when (change) {
-            is MapChange.Initial -> {
-                clear()
-                putAll(change.initial)
-            }
-            is MapChange.Add -> put(change.key, change.added)
-            is MapChange.Remove -> remove(change.key)
-            is MapChange.Replace -> put(change.key, change.added)
+            is MapChange.Put -> putAll(change.pairs)
+            is MapChange.Remove -> minusAssign(change.removed)
         }
     }
 

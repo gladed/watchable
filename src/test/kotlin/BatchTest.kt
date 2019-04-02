@@ -30,11 +30,11 @@ class BatchTest : ScopeTest() {
 
     @Test fun `batch changes arrive slowly`() = runBlocking {
         batch(set, 150) { changes.send(it) }
-        changes.expect(listOf(SetChange.Initial(setOf(1))))
+        changes.expect(listOf(SetChange(setOf(1))))
 
         set.use { add(2) }
         // Nothing shows up immediately but eventually it comes by
         changes.expectNone(25)
-        changes.expect(listOf(SetChange.Add(2)), timeout = 250)
+        changes.expect(listOf(SetChange(setOf(2))), timeout = 250)
     }
 }

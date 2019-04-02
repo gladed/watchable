@@ -42,24 +42,22 @@ class BindValueTest : ScopeTest() {
         eventually { assertEquals(5, dest.value) }
     }
 
-    @Test fun `example from readme`() {
+    @Test fun `example from readme`() = runBlocking {
         val from = listOf(4, 5).toWatchableList()
         val into = watchableListOf<Int>()
         bind(into, from)
-        runBlocking {
-            eventually { assertEquals(from, into) }
-        }
+        eventually { assertEquals(from, into) }
     }
 
     @Test fun `bind then change`() = runBlocking {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         watch(dest) { changes.send(it) }
-        changes.expect(ValueChange(6, 6))
+        changes.expect(ValueChange(6))
         bind(dest, origin)
-        origin.set(7)
+        origin.assign(7)
         // Was dest ever 5?
-        changes.expect(ValueChange(6, 7))
+        changes.expect(ValueChange(7))
         assertEquals(7, dest.value)
     }
 
@@ -107,7 +105,7 @@ class BindValueTest : ScopeTest() {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
                 bind(dest, origin)
-                dest.set(7)
+                dest.assign(7)
                 fail("Modification should not be permitted")
                 assertEquals(6, dest.value)
             }
@@ -122,7 +120,7 @@ class BindValueTest : ScopeTest() {
         bind(dest, origin)
         eventually { assertEquals(5, dest.value) }
         dest.unbind()
-        origin.set(7)
+        origin.assign(7)
         always { assertEquals(5, dest.value) }
     }
 
@@ -135,9 +133,9 @@ class BindValueTest : ScopeTest() {
             assertThat(Thread.currentThread().name, containsString("scope1"))
             changes.send(it)
         }
-        changes.expect(ValueChange(5, 5))
-        origin.set(6)
-        changes.expect(ValueChange(5, 6))
+        changes.expect(ValueChange(5))
+        origin.assign(6)
+        changes.expect(ValueChange(6))
     }
 
     @Test fun `kill binding scope`() = runBlocking {
@@ -145,12 +143,12 @@ class BindValueTest : ScopeTest() {
         val dest = watchableValueOf(6)
         watch(dest) { changes.send(it) }
         scope1.bind(dest, origin)
-        origin.set(7)
+        origin.assign(7)
         eventually { assertEquals(7, dest.value) }
         scope1.close() // Kill the destination value's scope
 
         // Changing origin has no effect on bound thing, though it is still bound
-        origin.set(8)
+        origin.assign(8)
         always { assertEquals(7, dest.value) }
         assertTrue(dest.isBound())
     }

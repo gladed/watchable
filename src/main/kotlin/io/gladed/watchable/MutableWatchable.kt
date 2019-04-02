@@ -21,7 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 /**
  * A [Watchable] which may be mutated in the form of an [M] and bound to other [Watchable] sources.
  */
-interface MutableWatchable<T, V, M : T, C : Change<T, V>> : Watchable<T, V, C> {
+interface MutableWatchable<T, V, M : T, C : Change> : Watchable<T, V, C> {
     /**
      * Suspend until [func] can safely execute, reading and/or writing data on [M] as desired and returning
      * the result. Note: if currently bound ([isBound] returns true), attempts to modify [M] will throw.
@@ -38,18 +38,27 @@ interface MutableWatchable<T, V, M : T, C : Change<T, V>> : Watchable<T, V, C> {
     suspend fun set(value: T)
 
     /**
+     * Empty out everything in this mutable collection.
+     */
+    suspend fun clear()
+
+    /**
      * Binds this unbound object to [origin], such that when [origin] changes, this object is updated to match
-     * [origin] exactly, until [scope] completes. While bound, this object may not be externally modified or
+     * [origin] exactly, until [context] completes. While bound, this object may not be externally modified or
      * rebound.
      */
-    fun bind(scope: CoroutineScope, origin: Watchable<T, V, C>)
+    suspend fun bind(scope: CoroutineScope, origin: Watchable<T, V, C>)
 
     /**
      * Binds this unbound object to [origin], such that for every change to [origin], the change is applied
      * to this object with [apply], until [scope] completes. While bound, this object may not be externally
      * modified or rebound.
      */
-    fun <T2, V2, C2 : Change<T2, V2>> bind(scope: CoroutineScope, origin: Watchable<T2, V2, C2>, apply: M.(C2) -> Unit)
+    suspend fun <T2, V2, C2 : Change> bind(
+        scope: CoroutineScope,
+        origin: Watchable<T2, V2, C2>,
+        apply: M.(C2) -> Unit
+    )
 
     /** Cancel any existing binding that exists for this object. */
     fun unbind()

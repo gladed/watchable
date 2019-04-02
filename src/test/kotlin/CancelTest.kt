@@ -46,7 +46,7 @@ class CancelTest {
 
         runBlocking {
             // intValue can still be set
-            intValue.set(88)
+            intValue.assign(88)
             Assert.assertEquals(88, intValue.value)
             // And it generates no changes
             changes.expectNone()
@@ -59,13 +59,13 @@ class CancelTest {
             Assert.assertThat(Thread.currentThread().name, CoreMatchers.containsString("scope1"))
             changes.send(it)
         }
-        changes.expect(ValueChange(5, 5))
-        intValue.set(17)
-        changes.expect(ValueChange(5, 17))
+        changes.expect(ValueChange(5))
+        intValue.assign(17)
+        changes.expect(ValueChange(17))
 
         // Shut down the watching scope
         scope1.coroutineContext.cancel()
-        intValue.set(88)
+        intValue.assign(88)
         changes.expectNone()
     }
 
@@ -78,13 +78,13 @@ class CancelTest {
             changes.send(it)
         }
 
-        changes.expect(ValueChange(5, 5))
-        intValue.set(17)
-        changes.expect(ValueChange(5, 17))
+        changes.expect(ValueChange(5))
+        intValue.assign(17)
+        changes.expect(ValueChange(17))
 
         // Shut down the job
         job.cancel()
-        intValue.set(88)
+        intValue.assign(88)
         changes.expectNone()
     }
 
@@ -92,7 +92,7 @@ class CancelTest {
     fun `watch allows parent scope to join`() = runBlocking {
         intValue = watchableValueOf(5)
         watch(intValue) { changes.send(it) }
-        changes.expect(ValueChange(5, 5))
+        changes.expect(ValueChange(5))
     }
 
     @Test
@@ -102,8 +102,8 @@ class CancelTest {
             changes.send(it)
             throw IllegalStateException("Whoops!")
         }
-        changes.expect(ValueChange(5, 5))
-        intValue.set(7)
+        changes.expect(ValueChange(5))
+        intValue.assign(7)
         changes.expectNone()
         handle.cancel()
     }

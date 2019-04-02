@@ -17,4 +17,15 @@
 package io.gladed.watchable
 
 /** Describes a change in the simplest possible form. */
-data class SimpleChange<out T>(val remove: T? = null, val add: T? = null)
+data class SimpleChange<out K, out V>(
+    /** The site of the change. */
+    val location: K,
+    /** The item added, or null if removed. */
+    val add: V? = null
+) {
+    /** Return true if this change corresponds to the remove of the element at [location]. */
+    val isRemove get() = add == null
+
+    /** Return true if this change corresponds to an addition of [add] at [location]. */
+    val isAdd get() = !isRemove
+}

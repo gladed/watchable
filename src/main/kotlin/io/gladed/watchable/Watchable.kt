@@ -20,7 +20,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.isActive
 
 /**
- * Wraps container [T] (having objects of type [V]) so that it may be watched for changes (of type [C]).
+ * Wraps container [T] (having objects of type [V])  so that it may be watched for
+ * changes (of type [C]).
  *
  * Each watch operation takes a [CoroutineScope]. Callbacks are delivered using this scope's context, and stop
  * automatically when this scope cancels or completes.
@@ -28,7 +29,7 @@ import kotlinx.coroutines.isActive
  * Each watch operation also returns a [WatchHandle] which may be used to independently cancel or join the watch
  * operation.
  */
-interface Watchable<out T, out V, out C : Change<T, V>> {
+interface Watchable<out T, out V, out C : Change> {
 
     /** Return an immutable copy of the current value of [T]. */
     val value: T
@@ -55,11 +56,11 @@ interface Watchable<out T, out V, out C : Change<T, V>> {
             }
         }
 
-    /**
-     * Deliver all changes from this [Watchable] to [func] receiving [SimpleChange] objects.
-     */
-    fun watchSimple(scope: CoroutineScope, func: suspend SimpleChange<V>.() -> Unit) =
-        watch(scope) { change ->
-            change.simple.forEach { it.func() }
-        }
+//    /**
+//     * Deliver all changes from this [Watchable] to [func] receiving [SimpleChange] objects.
+//     */
+//    fun watchSimple(scope: CoroutineScope, func: suspend SimpleChange<K, V>.() -> Unit) =
+//        watch(scope) { change ->
+//            change.simple.forEach { it.func() }
+//        }
 }

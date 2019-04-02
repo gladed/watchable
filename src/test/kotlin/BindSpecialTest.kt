@@ -18,6 +18,7 @@ import io.gladed.watchable.ListChange
 import io.gladed.watchable.bind
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
+import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
@@ -26,39 +27,13 @@ class BindSpecialTest {
     @Test fun specialBinding() = runBlocking {
         // Show how we can transform data types into each other
         val origin = watchableListOf(4, 5)
-        val dest = watchableMapOf(0 to 0)
-
-        fun MutableMap<Int, Int>.increment(key: Int) {
-            val addCount = this[key]
-            when(addCount) {
-                null -> this[key] = 1
-                else -> this[key] = addCount + 1
-            }
-        }
-
-        fun MutableMap<Int, Int>.decrement(key: Int) {
-            val removeCount = this[key]
-            when(removeCount) {
-                null -> remove(key) // Shouldn't happen really
-                1 -> remove(key)
-                else -> this[key] = removeCount - 1
-            }
-        }
+        val dest = watchableValueOf(0)
 
         bind(dest, origin) {
             when(it) {
-                is ListChange.Initial -> {
-                    clear()
-                    for (key in it.initial) {
-                        increment(key)
-                    }
-                }
-                is ListChange.Add -> increment(it.added)
-                is ListChange.Remove -> decrement(it.removed)
-                is ListChange.Replace -> {
-                    increment(it.added)
-                    decrement(it.removed)
-                }
+                is ListChange.Add -> dest.set(dest.value + it.added.size)
+                is ListChange.Remove -> dest.set(dest.value  - 1)
+                is ListChange.Replace -> { }
             }
         }
 

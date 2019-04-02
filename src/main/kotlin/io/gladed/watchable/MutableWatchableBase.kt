@@ -27,7 +27,7 @@ import kotlinx.coroutines.yield
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
     kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Suppress("TooManyFunctions") // Useful
-abstract class MutableWatchableBase<T, V, M : T, C : Change<T, V>> : MutableWatchable<T, V, M, C> {
+abstract class MutableWatchableBase<T, V, M : T, C : Change> : MutableWatchable<T, V, M, C> {
 
     /** The underlying mutable form of the data this object. When changes are applied, [changes] must be updated. */
     protected abstract val mutable: M
@@ -137,13 +137,14 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change<T, V>> : MutableWatc
     /** Wrapper for a binding. */
     private class Binding(val other: Watchable<*, *, *>, val handle: WatchHandle)
 
-    override fun bind(scope: CoroutineScope, origin: Watchable<T, V, C>) {
+    override suspend fun bind(scope: CoroutineScope, origin: Watchable<T, V, C>) {
+        clear()
         bind(scope, origin) {
             applyBoundChange(it)
         }
     }
 
-    override fun <T2, V2, C2 : Change<T2, V2>> bind(
+    override suspend fun <T2, V2, C2 : Change> bind(
         scope: CoroutineScope,
         origin: Watchable<T2, V2, C2>,
         apply: M.(C2) -> Unit

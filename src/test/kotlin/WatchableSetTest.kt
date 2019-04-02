@@ -15,7 +15,6 @@
  */
 
 import io.gladed.watchable.SetChange
-import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.channels.Channel
@@ -34,7 +33,7 @@ class WatchableSetTest : ScopeTest() {
     fun replace() = runBlocking {
         val set = watchableSetOf(1)
         val set2 = watchableSetOf<Int>()
-        bind(set2, set)
+        set2.bind(this, set)
         val set3 = set2.readOnly()
         assertThat(set.toString(), startsWith("WatchableSet("))
         assertThat(set3.toString(), startsWith("ReadOnlyWatchableSet("))
@@ -78,10 +77,13 @@ class WatchableSetTest : ScopeTest() {
         val set = watchableSetOf(1)
         val set2 = watchableSetOf(2)
         watch(set) { changes.send(it) }
-        changes.expect(SetChange.Initial(setOf(1)))
-        bind(set2, set)
+        changes.expect(SetChange(setOf(1)))
+        set2.bind(this, set)
         set.set(setOf(3))
         set.use { add(2) }
-        changes.expect(SetChange.Remove(1), SetChange.Add(3), SetChange.Add(2))
+        changes.expect(
+            SetChange(removed = listOf(1)),
+            SetChange(added = listOf(3)),
+            SetChange(added = listOf(2)))
     }
 }

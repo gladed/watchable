@@ -22,7 +22,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 /**
  * A group of [Watchable] objects that can be watched for any change, which arrives as a [GroupChange].
  */
-class WatchableGroup<out T, out V, C : Change<T, V>>(
+class WatchableGroup<out T, out V, C : Change>(
     private val watchables: List<Watchable<T, V, C>>
 ) : Watchable<List<Watchable<T, V, C>>, Watchable<T, V, C>, GroupChange<T, V, C>> {
 
