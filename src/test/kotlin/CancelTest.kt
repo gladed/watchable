@@ -41,7 +41,7 @@ class CancelTest {
         runBlocking {
             intValue = watchableValueOf(5)
             watch(intValue) { changes.send(it) }
-            changes.expect(ValueChange(5, 5))
+            changes.expect(ValueChange(5))
         }
 
         runBlocking {

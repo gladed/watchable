@@ -30,11 +30,11 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
 class GroupTest {
-    val changes = Channel<GroupChange<Any, Any, Change<Any, Any>>>(Channel.UNLIMITED)
+    val changes = Channel<GroupChange<Any, Any, Change>>(Channel.UNLIMITED)
 
     @Test fun coverage() {
         val intValue = watchableValueOf(1)
-        cover(GroupChange(intValue, ValueChange(1, 1)))
+        cover(GroupChange(intValue, ValueChange(1)))
     }
 
     @Test fun `subscribe to a group of watchables`() {
@@ -42,8 +42,8 @@ class GroupTest {
             val intValue = watchableValueOf(1)
             val setValue = watchableSetOf("1")
             group(intValue, setValue).watch(this) { changes.send(it) }
-            changes.expect(GroupChange(intValue, ValueChange(1, 1)))
-            changes.expect(GroupChange(setValue, SetChange.Initial(setOf("1"))))
+            changes.expect(GroupChange(intValue, ValueChange(1)))
+            changes.expect(GroupChange(setValue, SetChange(setOf("1"))))
         }
     }
 
@@ -53,8 +53,8 @@ class GroupTest {
             val setValue = watchableSetOf("1")
             watch(group(intValue, setValue)) { changes.send(it) }
             changes.expect(
-                GroupChange(intValue, ValueChange(1, 1)),
-                GroupChange(setValue, SetChange.Initial(setOf("1"))))
+                GroupChange(intValue, ValueChange(1)),
+                GroupChange(setValue, SetChange(setOf("1"))))
         }
     }
 
@@ -64,8 +64,8 @@ class GroupTest {
             val setValue = watchableSetOf("1")
             val handle = watch(group(intValue, setValue)) { changes.send(it) }
             changes.expect(
-                GroupChange(intValue, ValueChange(1, 1)),
-                GroupChange(setValue, SetChange.Initial(setOf("1"))))
+                GroupChange(intValue, ValueChange(1)),
+                GroupChange(setValue, SetChange(setOf("1"))))
             handle.close()
             changes.expectNone()
             setValue.use { add("2") }

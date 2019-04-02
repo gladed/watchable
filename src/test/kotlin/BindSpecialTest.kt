@@ -31,8 +31,8 @@ class BindSpecialTest {
 
         bind(dest, origin) {
             when(it) {
-                is ListChange.Add -> dest.set(dest.value + it.added.size)
-                is ListChange.Remove -> dest.set(dest.value  - 1)
+                is ListChange.Add -> value += it.added.size
+                is ListChange.Remove -> value -= 1
                 is ListChange.Replace -> { }
             }
         }

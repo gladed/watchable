@@ -39,7 +39,7 @@ class WatchableValueTest {
                 changes.send(it)
             }
             changes.expect(ValueChange(5))
-            intValue.set(17)
+            intValue.assign(17)
             changes.expect(ValueChange(17))
         }
     }
@@ -49,7 +49,7 @@ class WatchableValueTest {
             intValue = 5.toWatchableValue()
             watch(intValue) { changes.send(it) }
             changes.expect(ValueChange(5))
-            intValue.set(5)
+            intValue.assign(5)
             // Both announcements because value is NOT compared for equality
             changes.expect(ValueChange(5))
         }
@@ -85,9 +85,9 @@ class WatchableValueTest {
                 changes.send(it)
             }
             changes.expect(ValueChange(4))
-            intValue.set(5)
+            intValue.assign(5)
             assertEquals(5, readOnly.value)
-            intValue.set(6)
+            intValue.assign(6)
             assertEquals(6, readOnly.value)
             changes.expect(ValueChange(5))
             changes.expect(ValueChange(6))
