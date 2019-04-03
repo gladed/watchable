@@ -22,26 +22,24 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 /**
  * A group of [Watchable] objects that can be watched for any change, which arrives as a [GroupChange].
  */
-class WatchableGroup<out T, out V, C : Change<T, V>>(
-    private val watchables: List<Watchable<T, V, C>>
-) : Watchable<List<Watchable<T, V, C>>, Watchable<T, V, C>, GroupChange<T, V, C>> {
-
-    override val value: List<Watchable<T, V, C>> = watchables
+class WatchableGroup(
+    private val watchables: List<Watchable<*>>
+) : Watchable<GroupChange> {
 
     @UseExperimental(ExperimentalCoroutinesApi::class)
     override fun batch(
         scope: CoroutineScope,
         minPeriod: Long,
-        func: suspend (List<GroupChange<T, V, C>>) -> Unit
+        func: suspend (List<GroupChange>) -> Unit
     ) = scope.operate { closeMutex ->
-        // Start watching other subscriptions, delivering their changes here.
-        val subscriptions = watchables.map { watchable ->
+        // Start watching others, delivering their changes here.
+        val handles = watchables.map { watchable ->
             watchable.batch(scope) { changes ->
                 func(changes.map { GroupChange(watchable, it) })
             }
         }.toMutableList()
 
         closeMutex.lock()
-        subscriptions.forEach { it.closeAndJoin() }
+        handles.forEach { it.closeAndJoin() }
     }
 }

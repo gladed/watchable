@@ -16,5 +16,7 @@
 
 package io.gladed.watchable
 
-/** Describes a change in the simplest possible form. */
-data class SimpleChange<out T>(val remove: T? = null, val add: T? = null)
+/** A [Change] that can be expressed in terms of simpler change objects of type [S]. */
+interface HasSimpleChange<out S> : Change {
+    val simple: List<S>
+}

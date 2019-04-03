@@ -21,15 +21,16 @@ package io.gladed.watchable
 class WatchableSet<T> internal constructor(
     initial: Collection<T>
 ) : MutableWatchableBase<Set<T>, T, MutableSet<T>, SetChange<T>>(), ReadOnlyWatchableSet<T> {
+    override var immutable: Set<T> = initial.toSet()
 
-    override val size get() = value.size
-    override fun contains(element: T) = value.contains(element)
-    override fun containsAll(elements: Collection<T>) = value.containsAll(elements)
-    override fun isEmpty() = value.isEmpty()
-    override fun iterator(): Iterator<T> = value.iterator()
-    override fun equals(other: Any?) = value == other
-    override fun hashCode() = value.hashCode()
-    override fun toString() = "WatchableSet($value)"
+    override val size get() = immutable.size
+    override fun contains(element: T) = immutable.contains(element)
+    override fun containsAll(elements: Collection<T>) = immutable.containsAll(elements)
+    override fun isEmpty() = immutable.isEmpty()
+    override fun iterator(): Iterator<T> = immutable.iterator()
+    override fun equals(other: Any?) = immutable == other
+    override fun hashCode() = immutable.hashCode()
+    override fun toString() = "WatchableSet($immutable)"
 
     override val mutable = object : AbstractMutableSet<T>() {
         private val real = initial.toMutableSet()
@@ -38,7 +39,7 @@ class WatchableSet<T> internal constructor(
 
         override fun add(element: T) = doChange {
             real.add(element).also { success ->
-                if (success) changes.add(SetChange.Add(element))
+                if (success) changes.add(SetChange.Add(listOf(element)))
             }
         }
 
@@ -57,7 +58,7 @@ class WatchableSet<T> internal constructor(
                     realIterator.remove()
                     // Last must be OK if remove() didn't throw
                     @Suppress("UNCHECKED_CAST")
-                    changes.add(SetChange.Remove(last as T))
+                    changes.add(SetChange.Remove(listOf(last as T)))
                 }
             }
         }
@@ -98,30 +99,23 @@ class WatchableSet<T> internal constructor(
         use { retainAll(elements) }
 
     /** Clear all values from this set. */
-    suspend fun clear() = use { clear() }
+    override suspend fun clear() = use { clear() }
 
     override fun MutableSet<T>.toImmutable() = toSet()
 
-    override fun Set<T>.toInitialChange() = SetChange.Initial(this)
+    override fun Set<T>.toInitialChange() = takeIf { isNotEmpty() }?.let {
+        SetChange.Add(toList())
+    }
 
     override fun MutableSet<T>.applyBoundChange(change: SetChange<T>) {
         when (change) {
-            is SetChange.Initial -> {
-                clear()
-                addAll(change.initial)
-            }
-            is SetChange.Add -> add(change.added)
-            is SetChange.Remove -> remove(change.removed)
+            is SetChange.Remove -> removeAll(change.items)
+            is SetChange.Add -> addAll(change.items)
         }
-    }
-
-    override fun replace(newValue: Set<T>) {
-        mutable.clear()
-        mutable.addAll(newValue)
     }
 
     /** Return an unmodifiable form of this [WatchableSet]. */
     fun readOnly(): ReadOnlyWatchableSet<T> = object : ReadOnlyWatchableSet<T> by this {
-        override fun toString() = "ReadOnlyWatchableSet($value)"
+        override fun toString() = "ReadOnlyWatchableSet($immutable)"
     }
 }

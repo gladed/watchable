@@ -16,14 +16,8 @@
 
 package io.gladed.watchable
 
-/** Describes the replacement of a value. */
+/** Describes the update of a value. */
 data class ValueChange<T>(
-    /** The old value, or the same as [newValue] if this is the initial notification. */
-    val oldValue: T,
-    /** The new object value. */
-    val newValue: T
-) : Change<T, T> {
-    override val simple by lazy {
-        listOf(SimpleChange(add = newValue, remove = if (newValue == oldValue) null else oldValue))
-    }
-}
+    /** The new value. */
+    val value: T
+) : Change

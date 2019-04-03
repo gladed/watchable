@@ -23,21 +23,22 @@ package io.gladed.watchable
 class WatchableList<T> internal constructor(
     initial: Collection<T>
 ) : MutableWatchableBase<List<T>, T, MutableList<T>, ListChange<T>>(), ReadOnlyWatchableList<T> {
+    override var immutable: List<T> = initial.toList()
 
-    override val size: Int get() = value.size
-    override fun contains(element: T) = value.contains(element)
-    override fun containsAll(elements: Collection<T>) = value.containsAll(elements)
-    override fun get(index: Int) = value[index]
-    override fun indexOf(element: T) = value.indexOf(element)
-    override fun isEmpty() = value.isEmpty()
-    override fun iterator() = value.iterator()
-    override fun lastIndexOf(element: T) = value.lastIndexOf(element)
-    override fun listIterator() = value.listIterator()
-    override fun listIterator(index: Int) = value.listIterator(index)
-    override fun subList(fromIndex: Int, toIndex: Int) = value.subList(fromIndex, toIndex)
-    override fun equals(other: Any?): Boolean = value == other
-    override fun hashCode() = value.hashCode()
-    override fun toString() = "WatchableList($value)"
+    override val size: Int get() = immutable.size
+    override fun contains(element: T) = immutable.contains(element)
+    override fun containsAll(elements: Collection<T>) = immutable.containsAll(elements)
+    override fun get(index: Int) = immutable[index]
+    override fun indexOf(element: T) = immutable.indexOf(element)
+    override fun isEmpty() = immutable.isEmpty()
+    override fun iterator() = immutable.iterator()
+    override fun lastIndexOf(element: T) = immutable.lastIndexOf(element)
+    override fun listIterator() = immutable.listIterator()
+    override fun listIterator(index: Int) = immutable.listIterator(index)
+    override fun subList(fromIndex: Int, toIndex: Int) = immutable.subList(fromIndex, toIndex)
+    override fun equals(other: Any?): Boolean = immutable == other
+    override fun hashCode() = immutable.hashCode()
+    override fun toString() = "WatchableList($immutable)"
 
     override val mutable = object : AbstractMutableList<T>() {
         val real = initial.toMutableList()
@@ -46,23 +47,29 @@ class WatchableList<T> internal constructor(
 
         override fun get(index: Int) = real[index]
 
+        override fun addAll(index: Int, elements: Collection<T>) = doChange {
+            real.addAll(index, elements).also {
+                changes.add(ListChange.Insert(index, elements.toList()))
+            }
+        }
+
         override fun add(index: Int, element: T) {
             doChange {
                 real.add(index, element).also {
-                    changes.add(ListChange.Add(index, element))
+                    changes.add(ListChange.Insert(index, listOf(element)))
                 }
             }
         }
 
         override fun removeAt(index: Int) = doChange {
             real.removeAt(index).also {
-                changes.add(ListChange.Remove(index, it))
+                changes.add(ListChange.Remove(index..index))
             }
         }
 
         override fun set(index: Int, element: T) = doChange {
             real.set(index, element).also {
-                changes.add(ListChange.Replace(index, it, element))
+                changes.add(ListChange.Replace(index, listOf(element)))
             }
         }
     }
@@ -101,31 +108,26 @@ class WatchableList<T> internal constructor(
         use { retainAll(elements) }
 
     /** Clear all values from this list. */
-    suspend fun clear() = use { clear() }
+    override suspend fun clear() = use { clear() }
 
     override fun MutableList<T>.toImmutable() = toList()
 
-    override fun List<T>.toInitialChange() = ListChange.Initial(this)
+    override fun List<T>.toInitialChange() = takeIf { isNotEmpty() }?.let {
+        ListChange.Insert(0, toList())
+    }
 
     override fun MutableList<T>.applyBoundChange(change: ListChange<T>) {
         when (change) {
-            is ListChange.Initial -> {
-                clear()
-                addAll(change.initial)
+            is ListChange.Insert -> addAll(change.index, change.items)
+            is ListChange.Remove -> (change.range).forEach { _ -> removeAt(change.range.first) }
+            is ListChange.Replace -> (change.items).forEachIndexed { index, element ->
+                this[change.index + index] = element
             }
-            is ListChange.Add -> add(change.index, change.added)
-            is ListChange.Remove -> removeAt(change.index)
-            is ListChange.Replace -> set(change.index, change.added)
         }
-    }
-
-    override fun replace(newValue: List<T>) {
-        mutable.clear()
-        mutable.addAll(newValue)
     }
 
     /** Return an unmodifiable form of this [WatchableList]. */
     fun readOnly(): ReadOnlyWatchableList<T> = object : ReadOnlyWatchableList<T> by this {
-        override fun toString() = "ReadOnlyWatchableList($value)"
+        override fun toString() = "ReadOnlyWatchableList($immutable)"
     }
 }

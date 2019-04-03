@@ -16,6 +16,7 @@
 
 import io.gladed.watchable.MapChange
 import io.gladed.watchable.bind
+import io.gladed.watchable.waitFor
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.channels.Channel
@@ -52,13 +53,12 @@ class WatchableMapTest : ScopeTest() {
         val map = watchableMapOf(1 to "1")
         val map2 = watchableMapOf(2 to "2")
         val map3 = map2.readOnly()
-        watch(map3) { changes.send(it) }
-        changes.expect(MapChange.Initial(mapOf(2 to "2")))
-        bind(map2, map)
+        watch(map3) { log(it); changes.send(it) }
+        changes.expect(MapChange.Put(listOf(2 to "2")))
+        map2.bind(this, map)
+        changes.expect(MapChange.Remove(listOf(2)), MapChange.Put(listOf(1 to "1")))
         assertThat(map.toString(), startsWith("WatchableMap("))
         assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
-        map.set(mapOf(3 to "3"))
-        changes.expect(MapChange.Remove(2, "2"), MapChange.Add(3, "3"))
     }
 
     @Test fun bindReadOnly() = runBlocking {
@@ -68,9 +68,7 @@ class WatchableMapTest : ScopeTest() {
         bind(map2, map3)
         map.put(3, "3")
 
-        map3.watchUntil(this) {
-            assertEquals(map, map3)
-        }
+        waitFor(map) { it == map3 }
     }
 
     @Test fun `put and remove`() = runBlocking {

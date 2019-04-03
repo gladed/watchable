@@ -17,24 +17,37 @@
 package io.gladed.watchable
 
 /** Describes a change to a [List]. */
-sealed class ListChange<T> : Change<List<T>, T> {
-    /** The initial state of the list at the time watching began. */
-    data class Initial<T>(val initial: List<T>) : ListChange<T>() {
-        override val simple by lazy { initial.map { SimpleChange(add = it) } }
+sealed class ListChange<T> : HasSimpleChange<ListChange.Simple<T>> {
+
+    /** An insertion of [items] into a list at [index]. */
+    data class Insert<T>(val index: Int, val items: List<T>) : ListChange<T>() {
+        override val simple by lazy {
+            items.mapIndexed { addIndex, value -> Simple(index + addIndex, value, insert = true) }
+        }
     }
 
-    /** An addition of an element to the list. */
-    data class Add<T>(val index: Int, val added: T) : ListChange<T>() {
-        override val simple by lazy { listOf(SimpleChange(add = added)) }
+    /** A removal of items from a [range] of indexes. */
+    data class Remove<T>(val range: IntRange) : ListChange<T>() {
+        constructor(index: Int) : this(index..index)
+        override val simple by lazy {
+            range.map { Simple<T>(it) }
+        }
     }
 
-    /** A removal of an element in the list. */
-    data class Remove<T>(val index: Int, val removed: T) : ListChange<T>() {
-        override val simple by lazy { listOf(SimpleChange(remove = removed)) }
+    /** An overwriting of existing items with [items] at [index]. */
+    data class Replace<T>(val index: Int, val items: List<T>) : ListChange<T>() {
+        override val simple by lazy {
+            items.mapIndexed { replaceIndex, element -> Simple(index + replaceIndex, element, insert = false) }
+        }
     }
 
-    /** A replacement of the element at a specific place in the list. */
-    data class Replace<T>(val index: Int, val removed: T, val added: T) : ListChange<T>() {
-        override val simple by lazy { listOf(SimpleChange(remove = removed, add = added)) }
-    }
+    /** The atomic form of a list change, affecting only a single position in the list. */
+    data class Simple<T>(
+        /** Index at which a change occurred. */
+        val index: Int,
+        /** Item added or inserted at [index], or null if the item there was removed. */
+        val item: T? = null,
+        /** If true and [item] is non-null, it was inserted, or if false [item] overwrites existing value. */
+        val insert: Boolean = true
+    )
 }

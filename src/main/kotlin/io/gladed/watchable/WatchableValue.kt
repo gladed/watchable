@@ -16,28 +16,56 @@
 
 package io.gladed.watchable
 
+interface MutableValue<T> : Value<T> {
+    override var value: T
+}
+
+interface Value<T> {
+    val value: T
+}
+
 /** A [Watchable] value of [T] which may also be replaced or bound. Use [watchableValueOf] to create. */
 class WatchableValue<T> internal constructor(
     initial: T
-) : MutableWatchableBase<T, T, T, ValueChange<T>>(), ReadOnlyWatchableValue<T> {
+) : MutableWatchableBase<Value<T>, T, MutableValue<T>, ValueChange<T>>(), ReadOnlyWatchableValue<T> {
 
-    override var mutable: T = initial
-
-    /** Direct access to the current object. */
-    override val value: T get() = mutable
-
-    override fun T.toImmutable(): T = this
-
-    override fun T.toInitialChange() = ValueChange(this, this)
-
-    override fun T.applyBoundChange(change: ValueChange<T>) {
-        replace(change.newValue)
+    /** A holder for data. */
+    private data class ValueData<T>(override val value: T) : Value<T> {
+        override fun toString() = value.toString()
     }
 
-    override fun replace(newValue: T) {
-        val oldValue = mutable
-        mutable = newValue
-        changes += listOf(ValueChange(oldValue, newValue))
+    override var immutable: Value<T> = ValueData(initial)
+
+    override var mutable: MutableValue<T> = object : MutableValue<T> {
+        override var value: T = initial
+            set(value) {
+                doChange {
+                    changes += ValueChange(value)
+                    field = value
+                }
+            }
+    }
+
+    /** The currently contained value. */
+    override val value: T get() = immutable.value
+
+    override fun MutableValue<T>.toImmutable(): Value<T> = ValueData(value)
+
+    override fun Value<T>.toInitialChange(): ValueChange<T> = ValueChange(value)
+
+    override fun MutableValue<T>.applyBoundChange(change: ValueChange<T>) {
+        value = change.value
+    }
+
+    /** Insert a new value, replacing the old one. */
+    suspend fun set(value: T) {
+        use {
+            mutable.value = value
+        }
+    }
+
+    override suspend fun clear() {
+        // Clear doesn't really make sense for this data type but it is required by bind
     }
 
     /** Return an unmodifiable form of this [WatchableSet]. */
@@ -46,7 +74,12 @@ class WatchableValue<T> internal constructor(
     }
 
     override fun equals(other: Any?) =
-        if (other is WatchableValue<*>) value == other.value else value == other
+        when (other) {
+            is WatchableValue<*> -> value == other.value
+            is Value<*> -> value == other.value
+            else -> value == other
+        }
+
     override fun hashCode() = value.hashCode()
-    override fun toString() = "WatchableValue($value)"
+    override fun toString() = "WatchableValue($value.value)"
 }

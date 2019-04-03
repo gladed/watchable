@@ -32,10 +32,10 @@ class FlushTest : ScopeTest() {
         val value = watchableValueOf(1)
         val handle = watch(value) { changes.send(it) }
         runBlocking {
-            changes.expect(ValueChange(1, 1))
+            changes.expect(ValueChange(1))
             value.set(2)
             handle.close()
-            changes.expect(ValueChange(1, 2))
+            changes.expect(ValueChange(2))
             handle.join()
         }
     }
@@ -46,12 +46,12 @@ class FlushTest : ScopeTest() {
             val changes = Channel<List<ValueChange<Int>>>(Channel.UNLIMITED)
             val value = watchableValueOf(1)
             val handle = batch(value, 1000) { changes.send(it) }
-            changes.expect(listOf((ValueChange(1, 1))))
+            changes.expect(listOf((ValueChange(1))))
             value.set(2)
             // close should cause an immediate flush of outstanding batch items regardless of its timeout.
             changes.expectNone()
             handle.close()
-            changes.expect(listOf(ValueChange(1, 2)), timeout = 100)
+            changes.expect(listOf(ValueChange(2)), timeout = 100)
             handle.join()
         }
     }
@@ -61,7 +61,7 @@ class FlushTest : ScopeTest() {
         val list = watchableListOf(1)
         val handle = watch(list) { changes.send(it) } + watch(list) { changes.send(it) }
         handle.closeAndJoin()
-        changes.expect(ListChange.Initial(listOf(1)), ListChange.Initial(listOf(1)))
+        changes.expect(ListChange.Insert(0, listOf(1)), ListChange.Insert(0, listOf(1)))
     }
 
     @Test(timeout = 500) fun `cancel two`() = runBlocking {

@@ -42,24 +42,22 @@ class BindValueTest : ScopeTest() {
         eventually { assertEquals(5, dest.value) }
     }
 
-    @Test fun `example from readme`() {
+    @Test fun `example from readme`() = runBlocking {
         val from = listOf(4, 5).toWatchableList()
         val into = watchableListOf<Int>()
         bind(into, from)
-        runBlocking {
-            eventually { assertEquals(from, into) }
-        }
+        eventually { assertEquals(from, into) }
     }
 
     @Test fun `bind then change`() = runBlocking {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         watch(dest) { changes.send(it) }
-        changes.expect(ValueChange(6, 6))
+        changes.expect(ValueChange(6))
         bind(dest, origin)
         origin.set(7)
         // Was dest ever 5?
-        changes.expect(ValueChange(6, 7))
+        changes.expect(ValueChange(7))
         assertEquals(7, dest.value)
     }
 
@@ -135,9 +133,9 @@ class BindValueTest : ScopeTest() {
             assertThat(Thread.currentThread().name, containsString("scope1"))
             changes.send(it)
         }
-        changes.expect(ValueChange(5, 5))
+        changes.expect(ValueChange(5))
         origin.set(6)
-        changes.expect(ValueChange(5, 6))
+        changes.expect(ValueChange(6))
     }
 
     @Test fun `kill binding scope`() = runBlocking {

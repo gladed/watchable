@@ -17,41 +17,37 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
 
-/** Bind [dest] so that it receives values from [origin] as long as this [CoroutineScope] lives. */
-fun <T, V, M : T, C : Change<T, V>> CoroutineScope.bind(
-    dest: MutableWatchable<T, V, M, C>,
-    origin: Watchable<T, V, C>
+/** Bind [dest] so that it receives values from [origin] as long as the calling coroutineContext lives. */
+suspend fun <M, C : Change> CoroutineScope.bind(
+    dest: MutableWatchable<M, C>,
+    origin: Watchable<C>
 ) = dest.bind(this, origin)
 
 /**
- * Deliver changes for this [Watchable] to [func], starting with its initial state, until
+ * Deliver simplified changes for this [Watchable] as receiver objects to [func] until
  * the returned [WatchHandle] is closed or this [CoroutineScope] completes.
  */
-fun <T, V, C : Change<T, V>> CoroutineScope.watchSimple(
-    watchable: Watchable<T, V, C>,
-    func: suspend SimpleChange<V>.() -> Unit
-) = watchable.watchSimple(this@watchSimple, func)
+fun <S, C : HasSimpleChange<S>> CoroutineScope.simple(
+    watchable: SimpleWatchable<S, C>,
+    func: suspend S.() -> Unit
+) = watchable.simple(this@simple, func)
 
 /**
- * Deliver changes for this [Watchable] to [func], starting with its initial state, until
- * the returned [WatchHandle] is closed or this [CoroutineScope] completes.
+ * Deliver changes for this [Watchable] to [func] until the returned [WatchHandle] is closed or this
+ * [CoroutineScope] completes.
  */
-fun <T, V, C : Change<T, V>> CoroutineScope.watch(
-    watchable: Watchable<T, V, C>,
+fun <C : Change> CoroutineScope.watch(
+    watchable: Watchable<C>,
     func: suspend (C) -> Unit
 ) = watchable.watch(this@watch, func)
 
 /**
- * Deliver multiple changes for this [Watchable] to [func], starting with its initial state, until
- * the returned [WatchHandle] is closed or this [CoroutineScope] completes.
+ * Deliver multiple changes for this [Watchable] to [func] until the returned [WatchHandle] is closed or this
+ * [CoroutineScope] completes.
  */
-fun <T, V, C : Change<T, V>> CoroutineScope.batch(
-    watchable: Watchable<T, V, C>,
+fun <C : Change> CoroutineScope.batch(
+    watchable: Watchable<C>,
     /** The minimum time between change notifications in milliseconds, or 0 for no delay. */
     minPeriod: Long = 0,
     func: suspend (List<C>) -> Unit
@@ -61,37 +57,16 @@ fun <T, V, C : Change<T, V>> CoroutineScope.batch(
  * Bind [dest] so that it receives changes from [origin] and applies them with [apply] for as long as
  * this [CoroutineScope] lives.
  */
-fun <T, V, M : T, C : Change<T, V>, T2, V2, C2 : Change<T2, V2>> CoroutineScope.bind(
-    dest: MutableWatchable<T, V, M, C>,
-    origin: Watchable<T2, V2, C2>,
+suspend fun <M, C : Change, C2 : Change> CoroutineScope.bind(
+    dest: MutableWatchable<M, C>,
+    origin: Watchable<C2>,
     apply: M.(C2) -> Unit
 ) = dest.bind(this, origin, apply)
 
-/**
- * Perform some work in the background until the returned handle is closed or cancelled.
- */
-internal fun CoroutineScope.operate(
-    /** Work to perform, stopping as soon as the supplied Mutex can be locked. */
-    work: suspend CoroutineScope.(Mutex) -> Unit
-): WatchHandle {
-
-    // May be unlocked to allow [work] to shut down gently.
-    val mutex = Mutex(locked = true)
-
-    // Uses supervisor to allow the parent scope to complete without waiting
-    val operationScope = CoroutineScope(coroutineContext + SupervisorJob())
-    val operation = operationScope.launch {
-        work(mutex)
-    }
-
-    // When the current scope completes, cancel the operation
-    coroutineContext[Job]?.invokeOnCompletion { operation.cancel() }
-
-    return object : WatchHandle {
-        override fun cancel() { operation.cancel() }
-        override suspend fun join() { operation.join() }
-        override fun close() {
-            if (mutex.isLocked) mutex.unlock()
-        }
-    }
+/** Suspend until [condition] returns true, calling it after each group of changes. */
+suspend fun <C : Change, W : Watchable<C>> CoroutineScope.waitFor(
+    target: W,
+    condition: (W) -> Boolean
+) {
+    target.waitFor<C>(this) { condition(target) }
 }

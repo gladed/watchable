@@ -21,18 +21,19 @@ package io.gladed.watchable
 class WatchableMap<K, V> internal constructor(
     initial: Map<K, V>
 ) : MutableWatchableBase<Map<K, V>, V, MutableMap<K, V>, MapChange<K, V>>(), ReadOnlyWatchableMap<K, V> {
+    override var immutable: Map<K, V> = initial.toMap()
 
-    override val entries get() = value.entries
-    override val keys get() = value.keys
-    override val size get() = value.size
-    override val values get() = value.values
-    override fun containsKey(key: K) = value.containsKey(key)
-    override fun containsValue(value: V) = this.value.containsValue(value)
-    override fun get(key: K): V? = value[key]
-    override fun isEmpty() = value.isEmpty()
-    override fun equals(other: Any?) = value == other
-    override fun hashCode() = value.hashCode()
-    override fun toString() = "WatchableMap($value)"
+    override val entries get() = immutable.entries
+    override val keys get() = immutable.keys
+    override val size get() = immutable.size
+    override val values get() = immutable.values
+    override fun containsKey(key: K) = immutable.containsKey(key)
+    override fun containsValue(value: V) = immutable.containsValue(value)
+    override fun get(key: K): V? = immutable[key]
+    override fun isEmpty() = immutable.isEmpty()
+    override fun equals(other: Any?) = immutable == other
+    override fun hashCode() = immutable.hashCode()
+    override fun toString() = "WatchableMap($immutable)"
 
     /** A map that checks and reports all change attempts. */
     override val mutable = object : AbstractMutableMap<K, V>() {
@@ -60,7 +61,7 @@ class WatchableMap<K, V> internal constructor(
                                 object : MutableMap.MutableEntry<K, V> by original {
                                     override fun setValue(newValue: V): V = doChange {
                                         original.setValue(newValue).also {
-                                            changes += MapChange.Replace(key, it, newValue)
+                                            changes += MapChange.Put(listOf(key to newValue))
                                         }
                                     }
 
@@ -75,18 +76,24 @@ class WatchableMap<K, V> internal constructor(
                         doChange {
                             realIterator.remove()
                             // Last cannot be null if remove() succeeded
-                            changes += MapChange.Remove(last!!.key, last!!.value)
+                            changes += MapChange.Remove(listOf(last!!.key))
                         }
                     }
                 }
             }
 
+        override fun putAll(from: Map<out K, V>) {
+            doChange {
+                real.putAll(from).also {
+                    changes += MapChange.Put(from.map { (key, value) -> key to value })
+                }
+            }
+        }
+
         override fun put(key: K, value: V): V? = doChange {
-            real.put(key, value).also { oldValue ->
-                if (oldValue == null) {
-                    changes += MapChange.Add(key, value)
-                } else {
-                    changes += MapChange.Replace(key, oldValue, value)
+            doChange {
+                real.put(key, value).also {
+                    changes += MapChange.Put(listOf(key to value))
                 }
             }
         }
@@ -114,32 +121,24 @@ class WatchableMap<K, V> internal constructor(
     /** Remove the value associated with [key], returning it if it was present. */
     suspend fun remove(key: K): V? = use { remove(key) }
 
-    /** Clear all values from this map. */
-    suspend fun clear() = use { clear() }
+    /**  all values from this map. */
+    override suspend fun clear() = use { clear() }
 
     override fun MutableMap<K, V>.toImmutable() = toMap()
 
-    override fun Map<K, V>.toInitialChange() = MapChange.Initial(this)
+    override fun Map<K, V>.toInitialChange() = takeIf { isNotEmpty() }?.let {
+        MapChange.Put(map { (key, value) -> key to value })
+    }
 
     override fun MutableMap<K, V>.applyBoundChange(change: MapChange<K, V>) {
         when (change) {
-            is MapChange.Initial -> {
-                clear()
-                putAll(change.initial)
-            }
-            is MapChange.Add -> put(change.key, change.added)
-            is MapChange.Remove -> remove(change.key)
-            is MapChange.Replace -> put(change.key, change.added)
+            is MapChange.Put -> putAll(change.pairs)
+            is MapChange.Remove -> minusAssign(change.keys)
         }
-    }
-
-    override fun replace(newValue: Map<K, V>) {
-        mutable.clear()
-        mutable.putAll(newValue)
     }
 
     /** Return an unmodifiable form of this [WatchableMap]. */
     fun readOnly(): ReadOnlyWatchableMap<K, V> = object : ReadOnlyWatchableMap<K, V> by this {
-        override fun toString() = "ReadOnlyWatchableMap($value)"
+        override fun toString() = "ReadOnlyWatchableMap($immutable)"
     }
 }
