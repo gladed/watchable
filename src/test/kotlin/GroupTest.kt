@@ -29,7 +29,7 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
 class GroupTest {
-    val changes = Channel<GroupChange<Any, Any>>(Channel.UNLIMITED)
+    val changes = Channel<GroupChange>(Channel.UNLIMITED)
 
     @Test fun coverage() {
         val intValue = watchableValueOf(1)

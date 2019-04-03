@@ -17,7 +17,7 @@
 package io.gladed.watchable
 
 /** A [Watchable] value of type [T] which may not be replaced by the reference holder. */
-interface ReadOnlyWatchableValue<T> : Watchable<Value<T>, T, ValueChange<T>> {
+interface ReadOnlyWatchableValue<T> : Watchable<ValueChange<T>> {
     /** Direct access to the current value inside the container. */
-    fun get(): T = value.value
+    val value: T
 }

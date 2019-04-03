@@ -23,21 +23,22 @@ package io.gladed.watchable
 class WatchableList<T> internal constructor(
     initial: Collection<T>
 ) : MutableWatchableBase<List<T>, T, MutableList<T>, ListChange<T>>(), ReadOnlyWatchableList<T> {
+    override var immutable: List<T> = initial.toList()
 
-    override val size: Int get() = value.size
-    override fun contains(element: T) = value.contains(element)
-    override fun containsAll(elements: Collection<T>) = value.containsAll(elements)
-    override fun get(index: Int) = value[index]
-    override fun indexOf(element: T) = value.indexOf(element)
-    override fun isEmpty() = value.isEmpty()
-    override fun iterator() = value.iterator()
-    override fun lastIndexOf(element: T) = value.lastIndexOf(element)
-    override fun listIterator() = value.listIterator()
-    override fun listIterator(index: Int) = value.listIterator(index)
-    override fun subList(fromIndex: Int, toIndex: Int) = value.subList(fromIndex, toIndex)
-    override fun equals(other: Any?): Boolean = value == other
-    override fun hashCode() = value.hashCode()
-    override fun toString() = "WatchableList($value)"
+    override val size: Int get() = immutable.size
+    override fun contains(element: T) = immutable.contains(element)
+    override fun containsAll(elements: Collection<T>) = immutable.containsAll(elements)
+    override fun get(index: Int) = immutable[index]
+    override fun indexOf(element: T) = immutable.indexOf(element)
+    override fun isEmpty() = immutable.isEmpty()
+    override fun iterator() = immutable.iterator()
+    override fun lastIndexOf(element: T) = immutable.lastIndexOf(element)
+    override fun listIterator() = immutable.listIterator()
+    override fun listIterator(index: Int) = immutable.listIterator(index)
+    override fun subList(fromIndex: Int, toIndex: Int) = immutable.subList(fromIndex, toIndex)
+    override fun equals(other: Any?): Boolean = immutable == other
+    override fun hashCode() = immutable.hashCode()
+    override fun toString() = "WatchableList($immutable)"
 
     override val mutable = object : AbstractMutableList<T>() {
         val real = initial.toMutableList()
@@ -127,6 +128,6 @@ class WatchableList<T> internal constructor(
 
     /** Return an unmodifiable form of this [WatchableList]. */
     fun readOnly(): ReadOnlyWatchableList<T> = object : ReadOnlyWatchableList<T> by this {
-        override fun toString() = "ReadOnlyWatchableList($value)"
+        override fun toString() = "ReadOnlyWatchableList($immutable)"
     }
 }

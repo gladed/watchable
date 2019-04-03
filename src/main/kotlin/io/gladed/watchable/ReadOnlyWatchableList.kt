@@ -17,4 +17,4 @@
 package io.gladed.watchable
 
 /** A [Watchable] [List] which may not be modified by the reference holder. */
-interface ReadOnlyWatchableList<T> : SimpleWatchable<List<T>, T, ListChange.Simple<T>, ListChange<T>>, List<T>
+interface ReadOnlyWatchableList<T> : SimpleWatchable<ListChange.Simple<T>, ListChange<T>>, List<T>

@@ -21,15 +21,16 @@ package io.gladed.watchable
 class WatchableSet<T> internal constructor(
     initial: Collection<T>
 ) : MutableWatchableBase<Set<T>, T, MutableSet<T>, SetChange<T>>(), ReadOnlyWatchableSet<T> {
+    override var immutable: Set<T> = initial.toSet()
 
-    override val size get() = value.size
-    override fun contains(element: T) = value.contains(element)
-    override fun containsAll(elements: Collection<T>) = value.containsAll(elements)
-    override fun isEmpty() = value.isEmpty()
-    override fun iterator(): Iterator<T> = value.iterator()
-    override fun equals(other: Any?) = value == other
-    override fun hashCode() = value.hashCode()
-    override fun toString() = "WatchableSet($value)"
+    override val size get() = immutable.size
+    override fun contains(element: T) = immutable.contains(element)
+    override fun containsAll(elements: Collection<T>) = immutable.containsAll(elements)
+    override fun isEmpty() = immutable.isEmpty()
+    override fun iterator(): Iterator<T> = immutable.iterator()
+    override fun equals(other: Any?) = immutable == other
+    override fun hashCode() = immutable.hashCode()
+    override fun toString() = "WatchableSet($immutable)"
 
     override val mutable = object : AbstractMutableSet<T>() {
         private val real = initial.toMutableSet()
@@ -115,6 +116,6 @@ class WatchableSet<T> internal constructor(
 
     /** Return an unmodifiable form of this [WatchableSet]. */
     fun readOnly(): ReadOnlyWatchableSet<T> = object : ReadOnlyWatchableSet<T> by this {
-        override fun toString() = "ReadOnlyWatchableSet($value)"
+        override fun toString() = "ReadOnlyWatchableSet($immutable)"
     }
 }

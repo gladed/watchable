@@ -120,19 +120,6 @@ fun <T : Any> cover(obj: T) {
     }
 }
 
-/** Monitor events until func does not throw. */
-suspend fun <T, V, C: Change> Watchable<T, V, C>.waitFor(scope: CoroutineScope, func: () -> Unit) {
-    val mutex = Mutex(locked = true)
-    val handle = scope.watch(this) {
-        try {
-            func()
-            mutex.unlock()
-        } catch (t: Throwable) { }
-    }
-    mutex.lock() // Suspend until success
-    handle.cancel() // Cancel listening
-}
-
 suspend fun <C> ReceiveChannel<C>.expect(vararg expected: C, timeout: Long = 250, strict: Boolean = true) {
     val expectedList = expected.toList()
     val current = mutableListOf<C>()

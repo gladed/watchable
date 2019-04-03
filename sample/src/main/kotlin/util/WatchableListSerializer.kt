@@ -17,7 +17,7 @@ class WatchableListSerializer<T : Any>(private val dataSerializer: KSerializer<T
 
     override fun serialize(encoder: Encoder, obj: WatchableList<T>) {
         with(encoder.beginStructure(descriptor)) {
-            runBlocking { obj.value }.forEachIndexed { index, item ->
+            runBlocking { obj }.forEachIndexed { index, item ->
                 encodeSerializableElement(descriptor, index, dataSerializer, item)
             }
             endStructure(descriptor)

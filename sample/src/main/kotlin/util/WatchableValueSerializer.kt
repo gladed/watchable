@@ -19,7 +19,7 @@ class WatchableValueSerializer<T : Any>(private val dataSerializer: KSerializer<
 
     override fun serialize(encoder: Encoder, obj: WatchableValue<T>) {
         with(encoder.beginStructure(descriptor)) {
-            encodeSerializableElement(descriptor, 0, dataSerializer, obj.get())
+            encodeSerializableElement(descriptor, 0, dataSerializer, obj.value)
             endStructure(descriptor)
         }
     }

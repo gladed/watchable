@@ -21,18 +21,19 @@ package io.gladed.watchable
 class WatchableMap<K, V> internal constructor(
     initial: Map<K, V>
 ) : MutableWatchableBase<Map<K, V>, V, MutableMap<K, V>, MapChange<K, V>>(), ReadOnlyWatchableMap<K, V> {
+    override var immutable: Map<K, V> = initial.toMap()
 
-    override val entries get() = value.entries
-    override val keys get() = value.keys
-    override val size get() = value.size
-    override val values get() = value.values
-    override fun containsKey(key: K) = value.containsKey(key)
-    override fun containsValue(value: V) = this.value.containsValue(value)
-    override fun get(key: K): V? = value[key]
-    override fun isEmpty() = value.isEmpty()
-    override fun equals(other: Any?) = value == other
-    override fun hashCode() = value.hashCode()
-    override fun toString() = "WatchableMap($value)"
+    override val entries get() = immutable.entries
+    override val keys get() = immutable.keys
+    override val size get() = immutable.size
+    override val values get() = immutable.values
+    override fun containsKey(key: K) = immutable.containsKey(key)
+    override fun containsValue(value: V) = immutable.containsValue(value)
+    override fun get(key: K): V? = immutable[key]
+    override fun isEmpty() = immutable.isEmpty()
+    override fun equals(other: Any?) = immutable == other
+    override fun hashCode() = immutable.hashCode()
+    override fun toString() = "WatchableMap($immutable)"
 
     /** A map that checks and reports all change attempts. */
     override val mutable = object : AbstractMutableMap<K, V>() {
@@ -138,6 +139,6 @@ class WatchableMap<K, V> internal constructor(
 
     /** Return an unmodifiable form of this [WatchableMap]. */
     fun readOnly(): ReadOnlyWatchableMap<K, V> = object : ReadOnlyWatchableMap<K, V> by this {
-        override fun toString() = "ReadOnlyWatchableMap($value)"
+        override fun toString() = "ReadOnlyWatchableMap($immutable)"
     }
 }

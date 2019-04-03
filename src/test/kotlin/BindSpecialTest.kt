@@ -44,6 +44,6 @@ class BindSpecialTest {
         }
 
         // The size ends up 2
-        eventually { assertEquals(2, dest.get()) }
+        eventually { assertEquals(2, dest.value) }
     }
 }

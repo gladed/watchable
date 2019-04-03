@@ -16,6 +16,7 @@
 
 import io.gladed.watchable.MapChange
 import io.gladed.watchable.bind
+import io.gladed.watchable.waitFor
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.channels.Channel
@@ -67,9 +68,7 @@ class WatchableMapTest : ScopeTest() {
         bind(map2, map3)
         map.put(3, "3")
 
-        map3.waitFor(this) {
-            assertEquals(map, map3)
-        }
+        waitFor(map) { it == map3 }
     }
 
     @Test fun `put and remove`() = runBlocking {

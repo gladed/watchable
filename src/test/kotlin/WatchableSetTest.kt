@@ -37,7 +37,7 @@ class WatchableSetTest : ScopeTest() {
         assertThat(set.toString(), startsWith("WatchableSet("))
         assertThat(set2.toString(), startsWith("ReadOnlyWatchableSet("))
         set.add(3)
-        eventually { assertEquals(setOf(1, 3), set2.value) }
+        eventually { assertEquals(setOf(1, 3), set2) }
     }
 
     @Test

@@ -19,9 +19,9 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 
 /**
- * A [Watchable] which may be mutated in the form of an [M] and bound to other [Watchable] sources.
+ * A [Watchable] which contains a mutable object of [M] and can both generate and accept changes of type [C].
  */
-interface MutableWatchable<T, V, M : T, C : Change> : Watchable<T, V, C> {
+interface MutableWatchable<M, C : Change> : Watchable<C> {
     /**
      * Suspend until [func] can safely execute, reading and/or writing data on [M] as desired and returning
      * the result. Note: if currently bound ([isBound] returns true), attempts to modify [M] will throw.
@@ -42,16 +42,16 @@ interface MutableWatchable<T, V, M : T, C : Change> : Watchable<T, V, C> {
      * [origin] exactly, until [scope] completes. While bound, this object may not be externally modified or
      * rebound.
      */
-    suspend fun bind(scope: CoroutineScope, origin: Watchable<T, V, C>)
+    suspend fun bind(scope: CoroutineScope, origin: Watchable<C>)
 
     /**
      * Binds this unbound object to [origin], such that for every change to [origin], the change is applied
      * to this object with [apply], until [scope] completes. While bound, this object may not be externally
      * modified or rebound.
      */
-    suspend fun <T2, V2, C2 : Change> bind(
+    suspend fun <C2 : Change> bind(
         scope: CoroutineScope,
-        origin: Watchable<T2, V2, C2>,
+        origin: Watchable<C2>,
         apply: M.(C2) -> Unit
     )
 
@@ -62,5 +62,5 @@ interface MutableWatchable<T, V, M : T, C : Change> : Watchable<T, V, C> {
     fun isBound() = boundTo != null
 
     /** The [Watchable] to which this object is bound, if any. */
-    val boundTo: Watchable<*, *, *>?
+    val boundTo: Watchable<*>?
 }

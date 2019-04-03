@@ -28,6 +28,11 @@ interface Value<T> {
 class WatchableValue<T> internal constructor(
     initial: T
 ) : MutableWatchableBase<Value<T>, T, MutableValue<T>, ValueChange<T>>(), ReadOnlyWatchableValue<T> {
+    data class ValueData<T>(override val value: T) : Value<T> {
+        override fun toString() = value.toString()
+    }
+
+    override var immutable: Value<T> = ValueData(initial)
 
     override var mutable: MutableValue<T> = object : MutableValue<T> {
         override var value: T = initial
@@ -37,17 +42,12 @@ class WatchableValue<T> internal constructor(
                     field = value
                 }
             }
-
-        override fun toString() = "MutableValue($value)"
     }
 
     /** Direct access to the container. */
-    override val value: Value<T> get() = mutable
+    override val value: T get() = mutable.value
 
-    override fun MutableValue<T>.toImmutable(): Value<T> = object : Value<T> {
-        override val value = this@toImmutable.value
-        override fun toString() = "Value($value)"
-    }
+    override fun MutableValue<T>.toImmutable(): Value<T> = ValueData(value)
 
     override fun Value<T>.toInitialChange(): ValueChange<T> = ValueChange(value)
 
@@ -72,11 +72,11 @@ class WatchableValue<T> internal constructor(
 
     override fun equals(other: Any?) =
         when (other) {
-            is WatchableValue<*> -> value.value == other.value.value
-            is Value<*> -> value.value == other.value
-            else -> value.value == other
+            is WatchableValue<*> -> value == other.value
+            is Value<*> -> value == other.value
+            else -> value == other
         }
 
-    override fun hashCode() = value.value.hashCode()
+    override fun hashCode() = value.hashCode()
     override fun toString() = "WatchableValue($value.value)"
 }

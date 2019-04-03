@@ -22,7 +22,7 @@ import kotlinx.coroutines.isActive
 /**
  * A [Watchable] that allows for a more verbose series of simpler changes.
  */
-interface SimpleWatchable<out T, out V, S, out C : HasSimpleChange<S>> : Watchable<T, V, C> {
+interface SimpleWatchable<S, out C : HasSimpleChange<S>> : Watchable<C> {
     fun simple(scope: CoroutineScope, func: suspend (S) -> Unit): WatchHandle =
         watch(scope) {
             for (simpleChange in it.simple) {

@@ -18,10 +18,10 @@ package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.sync.Mutex
 
 /**
- * Wraps container [T] (having objects of type [V])  so that it may be watched for
- * changes (of type [C]).
+ * An object that allows you to watch for changes of type [C].
  *
  * Each watch operation takes a [CoroutineScope]. Callbacks are delivered using this scope's context, and stop
  * automatically when this scope cancels or completes.
@@ -29,11 +29,7 @@ import kotlinx.coroutines.isActive
  * Each watch operation also returns a [WatchHandle] which may be used to independently cancel or join the watch
  * operation.
  */
-interface Watchable<out T, out V, out C : Change> {
-
-    /** Return an immutable copy of the current value of [T]. */
-    val value: T
-
+interface Watchable<out C : Change> {
     /**
      * Deliver all changes from this [Watchable] to [func] as lists of [Change] objects until [scope] completes.
      */
@@ -55,4 +51,14 @@ interface Watchable<out T, out V, out C : Change> {
                 if (scope.isActive) func(change) else break
             }
         }
+
+    /** Suspend, calling [func] as changes arrive, and return when [func] returns true. */
+    suspend fun <C : Change> waitFor(scope: CoroutineScope, func: () -> Boolean) {
+        val mutex = Mutex(locked = true)
+        val handle = scope.batch(this) {
+            if (func()) mutex.unlock()
+        }
+        mutex.lock() // Suspend until success
+        handle.cancel() // Cancel listening
+    }
 }
