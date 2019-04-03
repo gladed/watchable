@@ -32,14 +32,14 @@ class WatchableGroup(
         minPeriod: Long,
         func: suspend (List<GroupChange>) -> Unit
     ) = scope.operate { closeMutex ->
-        // Start watching other subscriptions, delivering their changes here.
-        val subscriptions = watchables.map { watchable ->
+        // Start watching others, delivering their changes here.
+        val handles = watchables.map { watchable ->
             watchable.batch(scope) { changes ->
                 func(changes.map { GroupChange(watchable, it) })
             }
         }.toMutableList()
 
         closeMutex.lock()
-        subscriptions.forEach { it.closeAndJoin() }
+        handles.forEach { it.closeAndJoin() }
     }
 }

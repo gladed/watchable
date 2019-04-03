@@ -16,7 +16,7 @@
 
 package io.gladed.watchable
 
-/** A sort of change that can be expressed in terms of simpler change objects of type [S]. */
+/** A [Change] that can be expressed in terms of simpler change objects of type [S]. */
 interface HasSimpleChange<out S> : Change {
     val simple: List<S>
 }

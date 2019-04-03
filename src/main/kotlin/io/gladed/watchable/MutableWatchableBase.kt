@@ -52,7 +52,7 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : MutableWatchable<
     /** Collects changes applied during any mutation of [mutable]. */
     protected val changes = mutableListOf<C>()
 
-    /** The current immutable [T] form of [M], when known. */
+    /** The current immutable [T] form of [M]. */
     protected abstract var immutable: T
 
     /** The current binding if any. */

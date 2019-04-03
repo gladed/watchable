@@ -28,7 +28,7 @@ interface WatchHandle {
     /** Suspend until all outstanding changes are drained and the watch operation is completed. */
     suspend fun join()
 
-    /** Close the subscription with [close] and wait for all events to be processed with [join]. */
+    /** Close the operation with [close] and wait for all events to be processed with [join]. */
     suspend fun closeAndJoin() {
         close()
         join()

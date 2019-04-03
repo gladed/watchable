@@ -28,7 +28,9 @@ interface Value<T> {
 class WatchableValue<T> internal constructor(
     initial: T
 ) : MutableWatchableBase<Value<T>, T, MutableValue<T>, ValueChange<T>>(), ReadOnlyWatchableValue<T> {
-    data class ValueData<T>(override val value: T) : Value<T> {
+
+    /** A holder for data. */
+    private data class ValueData<T>(override val value: T) : Value<T> {
         override fun toString() = value.toString()
     }
 
@@ -44,8 +46,8 @@ class WatchableValue<T> internal constructor(
             }
     }
 
-    /** Direct access to the container. */
-    override val value: T get() = mutable.value
+    /** The currently contained value. */
+    override val value: T get() = immutable.value
 
     override fun MutableValue<T>.toImmutable(): Value<T> = ValueData(value)
 
@@ -55,6 +57,7 @@ class WatchableValue<T> internal constructor(
         value = change.value
     }
 
+    /** Insert a new value, replacing the old one. */
     suspend fun set(value: T) {
         use {
             mutable.value = value

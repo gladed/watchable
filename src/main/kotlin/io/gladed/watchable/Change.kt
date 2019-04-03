@@ -16,5 +16,5 @@
 
 package io.gladed.watchable
 
-/** Describes a change of some kind, that also has a simplified form. */
+/** An object that describes a change. */
 interface Change

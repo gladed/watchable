@@ -19,23 +19,25 @@ package io.gladed.watchable
 import kotlinx.coroutines.CoroutineScope
 
 /**
- * A [Watchable] which contains a mutable object of [M] and can both generate and accept changes of type [C].
+ * A [Watchable] containing a mutable object of type [M], which can both generate and accept changes of type [C].
  */
 interface MutableWatchable<M, C : Change> : Watchable<C> {
+    /**
+     * Remove all items.
+     */
+    suspend fun clear()
+
     /**
      * Suspend until [func] can safely execute, reading and/or writing data on [M] as desired and returning
      * the result. Note: if currently bound ([isBound] returns true), attempts to modify [M] will throw.
      */
     suspend fun <U> use(
-        /** A function to quickly inspect and/or return data on the mutable form of this object. Do not block,
-         * [use] other [MutableWatchable] objects, or return the mutable form outside of this routine. */
+        /**
+         * A function to inspect and/or return data from the mutable form of this object. Must not block
+         * or return the mutable form outside of this routine.
+         */
         func: M.() -> U
     ): U
-
-    /**
-     * Empty out everything in this container.
-     */
-    suspend fun clear()
 
     /**
      * Binds this unbound object to [origin], such that when [origin] changes, this object is updated to match
@@ -55,7 +57,7 @@ interface MutableWatchable<M, C : Change> : Watchable<C> {
         apply: M.(C2) -> Unit
     )
 
-    /** Cancel any existing binding that exists for this object. */
+    /** Remove any existing binding for this object. */
     fun unbind()
 
     /** Return true if this object is already bound. */
