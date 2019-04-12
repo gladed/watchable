@@ -18,33 +18,23 @@ import io.gladed.watchable.ValueChange
 import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
-import kotlinx.coroutines.asCoroutineDispatcher
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.runBlocking
-import org.hamcrest.CoreMatchers
 import org.junit.Assert
 import org.junit.Test
-import java.util.concurrent.Executors
 
 class CancelTest {
     private lateinit var intValue: WatchableValue<Int>
     val changes = Channel<ValueChange<Int>>(Channel.UNLIMITED)
 
-    private val dispatcher = Executors.newSingleThreadExecutor {
-        task -> Thread(task, "scope1")
-    }.asCoroutineDispatcher()
-
-    private val scope1 = LocalScope(dispatcher)
-
     @Test fun `callbacks stop when scope joined`() {
-        runBlocking {
+        runTest {
             intValue = watchableValueOf(5)
             watch(intValue) { changes.send(it) }
-            changes.expect(ValueChange(5))
+            changes.expect(ValueChange(null, 5))
         }
 
-        runBlocking {
+        runTest {
             // intValue can still be set
             intValue.set(88)
             Assert.assertEquals(88, intValue.value)
@@ -53,15 +43,13 @@ class CancelTest {
         }
     }
 
-    @Test fun `callbacks stop when scope cancelled`() = runBlocking {
+    @Test fun `callbacks stop when scope cancelled`() = runTest {
         intValue = watchableValueOf(5)
-        scope1.watch(intValue) {
-            Assert.assertThat(Thread.currentThread().name, CoreMatchers.containsString("scope1"))
-            changes.send(it)
-        }
-        changes.expect(ValueChange(5))
+        val scope1 = newScope()
+        scope1.watch(intValue) { changes.send(it) }
+        changes.expect(ValueChange(null, 5))
         intValue.set(17)
-        changes.expect(ValueChange(17))
+        changes.expect(ValueChange(5, 17))
 
         // Shut down the watching scope
         scope1.coroutineContext.cancel()
@@ -70,17 +58,14 @@ class CancelTest {
     }
 
     @Test
-    fun `callbacks stop when job cancelled`() = runBlocking {
+    fun `callbacks stop when job cancelled`() = runTest {
         intValue = watchableValueOf(5)
-        val job = scope1.watch(intValue) {
-            Assert.assertThat(Thread.currentThread().name, CoreMatchers.containsString("scope1"))
-            // Because we're watching from this scope it should be named here
-            changes.send(it)
-        }
+        val scope1 = newScope()
+        val job = scope1.watch(intValue) { changes.send(it) }
 
-        changes.expect(ValueChange(5))
+        changes.expect(ValueChange(null, 5))
         intValue.set(17)
-        changes.expect(ValueChange(17))
+        changes.expect(ValueChange(5, 17))
 
         // Shut down the job
         job.cancel()
@@ -89,22 +74,19 @@ class CancelTest {
     }
 
     @Test
-    fun `watch allows parent scope to join`() = runBlocking {
+    fun `watch allows parent scope to join`() = runTest {
         intValue = watchableValueOf(5)
         watch(intValue) { changes.send(it) }
-        changes.expect(ValueChange(5))
+        changes.expect(ValueChange(null, 5))
     }
 
-    @Test
-    fun `throw during watch cancels job`() = runBlocking {
+    @Test(expected = IllegalStateException::class)
+    fun `throw during watch destroys everything`() = runTest {
         intValue = watchableValueOf(5)
-        val handle = watch(intValue) {
+        watch(intValue) {
             changes.send(it)
             throw IllegalStateException("Whoops!")
         }
-        changes.expect(ValueChange(5))
-        intValue.set(7)
-        changes.expectNone()
-        handle.cancel()
+        triggerActions()
     }
 }

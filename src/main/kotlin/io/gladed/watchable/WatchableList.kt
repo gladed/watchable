@@ -63,13 +63,13 @@ class WatchableList<T> internal constructor(
 
         override fun removeAt(index: Int) = doChange {
             real.removeAt(index).also {
-                changes.add(ListChange.Remove(index..index))
+                changes.add(ListChange.Remove(index, it))
             }
         }
 
         override fun set(index: Int, element: T) = doChange {
             real.set(index, element).also {
-                changes.add(ListChange.Replace(index, listOf(element)))
+                changes.add(ListChange.Replace(index, remove = it, add = element))
             }
         }
     }
@@ -112,17 +112,14 @@ class WatchableList<T> internal constructor(
 
     override fun MutableList<T>.toImmutable() = toList()
 
-    override fun List<T>.toInitialChange() = takeIf { isNotEmpty() }?.let {
-        ListChange.Insert(0, toList())
-    }
+    override fun List<T>.toInitialChange() = ListChange.Initial(this)
 
     override fun MutableList<T>.applyBoundChange(change: ListChange<T>) {
         when (change) {
-            is ListChange.Insert -> addAll(change.index, change.items)
-            is ListChange.Remove -> (change.range).forEach { _ -> removeAt(change.range.first) }
-            is ListChange.Replace -> (change.items).forEachIndexed { index, element ->
-                this[change.index + index] = element
-            }
+            is ListChange.Initial -> { clear(); addAll(change.list) }
+            is ListChange.Insert -> addAll(change.index, change.insert)
+            is ListChange.Remove -> removeAt(change.index)
+            is ListChange.Replace -> set(change.index, change.add)
         }
     }
 

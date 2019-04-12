@@ -15,37 +15,31 @@
  */
 
 import io.gladed.watchable.ListChange
-import io.gladed.watchable.WatchHandle
 import io.gladed.watchable.WatchableList
 import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertNull
-import org.junit.Ignore
 import org.junit.Test
 import java.lang.ref.WeakReference
 
 @Suppress("UNUSED_VALUE") // We mean to release items when we are done with them.
-//@Ignore // These tests simply aren't reliable since gc behavior can vary
 class MemoryLeakTest {
-    private val scope1 = CoroutineScope(Dispatchers.Default)
     val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
 
-    @Test fun `gc is detectable`() = runBlocking {
+    @Test fun `gc is detectable`() = runTest {
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)
         list1 = null
         scour { assertNull(ref.get()) }
     }
 
-    @Test fun `cancel of watch scope allows gc`() = runBlocking {
+    @Test fun `cancel of watch scope allows gc`() = runTest {
+        val scope1 = newScope()
+
         // Create a var in scope1
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)
@@ -61,7 +55,9 @@ class MemoryLeakTest {
         scour { assertNull(ref.get()) }
     }
 
-    @Test fun `cancel of handle allows gc`() = runBlocking {
+    @Test fun `cancel of handle allows gc`() = runTest {
+        val scope1 = newScope()
+
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)
         // Watch and then cancel
@@ -72,7 +68,9 @@ class MemoryLeakTest {
         scour { assertNull(ref.get()) }
     }
 
-    @Test fun `join on scope used to bind allows gc`() = runBlocking {
+    @Test fun `join on scope used to bind allows gc`() = runTest {
+        val scope1 = newScope()
+
         // Create a var in scope1
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)

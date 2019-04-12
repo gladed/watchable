@@ -54,9 +54,9 @@ class WatchableMapTest : ScopeTest() {
         val map2 = watchableMapOf(2 to "2")
         val map3 = map2.readOnly()
         watch(map3) { log(it); changes.send(it) }
-        changes.expect(MapChange.Put(listOf(2 to "2")))
+        changes.expect(MapChange.Initial(mapOf(2 to "2")))
         map2.bind(this, map)
-        changes.expect(MapChange.Remove(listOf(2)), MapChange.Put(listOf(1 to "1")))
+        changes.expect(MapChange.Remove(2, "2"), MapChange.Put(1, null, "1"))
         assertThat(map.toString(), startsWith("WatchableMap("))
         assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
     }

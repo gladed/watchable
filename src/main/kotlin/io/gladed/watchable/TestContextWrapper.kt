@@ -16,17 +16,15 @@
 
 package io.gladed.watchable
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.test.TestCoroutineContext
+import kotlin.coroutines.CoroutineContext
 
 /**
- * A [Watchable] that allows for a more verbose series of simpler changes.
+ * A wrapper for [testContext] so that it can be added into a [CoroutineContext].
  */
-interface SimpleWatchable<S, C : HasSimpleChange<S>> : Watchable<C> {
-    suspend fun simple(scope: CoroutineScope, func: suspend (S) -> Unit): Busy =
-        watch(scope) {
-            for (simpleChange in it.simple) {
-                if (scope.isActive) func(simpleChange) else break
-            }
-        }
+@UseExperimental(ObsoleteCoroutinesApi::class)
+class TestContextWrapper(val testContext: TestCoroutineContext) : CoroutineContext.Element {
+    override val key: CoroutineContext.Key<*> = TestContextWrapper.Key
+    companion object Key : CoroutineContext.Key<TestContextWrapper>
 }

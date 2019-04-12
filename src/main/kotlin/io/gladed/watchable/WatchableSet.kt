@@ -104,13 +104,14 @@ class WatchableSet<T> internal constructor(
     override fun MutableSet<T>.toImmutable() = toSet()
 
     override fun Set<T>.toInitialChange() = takeIf { isNotEmpty() }?.let {
-        SetChange.Add(toList())
+        SetChange.Initial(toSet())
     }
 
     override fun MutableSet<T>.applyBoundChange(change: SetChange<T>) {
         when (change) {
-            is SetChange.Remove -> removeAll(change.items)
-            is SetChange.Add -> addAll(change.items)
+            is SetChange.Initial -> { clear(); addAll(change.set) }
+            is SetChange.Remove -> removeAll(change.remove)
+            is SetChange.Add -> addAll(change.add)
         }
     }
 

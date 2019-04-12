@@ -15,11 +15,11 @@
  */
 
 import io.gladed.watchable.batch
+import io.gladed.watchable.group
 import io.gladed.watchable.toWatchableList
+import io.gladed.watchable.toWatchableSet
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
@@ -27,34 +27,47 @@ import org.junit.Test
 class ReadmeTest {
     val out = mutableListOf<String>()
 
-    @Test fun `batching docs`() = runBlocking {
+    @Test fun `batching docs`() = runTest {
         val list = listOf(4, 5).toWatchableList()
         batch(list) { out += it.toString() }
-        delay(25)
         list.use {
             add(6)
             add(7)
             remove(6)
         }
-        delay(25)
+        triggerActions()
         assertEquals("""
-            [Insert(index=0, items=[4, 5])]
-            [Insert(index=2, items=[6]), Insert(index=3, items=[7]), Remove(range=2..2)]""".trimIndent(),
+            [Initial(list=[4, 5])]
+            [Insert(index=2, insert=[6]), Insert(index=3, insert=[7]), Remove(index=2, remove=6)]""".trimIndent(),
             out.joinToString("\n"))
 
         // Prints: [Add(index=2, added=6), Add(index=3, added=7)]
     }
 
-    @Test fun `close watch handle`() = runBlocking {
+    @Test fun `close watch handle`() = runTest {
         val list = watchableListOf(1)
         val handle = watch(list) { out += it.toString() }
-        delay(10)
         list.add(2)
-        handle.closeAndJoin()
+        handle.close()
         list.add(3)
-        delay(10)
+        triggerActions()
         assertEquals("""
-            Insert(index=0, items=[1])
-            Insert(index=1, items=[2])""".trimIndent(), out.joinToString("\n"))
+            Initial(list=[1])
+            Insert(index=1, insert=[2])""".trimIndent(), out.joinToString("\n"))
+    }
+
+    @Test fun `example from readme`() = runTest {
+        val list = listOf(4).toWatchableList()
+        val set = setOf("a").toWatchableSet()
+        watch(group(set, list)) { println(it) }
+        triggerActions()
+        // Prints:
+        //   GroupChange(watchable=WatchableSet(), change=Initial(initial=[a]))
+        //   GroupChange(watchable=WatchableList(), change=Initial(initial=[4]))
+        list.use { add(6) }
+        set.use { add("b") }
+        //   GroupChange(watchable=WatchableList(), change=Add(index=1, added=6))
+        //   GroupChange(watchable=WatchableSet(), change=Add(added=b))
+        triggerActions()
     }
 }

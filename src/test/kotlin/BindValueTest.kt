@@ -21,49 +21,48 @@ import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.newSingleThreadContext
-import kotlinx.coroutines.runBlocking
-import org.hamcrest.CoreMatchers.containsString
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
 @UseExperimental(ObsoleteCoroutinesApi::class)
 class BindValueTest : ScopeTest() {
-    val changes = Channel<ValueChange<Int>>(Channel.UNLIMITED)
+    val changes = Channel<Any>(Channel.UNLIMITED)
 
-    @Test fun `bind value`() = runBlocking {
+    @Test fun `bind value`() = runTest {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         bind(dest, origin)
         eventually { assertEquals(5, dest.value) }
     }
 
-    @Test fun `example from readme`() = runBlocking {
+    @Test fun `example from readme`() = runTest {
         val from = listOf(4, 5).toWatchableList()
         val into = watchableListOf<Int>()
         bind(into, from)
-        eventually { assertEquals(from, into) }
+        triggerActions()
+        assertEquals(from, into)
     }
 
-    @Test fun `bind then change`() = runBlocking {
+    @Test fun `bind then change`() = runTest {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         watch(dest) { changes.send(it) }
-        changes.expect(ValueChange(6))
+        changes.assert(ValueChange(null, 6))
+
         bind(dest, origin)
         origin.set(7)
-        // Was dest ever 5?
-        changes.expect(ValueChange(7))
+
+        changes.assert(ValueChange(6, 5), ValueChange(5, 7))
         assertEquals(7, dest.value)
     }
 
     @Test fun `bind to self`() {
         try {
-            runBlocking {
+            runTest {
                 val origin = watchableValueOf(5)
                 bind(origin, origin)
                 fail("Shouldn't get here")
@@ -73,7 +72,7 @@ class BindValueTest : ScopeTest() {
 
     @Test fun `bind twice`() {
         try {
-            runBlocking {
+            runTest {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
                 bind(dest, origin)
@@ -87,7 +86,7 @@ class BindValueTest : ScopeTest() {
 
     @Test fun `circular binding`() {
         try {
-            runBlocking {
+            runTest {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
                 bind(dest, origin)
@@ -101,7 +100,7 @@ class BindValueTest : ScopeTest() {
 
     @Test fun `modify bound`() {
         try {
-            runBlocking {
+            runTest {
                 val origin = watchableValueOf(5)
                 val dest = watchableValueOf(6)
                 bind(dest, origin)
@@ -114,7 +113,7 @@ class BindValueTest : ScopeTest() {
         }
     }
 
-    @Test fun `bind then unbind`() = runBlocking {
+    @Test fun `bind then unbind`() = runTest {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         bind(dest, origin)
@@ -124,32 +123,35 @@ class BindValueTest : ScopeTest() {
         always { assertEquals(5, dest.value) }
     }
 
-    private val scope1 = LocalScope(newSingleThreadContext("scope1"))
-
-    @Test fun `watch from different scope`() = runBlocking {
+    @Test fun `watch from different scope`() = runTest {
         val origin = watchableValueOf(5)
+        val scope1 = newScope()
         scope1.watch(origin) {
-            log(it)
-            assertThat(Thread.currentThread().name, containsString("scope1"))
             changes.send(it)
         }
-        changes.expect(ValueChange(5))
+        log("Asserting after $scope1 launch")
+        changes.assert(ValueChange(null, 5))
         origin.set(6)
-        changes.expect(ValueChange(6))
+        changes.assert(ValueChange(5, 6))
     }
 
-    @Test fun `kill binding scope`() = runBlocking {
+    @Test fun `kill binding scope`() = runTest {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         watch(dest) { changes.send(it) }
+        val scope1 = newScope()
         scope1.bind(dest, origin)
         origin.set(7)
-        eventually { assertEquals(7, dest.value) }
-        scope1.close() // Kill the destination value's scope
+        triggerActions()
+        assertEquals(7, dest.value)
+
+        // Kill the destination value's scope, which should also kill the binding
+        scope1.coroutineContext.cancel()
 
         // Changing origin has no effect on bound thing, though it is still bound
         origin.set(8)
-        always { assertEquals(7, dest.value) }
+        triggerActions()
+        assertEquals(7, dest.value)
         assertTrue(dest.isBound())
     }
 }

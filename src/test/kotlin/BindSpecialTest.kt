@@ -17,21 +17,20 @@
 import io.gladed.watchable.ListChange
 import io.gladed.watchable.bind
 import io.gladed.watchable.watchableListOf
-import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableValueOf
-import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
 class BindSpecialTest {
-    @Test fun specialBinding() = runBlocking {
+    @Test fun specialBinding() = runTest {
         // Show how we can transform data types into each other
         val origin = watchableListOf(4, 5)
         val dest = watchableValueOf(0)
 
         bind(dest, origin) {
             when(it) {
-                is ListChange.Insert -> value += it.items.size
+                is ListChange.Initial -> value = it.list.size
+                is ListChange.Insert -> value += it.insert.size
                 is ListChange.Remove -> value -= 1
                 is ListChange.Replace -> { }
             }
@@ -44,6 +43,7 @@ class BindSpecialTest {
         }
 
         // The size ends up 2
-        eventually { assertEquals(2, dest.value) }
+        triggerActions()
+        assertEquals(2, dest.value)
     }
 }

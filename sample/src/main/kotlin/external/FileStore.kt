@@ -16,7 +16,6 @@
 
 package external
 
-import io.gladed.watchable.batch
 import io.gladed.watchable.group
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.CoroutineScope
@@ -60,9 +59,9 @@ class FileStore(
             .also { it.invokeOnCompletion { birds -= bird.id } }
     }
 
-    private fun watch(bird: Bird) {
+    private suspend fun watch(bird: Bird) {
         // Only save this maximum once per fileDelayMillis
-        batch(group(bird.name, bird.following), fileDelayMillis) {
+        group(bird.name, bird.following).batch(this, fileDelayMillis) {
             save(bird)
         }
     }

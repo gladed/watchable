@@ -21,54 +21,45 @@ import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
 class FlushTest : ScopeTest() {
+    val changes = Channel<Any>(Channel.UNLIMITED)
 
-    @Test(timeout = 500)
-    fun `receive events while flushing`() {
-        val changes = Channel<ValueChange<Int>>(Channel.UNLIMITED)
+    @Test fun `receive events while flushing`() = runTest {
         val value = watchableValueOf(1)
         val handle = watch(value) { changes.send(it) }
-        runBlocking {
-            changes.expect(ValueChange(1))
-            value.set(2)
-            handle.close()
-            changes.expect(ValueChange(2))
-            handle.join()
-        }
+        changes.assert(ValueChange(null, 1))
+        value.set(2)
+        handle.close()
+        changes.assert(ValueChange(1, 2))
     }
 
-    @Test(timeout = 500)
-    fun `get final batch`() {
-        runBlocking {
-            val changes = Channel<List<ValueChange<Int>>>(Channel.UNLIMITED)
-            val value = watchableValueOf(1)
-            val handle = batch(value, 1000) { changes.send(it) }
-            changes.expect(listOf((ValueChange(1))))
-            value.set(2)
-            // close should cause an immediate flush of outstanding batch items regardless of its timeout.
-            changes.expectNone()
-            handle.close()
-            changes.expect(listOf(ValueChange(2)), timeout = 100)
-            handle.join()
-        }
+    @Test fun `get final batch`() = runTest {
+        val changes = Channel<List<ValueChange<Int>>>(Channel.UNLIMITED)
+        val value = watchableValueOf(1)
+        val handle = batch(value, 500) { changes.send(it) }
+        value.set(2)
+        changes.assert()
+
+        // close should cause an immediate flush of outstanding batch items regardless of its timeout.
+        handle.close()
+        changes.assert(listOf(ValueChange(null, 1), ValueChange(1, 2)))
     }
 
-    @Test(timeout = 500) fun `flush two`() = runBlocking {
+    @Test fun `flush two`() = runTest {
         val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
         val list = watchableListOf(1)
         val handle = watch(list) { changes.send(it) } + watch(list) { changes.send(it) }
-        handle.closeAndJoin()
-        changes.expect(ListChange.Insert(0, listOf(1)), ListChange.Insert(0, listOf(1)))
+        handle.close()
+        changes.assert(ListChange.Initial(listOf(1)), ListChange.Initial(listOf(1)))
     }
 
-    @Test(timeout = 500) fun `cancel two`() = runBlocking {
+    @Test fun `cancel two`() = runTest {
         val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
         val list = watchableListOf(1)
         val handle = watch(list) { changes.send(it) } + watch(list) { changes.send(it) }
         handle.cancel()
-        changes.expectNone()
+        changes.assert()
     }
 }

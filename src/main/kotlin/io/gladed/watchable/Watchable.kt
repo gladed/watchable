@@ -16,6 +16,7 @@
 
 package io.gladed.watchable
 
+import io.gladed.watchable.Period.IMMEDIATE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.sync.Mutex
@@ -26,39 +27,47 @@ import kotlinx.coroutines.sync.Mutex
  * Each watch operation takes a [CoroutineScope]. Callbacks are delivered using this scope's context, and stop
  * automatically when this scope cancels or completes.
  *
- * Each watch operation also returns a [WatchHandle] which may be used to independently cancel or join the watch
+ * Each watch operation also returns a [Busy] which may be used to independently cancel or join the watch
  * operation.
  */
 interface Watchable<out C : Change> {
+
     /**
      * Deliver all changes from this [Watchable] to [func] as lists of [Change] objects until [scope] completes.
      */
-    fun batch(
+    suspend fun batch(
         /** Scope within which to process changes. */
         scope: CoroutineScope,
-        /** The minimum period between lists of change events. */
-        minPeriod: Long = 0,
+        /** When to receive changes, see [Period]. */
+        period: Long = IMMEDIATE,
         /** Function which processes elements as they arrive. */
         func: suspend (List<C>) -> Unit
-    ): WatchHandle
+    ): Busy
 
     /**
      * Deliver all changes from this [Watchable] to [func] as individual [Change] objects until [scope] completes.
      */
-    fun watch(scope: CoroutineScope, func: suspend (C) -> Unit): WatchHandle =
-        batch(scope) { changes ->
+    suspend fun watch(
+        scope: CoroutineScope,
+        /** When to receive changes, see [Period]. */
+        period: Long = IMMEDIATE,
+        func: suspend (C) -> Unit
+    ): Busy =
+        batch(scope, period) { changes ->
             for (change in changes) {
                 if (scope.isActive) func(change) else break
             }
         }
 
     /** Suspend, calling [func] as changes arrive, and return when [func] returns true. */
-    suspend fun <C : Change> waitFor(scope: CoroutineScope, func: () -> Boolean) {
+    suspend fun waitFor(scope: CoroutineScope, func: () -> Boolean) {
+        if (func()) return
         val mutex = Mutex(locked = true)
         val handle = scope.batch(this) {
-            if (func()) mutex.unlock()
+            if (mutex.isLocked && func()) mutex.unlock()
         }
         mutex.lock() // Suspend until success
+        println("Cancelling handle RIGHT NOW")
         handle.cancel() // Cancel listening
     }
 }

@@ -14,15 +14,10 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.Change
-import io.gladed.watchable.Watchable
-import io.gladed.watchable.watch
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
-import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert
@@ -36,8 +31,8 @@ import java.time.format.DateTimeFormatter
 private val clockTimeFormat = DateTimeFormatter.ofPattern("HH:mm:ss.SSS")
 
 fun log(message: Any?) {
-    val now = ZonedDateTime.now( ZoneOffset.UTC ).format( clockTimeFormat )
-    println("$now ${Thread.currentThread().name}: $message")
+    val time = ZonedDateTime.now(ZoneOffset.UTC).format(clockTimeFormat)
+    println("$time ${Thread.currentThread().name}: $message")
 }
 
 suspend fun eventually(timeout: Int = 250, delay: Int = 10, test: suspend () -> Unit) {
@@ -127,7 +122,6 @@ suspend fun <C> ReceiveChannel<C>.expect(vararg expected: C, timeout: Long = 250
     val result = withTimeoutOrNull(timeout) {
         while (expectedList != current) {
             if (strict && current.isNotEmpty()) {
-                println("Comparing $expectedList with $current")
                 assertEquals(expectedList.take(current.size), current)
             }
             current.add(receive())

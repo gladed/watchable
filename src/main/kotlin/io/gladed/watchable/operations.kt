@@ -16,6 +16,7 @@
 
 package io.gladed.watchable
 
+import io.gladed.watchable.Period.IMMEDIATE
 import kotlinx.coroutines.CoroutineScope
 
 /** Bind [dest] so that it receives values from [origin] as long as the calling coroutineContext lives. */
@@ -26,32 +27,34 @@ suspend fun <M, C : Change> CoroutineScope.bind(
 
 /**
  * Deliver simplified changes for this [Watchable] as receiver objects to [func] until
- * the returned [WatchHandle] is closed or this [CoroutineScope] completes.
+ * the returned [Busy] is closed or this [CoroutineScope] completes.
  */
-fun <S, C : HasSimpleChange<S>> CoroutineScope.simple(
+suspend fun <S, C : HasSimpleChange<S>> CoroutineScope.simple(
     watchable: SimpleWatchable<S, C>,
     func: suspend S.() -> Unit
 ) = watchable.simple(this@simple, func)
 
 /**
- * Deliver changes for this [Watchable] to [func] until the returned [WatchHandle] is closed or this
+ * Deliver changes for this [Watchable] to [func] until the returned [Busy] is closed or this
  * [CoroutineScope] completes.
  */
-fun <C : Change> CoroutineScope.watch(
+suspend fun <C : Change> CoroutineScope.watch(
     watchable: Watchable<C>,
+    /** When to receive changes, see [Period]. */
+    period: Long = IMMEDIATE,
     func: suspend (C) -> Unit
-) = watchable.watch(this@watch, func)
+) = watchable.watch(this@watch, period, func)
 
 /**
- * Deliver multiple changes for this [Watchable] to [func] until the returned [WatchHandle] is closed or this
+ * Deliver multiple changes for this [Watchable] to [func] until the returned [Busy] is closed or this
  * [CoroutineScope] completes.
  */
-fun <C : Change> CoroutineScope.batch(
+suspend fun <C : Change> CoroutineScope.batch(
     watchable: Watchable<C>,
-    /** The minimum time between change notifications in milliseconds, or 0 for no delay. */
-    minPeriod: Long = 0,
+    /** When to receive changes, see [Period]. */
+    period: Long = IMMEDIATE,
     func: suspend (List<C>) -> Unit
-) = watchable.batch(this@batch, minPeriod, func)
+) = watchable.batch(this@batch, period, func)
 
 /**
  * Bind [dest] so that it receives changes from [origin] and applies them with [apply] for as long as
@@ -60,13 +63,15 @@ fun <C : Change> CoroutineScope.batch(
 suspend fun <M, C : Change, C2 : Change> CoroutineScope.bind(
     dest: MutableWatchable<M, C>,
     origin: Watchable<C2>,
+    /** When to receive changes, see [Period]. */
+    period: Long = IMMEDIATE,
     apply: M.(C2) -> Unit
-) = dest.bind(this, origin, apply)
+) = dest.bind(this, origin, period, apply)
 
 /** Suspend until [condition] returns true, calling it after each group of changes. */
 suspend fun <C : Change, W : Watchable<C>> CoroutineScope.waitFor(
     target: W,
     condition: (W) -> Boolean
 ) {
-    target.waitFor<C>(this) { condition(target) }
+    target.waitFor(this) { condition(target) }
 }

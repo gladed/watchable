@@ -16,23 +16,13 @@
 
 package io.gladed.watchable
 
-interface MutableValue<T> : Value<T> {
-    override var value: T
-}
-
-interface Value<T> {
-    val value: T
-}
-
 /** A [Watchable] value of [T] which may also be replaced or bound. Use [watchableValueOf] to create. */
 class WatchableValue<T> internal constructor(
     initial: T
 ) : MutableWatchableBase<Value<T>, T, MutableValue<T>, ValueChange<T>>(), ReadOnlyWatchableValue<T> {
 
     /** A holder for data. */
-    private data class ValueData<T>(override val value: T) : Value<T> {
-        override fun toString() = value.toString()
-    }
+    private data class ValueData<T>(override val value: T) : Value<T>
 
     override var immutable: Value<T> = ValueData(initial)
 
@@ -40,7 +30,7 @@ class WatchableValue<T> internal constructor(
         override var value: T = initial
             set(value) {
                 doChange {
-                    changes += ValueChange(value)
+                    changes += ValueChange(field, value)
                     field = value
                 }
             }
@@ -51,7 +41,7 @@ class WatchableValue<T> internal constructor(
 
     override fun MutableValue<T>.toImmutable(): Value<T> = ValueData(value)
 
-    override fun Value<T>.toInitialChange(): ValueChange<T> = ValueChange(value)
+    override fun Value<T>.toInitialChange(): ValueChange<T> = ValueChange(null, value)
 
     override fun MutableValue<T>.applyBoundChange(change: ValueChange<T>) {
         value = change.value
@@ -81,5 +71,5 @@ class WatchableValue<T> internal constructor(
         }
 
     override fun hashCode() = value.hashCode()
-    override fun toString() = "WatchableValue($value.value)"
+    override fun toString() = "WatchableValue($value)"
 }

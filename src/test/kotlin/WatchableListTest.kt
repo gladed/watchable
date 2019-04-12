@@ -19,7 +19,6 @@ import io.gladed.watchable.batch
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -27,42 +26,34 @@ import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class WatchableListTest : ScopeTest() {
-    val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
+class WatchableListTest {
+    val changes = Channel<Any>(Channel.UNLIMITED)
 
-    @Test fun clear() {
-        val changes = Channel<List<ListChange<Int>>>(Channel.UNLIMITED)
-
-        runBlocking {
-            val list = watchableListOf(3, 4)
-            batch(list) { changes.send(it) }
-            changes.expect(listOf(ListChange.Insert(0, listOf(3, 4))))
-            list.use { clear() }
-            changes.expect(listOf(ListChange.Remove(0..0), ListChange.Remove(0..0)))
-            changes.expectNone()
-        }
+    @Test fun clear() = runTest {
+        val list = watchableListOf(3, 4)
+        batch(list) { changes.send(it) }
+        changes.assert(listOf(ListChange.Initial(listOf(3, 4))))
+        list.use { clear() }
+        changes.assert(listOf(ListChange.Remove(0, 3), ListChange.Remove(0, 4)))
+        changes.assert()
     }
 
-    @Test fun readOnly() {
-        runBlocking {
-            val list = watchableListOf(1)
-            val readOnlyList = list.readOnly()
-            watch(readOnlyList) { changes.send(it) }
-            changes.expect(ListChange.Insert(0, listOf(1)))
-            assertThat(list.toString(), startsWith("WatchableList("))
-            assertThat(readOnlyList.toString(), startsWith("ReadOnlyWatchableList("))
-        }
+    @Test fun readOnly() = runTest {
+        val list = watchableListOf(1)
+        val readOnlyList = list.readOnly()
+        watch(readOnlyList) { changes.send(it) }
+        changes.expect(ListChange.Initial(listOf(1)))
+        assertThat(list.toString(), startsWith("WatchableList("))
+        assertThat(readOnlyList.toString(), startsWith("ReadOnlyWatchableList("))
     }
 
-    @Test fun withNull() {
-        runBlocking {
-            val list = watchableListOf(1, null)
-            val channel = Channel<ListChange<Int?>>(20)
-            watch(list) { channel.send(it) }
-            channel.expect(ListChange.Insert(0, listOf(1, null)))
-            list.use { remove(null) }
-            channel.expect(ListChange.Remove(1..1))
-        }
+    @Test fun withNull() = runTest {
+        val list = watchableListOf(1, null)
+        val channel = Channel<ListChange<Int?>>(20)
+        watch(list) { channel.send(it) }
+        channel.expect(ListChange.Initial(listOf(1, null)))
+        list.use { remove(null) }
+        channel.expect(ListChange.Remove(1, null))
     }
 
     @Test fun `equality with null`() {
@@ -76,7 +67,7 @@ class WatchableListTest : ScopeTest() {
         assertEquals(listOf(1, null, 2).hashCode(), list.hashCode())
     }
 
-    @Test fun `add and remove`() = runBlocking {
+    @Test fun `add and remove`() = runTest {
         val list = watchableListOf(1, null, 2)
         list.add(null)
         assertTrue(list.remove(null))
@@ -86,7 +77,7 @@ class WatchableListTest : ScopeTest() {
         assertTrue(list.isEmpty())
     }
 
-    @Test fun `addAll etc`() = runBlocking {
+    @Test fun `addAll etc`() = runTest {
         val list = watchableListOf(1, 2)
         list.addAll(setOf(3, 4))
         list.addAll(arrayOf(5, 6))
@@ -95,7 +86,6 @@ class WatchableListTest : ScopeTest() {
         list.removeAll(setOf(6, 7))
         list.retainAll(listOf(1, 3, 5, 7, 8, 9))
         assertEquals(listOf(1, 3, 5, 8, 9), list)
-        Unit
     }
 
     @Test fun listApis() {

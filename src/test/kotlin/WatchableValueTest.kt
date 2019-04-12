@@ -32,15 +32,19 @@ class WatchableValueTest {
     private lateinit var intValue: WatchableValue<Int>
     val changes = Channel<ValueChange<Int>>(Channel.UNLIMITED)
 
+    @Test fun coverage() {
+        cover(ValueChange(null, 1))
+    }
+
     @Test fun simple() {
         runBlocking {
             intValue = watchableValueOf(5)
             watch(intValue) {
                 changes.send(it)
             }
-            changes.expect(ValueChange(5))
+            changes.expect(ValueChange(null, 5))
             intValue.set(17)
-            changes.expect(ValueChange(17))
+            changes.expect(ValueChange(5, 17))
         }
     }
 
@@ -48,10 +52,10 @@ class WatchableValueTest {
         runBlocking {
             intValue = 5.toWatchableValue()
             watch(intValue) { changes.send(it) }
-            changes.expect(ValueChange(5))
+            changes.expect(ValueChange(null, 5))
             intValue.set(5)
             // Both announcements because value is NOT compared for equality
-            changes.expect(ValueChange(5))
+            changes.expect(ValueChange(5, 5))
         }
     }
 
@@ -84,13 +88,13 @@ class WatchableValueTest {
             watch(readOnly) {
                 changes.send(it)
             }
-            changes.expect(ValueChange(4))
+            changes.expect(ValueChange(null, 4))
             intValue.set(5)
             assertEquals(5, readOnly.value)
             intValue.set(6)
             assertEquals(6, readOnly.value)
-            changes.expect(ValueChange(5))
-            changes.expect(ValueChange(6))
+            changes.expect(ValueChange(4, 5))
+            changes.expect(ValueChange(5, 6))
             assertEquals(6, readOnly.value)
         }
     }

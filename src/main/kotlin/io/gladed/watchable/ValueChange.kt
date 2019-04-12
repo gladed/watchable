@@ -18,6 +18,8 @@ package io.gladed.watchable
 
 /** Describes the update of a value. */
 data class ValueChange<T>(
+    /** The old value, if any. */
+    val oldValue: T? = null,
     /** The new value. */
     val value: T
 ) : Change

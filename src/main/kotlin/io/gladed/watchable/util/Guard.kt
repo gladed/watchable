@@ -14,19 +14,16 @@
  * limitations under the License.
  */
 
-package io.gladed.watchable
+package io.gladed.watchable.util
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.isActive
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
-/**
- * A [Watchable] that allows for a more verbose series of simpler changes.
- */
-interface SimpleWatchable<S, C : HasSimpleChange<S>> : Watchable<C> {
-    suspend fun simple(scope: CoroutineScope, func: suspend (S) -> Unit): Busy =
-        watch(scope) {
-            for (simpleChange in it.simple) {
-                if (scope.isActive) func(simpleChange) else break
-            }
-        }
+/** Protects all access to [item] behind a [Mutex]. */
+class Guard<T>(private val item: T) {
+    private val mutex = Mutex()
+
+    /** Operate directly on [item] while holding a [Mutex]. */
+    suspend operator fun <U> invoke(func: suspend T.() -> U): U =
+        mutex.withLock { item.func() }
 }
