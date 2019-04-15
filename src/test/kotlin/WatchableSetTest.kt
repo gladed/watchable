@@ -34,8 +34,6 @@ class WatchableSetTest : ScopeTest() {
         val set = watchableSetOf(1)
         val set2 = set.readOnly()
         watch(set2) { changes.send(it) }
-        assertThat(set.toString(), startsWith("WatchableSet("))
-        assertThat(set2.toString(), startsWith("ReadOnlyWatchableSet("))
         set.add(3)
         eventually { assertEquals(setOf(1, 3), set2) }
     }
@@ -70,4 +68,21 @@ class WatchableSetTest : ScopeTest() {
         assertEquals(setOf(1, 3, 5, 8, 9), set)
         Unit
     }
+
+    @Test fun setOperators() = runTest {
+        val set = watchableSetOf(1, 2)
+        set += 3
+        set += setOf(4, 5)
+        set += arrayOf(6, 7)
+        set += sequenceOf(8, 9)
+        set -= 1
+        set -= setOf(3)
+        set -= arrayOf(5)
+        set -= sequenceOf(7, 9)
+        assertEquals(setOf(2, 4, 6, 8), set)
+
+        set.retainAll(setOf(4, 6, 7))
+        assertEquals(setOf(4, 6), set)
+    }
+
 }

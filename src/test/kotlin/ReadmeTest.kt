@@ -15,46 +15,164 @@
  */
 
 import io.gladed.watchable.batch
+import io.gladed.watchable.group
+import io.gladed.watchable.simple
 import io.gladed.watchable.toWatchableList
+import io.gladed.watchable.toWatchableSet
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
+import io.gladed.watchable.watchableMapOf
+import io.gladed.watchable.watchableSetOf
+import io.gladed.watchable.watchableValueOf
+import kotlinx.coroutines.coroutineScope
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import java.net.URI
 
 /** Check certain doc comments are accurate. */
 class ReadmeTest {
-    val out = mutableListOf<String>()
+    private val out = mutableListOf<String>()
 
-    @Test fun `batching docs`() = runBlocking {
-        val list = listOf(4, 5).toWatchableList()
-        batch(list) { out += it.toString() }
-        delay(25)
-        list.use {
-            add(6)
-            add(7)
-            remove(6)
+    @Test fun `Watchable section`() = runTest {
+        coroutineScope {
+            val set = watchableSetOf(1, 2)
+            watch(set) { println("Got $it") }
+            set.add(3)
         }
-        delay(25)
-        assertEquals("""
-            [Insert(index=0, items=[4, 5])]
-            [Insert(index=2, items=[6]), Insert(index=3, items=[7]), Remove(range=2..2)]""".trimIndent(),
-            out.joinToString("\n"))
 
-        // Prints: [Add(index=2, added=6), Add(index=3, added=7)]
+        outputIs("""
+            Got Initial(set=[1, 2])
+            Got Add(add=[3])""")
     }
 
-    @Test fun `close watch handle`() = runBlocking {
+    @Suppress("UNUSED_VARIABLE")
+    @Test fun `Watchable Data Types`() = runTest {
+        val list = watchableListOf(1, 2, 3)
+        val map = watchableMapOf(4 to "four")
+        val set = watchableSetOf(5.0, 6.0)
+        val value = watchableValueOf(URI.create("https://github.com"))
+    }
+
+    @Test fun `Reading and Writing Data`() = runTest {
+        val map = watchableMapOf(1 to "1")
+        println(map) // Prints {1=1}
+        map.put(2, "2") // Suspends if concurrent modification attempted
+        println(map) // Prints {1=1, 2=2}
+
+        mutableListOf(1, 2, 3) += listOf(3, 4)
+        outputIs("""
+            {1=1}
+            {1=1, 2=2}""")
+    }
+
+    @Test fun `Reading and Writing Data Part 2`() = runTest {
+        val list = watchableListOf(1, 2, 3)
+        // Remove last element safely
+        println(list.use { removeAt(list.size - 1) }) // Prints 3
+        outputIs("3")
+    }
+
+    @Test fun `Watching for Changes`() = runTest {
+        val set = watchableSetOf(1, 2)
+        watch(set) { println(it) }
+        set += 3
+        set -= listOf(3, 2)
+        outputIs("""
+            Initial(set=[1, 2])
+            Add(add=[3])
+            Remove(remove=[3, 2])""")
+    }
+
+    @Test fun `Binding - simple`() = runTest {
+        val from = listOf(4, 5).toWatchableList()
+        val into = watchableListOf<Int>()
+        into.bind(this, from) // "this" is the current coroutine scope
+        triggerActions() // not in doc
+        // ...time passes...
+        println(from == into) // true
+        outputIs("""true""")
+    }
+
+    @Test fun `Binding - complex`() = runTest {
+        val from = listOf(4, 5).toWatchableList()
+        val into = watchableValueOf(0)
+        into.bind(this, from) {
+            // Ignore change (it) and read directly from source
+            value = from.size
+        }
+        triggerActions() // not in doc
+        // ...time passes...
+        println(into) // true
+        outputIs("""2""")
+    }
+
+    @Test fun `Batching readme`() = runTest {
+        val list = listOf(4, 5).toWatchableList()
+        batch(list, 50) { println(it) }
+        list.use { add(6); add(7) }
+        advanceTimeBy(60) // Not in doc
+        // After time passes, prints:
+        // [Initial(list=[4, 5]), Add(index=2, added=6), Add(index=3, added=7)]
+        outputIs("""
+            [Initial(list=[4, 5]), Insert(index=2, insert=[6, 7])]""")
+    }
+
+    @Test fun `close watch handle`() = runTest {
         val list = watchableListOf(1)
         val handle = watch(list) { out += it.toString() }
-        delay(10)
         list.add(2)
-        handle.closeAndJoin()
+        handle.close()
         list.add(3)
-        delay(10)
-        assertEquals("""
-            Insert(index=0, items=[1])
-            Insert(index=1, items=[2])""".trimIndent(), out.joinToString("\n"))
+        triggerActions()
+        outputIs("""
+            Initial(list=[1])
+            Insert(index=1, insert=[2])""")
+    }
+
+    @Test fun `Grouping readme`() = runTest {
+        val set = setOf("a").toWatchableSet()
+        val list = listOf(4).toWatchableList()
+        watch(group(set, list)) { println(it) }
+        triggerActions()
+        outputIs("""
+            GroupChange(watchable=[a], change=Initial(set=[a]))
+            GroupChange(watchable=[4], change=Initial(list=[4]))""")
+
+        out.clear()
+        list += 6
+        set += "b"
+        triggerActions()
+        outputIs("""
+            GroupChange(watchable=[4, 6], change=Insert(index=1, insert=[6]))
+            GroupChange(watchable=[a, b], change=Add(add=[b]))""")
+    }
+
+    @Test fun `Simple Watches`() = runTest {
+        val map = watchableMapOf(1 to "2")
+        simple(map) { println("at $key remove $remove add $add") }
+        map.put(1, "3")
+
+        outputIs("""
+            at 1 remove null add 2
+            at 1 remove 2 add 3""".trimIndent())
+    }
+
+    @Test fun `Object Lifetime`() = runTest {
+        val list = watchableListOf(1)
+        val handle = watch(list) { println(it) }
+        list.add(2)
+        handle.close() // No further notifications after this point
+        list.add(3)
+
+        outputIs("""
+            Initial(list=[1])
+            Insert(index=1, insert=[2])""".trimIndent())
+    }
+
+    private fun println(obj: Any) { out += obj.toString() }
+
+    private fun TestCoroutineScope.outputIs(untrimmed: String) {
+        triggerActions()
+        assertEquals(untrimmed.trimIndent(), out.joinToString("\n"))
     }
 }

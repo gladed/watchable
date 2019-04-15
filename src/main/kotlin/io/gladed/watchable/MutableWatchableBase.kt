@@ -17,17 +17,12 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.channels.BroadcastChannel
-import kotlinx.coroutines.selects.whileSelect
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
-import kotlinx.coroutines.yield
 
 /** Base for implementing a type that is watchable, mutable, and bindable. */
-@UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
-    kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Suppress("TooManyFunctions") // Useful
-abstract class MutableWatchableBase<T, V, M : T, C : Change> : MutableWatchable<M, C> {
+abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(), MutableWatchable<M, C> {
 
     /** The underlying mutable form of the data this object. When changes are applied, [changes] must be updated. */
     protected abstract val mutable: M
@@ -38,19 +33,14 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : MutableWatchable<
     /** Copy a mutable [M] to an immutable [T]. */
     protected abstract fun M.toImmutable(): T
 
-    /** Given the current state T return a C representing that initial state, if any. */
+    /** Given the current state [T] return [C] representing the initial state, if any. */
     protected abstract fun T.toInitialChange(): C?
 
     /** Apply all [changes] to [M]. */
     protected abstract fun M.applyBoundChange(change: C)
 
-    /** The internal channel used to broadcast changes to watchers. */
-    private val broadcaster: BroadcastChannel<List<C>> by lazy {
-        BroadcastChannel<List<C>>(CAPACITY)
-    }
-
     /** Collects changes applied during any mutation of [mutable]. */
-    protected val changes = mutableListOf<C>()
+    private val changes = mutableListOf<C>()
 
     /** The current immutable [T] form of [M]. */
     protected abstract var immutable: T
@@ -63,38 +53,21 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : MutableWatchable<
     /** True if current processing a change from the watchable to which this object is bound. */
     private var isOnBoundChange: Boolean = false
 
-    @Suppress("UNUSED_VARIABLE")
-    override fun batch(
-        scope: CoroutineScope,
-        minPeriod: Long,
-        func: suspend (List<C>) -> Unit
-    ) = scope.operate { closeMutex ->
-        // Simultaneously get first change and an upstream subscription
-        val (initial, subscription) = mutableMutex.withLock {
-            immutable.toInitialChange() to broadcaster.openSubscription()
-        }
+    override fun getInitialChange(): C? =
+        immutable.toInitialChange()
 
-        // Batch the subscription contents
-        val rxChannel = collect(subscription, minPeriod, listOfNotNull(initial))
-        whileSelect {
-            rxChannel.onReceiveOrNull {
-                if (it != null) {
-                    func(it)
-                    true
-                } else {
-                    false
-                }
-            }
-            closeMutex.onLock {
-                // Cancel upstream of rxChannel
-                subscription.cancel()
-                yield()
-                true
-            }
+    /** Record the latest change. */
+    protected fun record(change: C) {
+        @Suppress("UNCHECKED_CAST")
+        val replace = (changes.lastOrNull() as? Mergeable<C>)?.merge(change)
+        if (replace != null) {
+            changes[changes.lastIndex] = replace
+        } else {
+            changes += change
         }
     }
 
-    /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
+    /** Run [func] if changes are currently allowed, or throw if not. */
     protected fun <U> doChange(func: () -> U): U =
         if (boundTo != null && !isOnBoundChange) {
             throw IllegalStateException("A bound object may not be modified.")
@@ -104,24 +77,28 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : MutableWatchable<
         mutableMutex.withLock {
             // Apply mutations
             mutable.func().also {
-                deliverChanges()
+                if (changes.isNotEmpty()) {
+                    val oldImmutable = immutable
+                    // Recreate the immutable form now that the change is complete.
+                    immutable = mutable.toImmutable()
+                    // Deliver changes
+                    val changeList = changes.toList()
+                    changes.clear()
+
+                    @Suppress("TooGenericExceptionCaught") // Required for roll-back behavior
+                    try {
+                        dispatch(changeList)
+                    } catch (t: Throwable) {
+                        // Roll-back and re-throw
+                        immutable = oldImmutable
+                        throw t
+                    }
+                }
             }
         }
 
-    /** Push outstanding changes, if any, into the broadcast channel. */
-    private suspend fun deliverChanges() {
-        if (changes.isNotEmpty()) {
-            // Clear the immutable form, allow it to be repopulated later
-            immutable = mutable.toImmutable()
-            // Deliver and clear out changes if the channel is open
-            val changeList = changes.toList()
-            changes.clear()
-            broadcaster.send(changeList)
-        }
-    }
-
     /** Wrapper for a binding. */
-    private class Binding(val other: Watchable<*>, val handle: WatchHandle)
+    private class Binding(val other: Watchable<*>, val watcher: Watcher)
 
     override suspend fun bind(scope: CoroutineScope, origin: Watchable<C>) {
         bind(scope, origin) {
@@ -132,6 +109,7 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : MutableWatchable<
     override suspend fun <C2 : Change> bind(
         scope: CoroutineScope,
         origin: Watchable<C2>,
+        period: Long,
         apply: M.(C2) -> Unit
     ) {
         if (binding != null) throw IllegalStateException("Object already bound")
@@ -141,7 +119,7 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : MutableWatchable<
         clear()
 
         // Start watching
-        val job = origin.batch(scope) {
+        val job = origin.batch(scope, period) {
             use {
                 isOnBoundChange = true
                 for (change in it) {
@@ -162,12 +140,8 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : MutableWatchable<
 
     override fun unbind() {
         binding?.apply {
-            handle.cancel()
+            watcher.cancel()
             binding = null
         }
-    }
-
-    companion object {
-        const val CAPACITY = 10
     }
 }

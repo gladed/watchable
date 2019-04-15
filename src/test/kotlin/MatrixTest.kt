@@ -22,10 +22,8 @@ import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -66,14 +64,16 @@ class MatrixTest<M, C: Change>: ScopeTest() {
         watchable2 = maker2()
     }
 
-    @Test fun `bind works`() = runBlocking {
+    @Test fun `bind works`() = runTest {
         assertFalse(watchable2.isBound())
         bind(watchable2, watchable1)
         assertTrue(watchable2.isBound())
-        waitFor(watchable2) { it == watchable1 }
+        withTimeout(250) {
+            waitFor(watchable2) { println("$watchable1, $watchable2"); it == watchable1 }
+        }
     }
 
-    @Test fun `bind then make changes`() = runBlocking {
+    @Test fun `bind then make changes`() = runTest {
         bind(watchable2, watchable1)
         for (i in 0 until 200) {
             watchable1.use { modify() }
@@ -83,7 +83,7 @@ class MatrixTest<M, C: Change>: ScopeTest() {
         log(watchable1)
     }
 
-    @Test fun `no change on bound`() = runBlocking {
+    @Test fun `no change on bound`() = runTest {
         bind(watchable2, watchable1)
         try {
             for (i in 0 until 100) watchable2.use { modify() }
@@ -93,20 +93,20 @@ class MatrixTest<M, C: Change>: ScopeTest() {
         }
     }
 
-    @Test fun `no self-bind`() = runBlocking {
+    @Test fun `no self-bind`() = runTest {
         mustThrow(IllegalStateException::class.java) {
             bind(watchable1, watchable1)
         }
     }
 
-    @Test fun `no circular-bind`() = runBlocking {
+    @Test fun `no circular-bind`() = runTest {
         mustThrow(IllegalStateException::class.java) {
             bind(watchable2, watchable1)
             bind(watchable1, watchable2)
         }
     }
 
-    @Test fun `no write when bound`() = runBlocking {
+    @Test fun `no write when bound`() = runTest {
         mustThrow(IllegalStateException::class.java) {
             bind(watchable2, watchable1)
             for (i in 0 until 20) {
@@ -115,79 +115,62 @@ class MatrixTest<M, C: Change>: ScopeTest() {
         }
     }
 
-    @Test fun `unbound changes not applied`() = runBlocking {
-        withTimeout(1000) {
-            bind(watchable2, watchable1)
-            for (i in 0 until 100) {
-                watchable1.use { modify() }
-            }
-            watchable1.use(finalMod)
-
-            waitFor(watchable2) { it == watchable2 }
-
-            watchable2.unbind()
-            watchable2.unbind() // Safe
-
-            for (i in 0 until 100) {
-                watchable1.use { modify() }
-            }
-            delay(50) // No changes arrive
-            assertNotEquals(watchable1, watchable2)
+    @Test fun `unbound changes not applied`() = runTest {
+        bind(watchable2, watchable1)
+        for (i in 0 until 100) {
+            watchable1.use { modify() }
         }
+        watchable1.use(finalMod)
+
+        waitFor(watchable2) { it == watchable2 }
+
+        watchable2.unbind()
+        watchable2.unbind() // Safe
+
+        for (i in 0 until 100) {
+            watchable1.use { modify() }
+        }
+        triggerActions()
+        assertNotEquals(watchable1, watchable2)
     }
 
-    @Test(timeout = 1000) fun `batch changes together`() = runBlocking {
-        val changes = mutableListOf<C>()
+    @Test fun `batch changes together`() = runTest {
         val batches = mutableListOf<List<C>>()
-        bind(watchable2, watchable1)
-
-        log("watch()")
-
-        // Timing output here proves that modifications are held up.
-        // Provide a non-0 batch amount
-        watchable1.watch(this) {
-            changes += it
-        }
 
         // Provide a non-0 batch amount
-        watchable1.batch(this, 50) {
-            batches += it
-        }
-
-        // The first batch should arrive quickly and contain initial
-        eventually { assertTrue(batches.size > 0) }
+        watchable1.batch(this, 50) { batches += it }
 
         // Throw many modifications at watchable1
-        for (i in 0 until 100) {
-            watchable1.use {
-                modify()
-            }
-        }
+        for (i in 0 until 100) watchable1.use { modify() }
 
-        // Wait for everything to arrive at watchable2
-        waitFor(watchable1) { it == watchable2 }
+        triggerActions()
+        assertEquals(listOf<List<C>>(), batches)
 
-        eventually {
-            log("changes: ${changes.size}, batches: ${batches.size}")
-            assertTrue(changes.size > 0)
-            assertEquals(changes, batches.flatten())
-            assertNotEquals(changes.size, batches.size)
-        }
+        advanceTimeBy(50)
+        val size = batches.size
+        assertNotEquals(0, size)
+
+        advanceTimeBy(50)
+        assertEquals(size, batches.size)
     }
 
-    @Test fun equality() = runBlocking {
+    @Test fun equality() = runTest {
         bind(watchable2, watchable1)
-        waitFor(watchable2) { it == watchable1 }
+        withTimeout(250) {
+            waitFor(watchable2) { it == watchable1 }
+        }
         assertEquals(watchable1, watchable1)
         assertEquals(watchable1, watchable2)
         assertEquals(watchable2, watchable1)
         watchable1.use { assertEquals(this, watchable2)}
     }
 
-    @Test(timeout = 3000) fun stress() = runBlocking {
+    @Test fun stress() = runTest {
         val start = System.currentTimeMillis()
-        val count = 10000
+        val count = 1000
         bind(watchable2, watchable1)
+
+        log("Launching $count modification jobs while bound")
         val allJobs = (0 until count).map {
             launch {
                 watchable1.use {
@@ -206,15 +189,12 @@ class MatrixTest<M, C: Change>: ScopeTest() {
         }
 
         // Join up
-        log("Waiting for all modifications to be done")
         allJobs.joinAll()
-        watchable1.use {
-            finalMod(this)
-        }
+        watchable1.use { finalMod(this) }
 
         // Eventually w2 will catch up to w1
         log("Waiting for everything to match")
-        waitFor(watchable2) { it == watchable1 }
+        triggerActions()
         assertEquals(watchable1.hashCode(), watchable2.hashCode())
         val elapsed = System.currentTimeMillis() - start
         log("$count in $elapsed ms. ${elapsed * 1000 / count} μs per iteration.")
@@ -226,30 +206,30 @@ class MatrixTest<M, C: Change>: ScopeTest() {
         private val setModificationMaker: (Set<Int>, Chooser) -> ((MutableSet<Int>) -> Unit) = { set, chooser ->
             val value = chooser(MAX_SIZE)
             if (set.isEmpty()) { { mutable -> mutable.add(value)} } else when (chooser(3)) {
-                0 -> { // Add
-                    { mutable -> mutable.add(value) }
-                }
-                else -> { // Remove
+                0 -> { // Remove
                     val target = chooser(set);
                     { mutable -> mutable.remove(target) }
+                }
+                else -> { // Add
+                    { mutable -> mutable.add(value) }
                 }
             }
         }
 
         private val mapModificationMaker: (Map<Int, String>, Chooser) -> ((MutableMap<Int, String>) -> Unit) = { map, chooser ->
             // Add, remove, update
-            when (chooser(3)) {
-                0-> { // Add (or modify)
-                    val target = chooser(MAX_SIZE);
-                    { it[target] = it[target]?.run { "$this." } ?: target.toString() }
+            when (chooser(4)) {
+                0-> { // Randomly remove (if any)
+                    val target = chooser(map.keys) ?: 0
+                    { it.remove(target) }
                 }
                 1-> { // Select existing and modify (or add if none)
                     val target = chooser(map.keys) ?: 0
                     { it[target] = it[target]?.run { "$this." } ?: target.toString() }
                 }
-                else -> { // Randomly remove (if any)
-                    val target = chooser(map.keys) ?: 0
-                    { it.remove(target) }
+                else -> { // Add (or modify)
+                    val target = chooser(MAX_SIZE);
+                    { it[target] = it[target]?.run { "$this." } ?: target.toString() }
                 }
             }
         }
@@ -258,17 +238,17 @@ class MatrixTest<M, C: Change>: ScopeTest() {
             // Add, remove, update
             val value = chooser(MAX_SIZE)
             // If list is empty, add, otherwise return a random mutation
-            if (list.isEmpty()) { { mutable -> mutable.add(value) } } else when (chooser(3)) {
-                0-> { // Add
-                    { mutable -> mutable.add(value) }
+            if (list.isEmpty()) { { mutable -> mutable.add(value) } } else when (chooser(4)) {
+                0-> { // Remove
+                    val index = chooser(list.size);
+                    { mutable -> mutable.removeAt(index) }
                 }
                 1-> { // Modify
                     val index = chooser(list.size);
                     { mutable -> mutable[index] = value }
                 }
-                else -> { // Remove
-                    val index = chooser(list.size);
-                    { mutable -> mutable.removeAt(index) }
+                else -> { // Add
+                    { mutable -> mutable.add(value) }
                 }
             }
         }

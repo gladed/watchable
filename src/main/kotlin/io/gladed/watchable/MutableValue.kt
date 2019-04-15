@@ -16,17 +16,7 @@
 
 package io.gladed.watchable
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.isActive
-
-/**
- * A [Watchable] that allows for a more verbose series of simpler changes.
- */
-interface SimpleWatchable<S, C : HasSimpleChange<S>> : Watchable<C> {
-    suspend fun simple(scope: CoroutineScope, func: suspend (S) -> Unit): Watcher =
-        watch(scope) {
-            for (simpleChange in it.simple) {
-                if (scope.isActive) func(simpleChange) else break
-            }
-        }
+/** A container for a value that can be changed. */
+interface MutableValue<T> : Value<T> {
+    override var value: T
 }

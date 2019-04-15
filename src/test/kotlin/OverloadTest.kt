@@ -15,11 +15,9 @@
  */
 
 import io.gladed.watchable.ListChange
-import io.gladed.watchable.MapChange
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
@@ -31,13 +29,13 @@ class OverloadTest {
         val list = watchableListOf(1)
         watch(list) {
             if (it is ListChange.Insert) {
-                it.items.forEach { added ->
-                    if (added % 2 == 0) list.use { remove(added) }
+                it.insert.forEach { inserted ->
+                    if (inserted % 2 == 0) list.use { remove(inserted) }
                 }
             }
             changes.send(it)
         }
-        changes.expect(ListChange.Insert(0, listOf(1)))
+        changes.expect(ListChange.Initial(listOf(1)))
 
         // Generate more changes than will fit in the channel at once
         val range = 0 until 20
@@ -46,6 +44,6 @@ class OverloadTest {
         }
 
         // Wait until 18 (the last even item) is removed
-        changes.expect(ListChange.Remove(10), strict = false)
+        changes.expect(ListChange.Remove(10, 18), strict = false)
     }
 }

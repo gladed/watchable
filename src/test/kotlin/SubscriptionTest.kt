@@ -22,7 +22,6 @@ import kotlinx.coroutines.cancelChildren
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
-import org.junit.Assert.assertEquals
 import org.junit.Test
 
 @UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
@@ -37,7 +36,7 @@ class SubscriptionTest {
     @Test fun `cancel immediately`() {
         runThenCancel {
             val handle = watch(set) { changes.send(it) }
-            changes.expect(SetChange.Add(listOf(1)))
+            changes.expect(SetChange.Initial(setOf(1)))
             handle.cancel() // Instantly cancel, no more changes!
             set.use { add(2) }
             changes.expectNone()
@@ -47,7 +46,7 @@ class SubscriptionTest {
     @Test fun `close drains all pending changes`() {
         runThenCancel {
             val handle = watch(set) { changes.send(it) }
-            changes.expect(SetChange.Add(listOf(1)))
+            changes.expect(SetChange.Initial(setOf(1)))
             set.use { add(2) }
             handle.close()
             yield() // Allow other coroutines to process

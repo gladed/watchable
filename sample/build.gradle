@@ -5,11 +5,12 @@ buildscript {
     }
 }
 
+apply plugin: 'io.gitlab.arturbosch.detekt'
 apply plugin: 'kotlin'
 apply plugin: 'kotlinx-serialization'
 apply plugin: 'application'
 
-group 'io.gladed'
+group 'io.gladed.sample'
 version '1.0'
 
 repositories {
@@ -19,12 +20,12 @@ repositories {
 }
 
 dependencies {
+    compile rootProject  // Local version, otherwise use: compile "io.gladed:watchable:x.x.x"
     compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.10.0"
-    compile 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.1.1'
 
-    compile rootProject  // Local version
-//    compile "io.gladed:watchable:0.6.5"  // Use this line instead for downloaded version
     testCompile 'junit:junit:4.12'
+
+    detektPlugins "io.gitlab.arturbosch.detekt:detekt-formatting:$detekt_version"
 }
 
 compileKotlin.kotlinOptions {

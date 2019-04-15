@@ -27,8 +27,8 @@ class WatchableListSerializer<T : Any>(private val dataSerializer: KSerializer<T
     override fun deserialize(decoder: Decoder): WatchableList<T> =
         with(decoder.beginStructure(descriptor)) {
             val items = mutableListOf<T>()
-            loop@while(true) {
-                when(val index = decodeElementIndex(descriptor)) {
+            loop@while (true) {
+                when (val index = decodeElementIndex(descriptor)) {
                     CompositeDecoder.READ_DONE -> break@loop
                     else -> items += decodeSerializableElement(descriptor, index, dataSerializer)
                 }

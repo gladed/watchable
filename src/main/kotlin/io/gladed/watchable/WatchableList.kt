@@ -38,7 +38,7 @@ class WatchableList<T> internal constructor(
     override fun subList(fromIndex: Int, toIndex: Int) = immutable.subList(fromIndex, toIndex)
     override fun equals(other: Any?): Boolean = immutable == other
     override fun hashCode() = immutable.hashCode()
-    override fun toString() = "WatchableList($immutable)"
+    override fun toString() = "$immutable"
 
     override val mutable = object : AbstractMutableList<T>() {
         val real = initial.toMutableList()
@@ -49,85 +49,116 @@ class WatchableList<T> internal constructor(
 
         override fun addAll(index: Int, elements: Collection<T>) = doChange {
             real.addAll(index, elements).also {
-                changes.add(ListChange.Insert(index, elements.toList()))
+                record(ListChange.Insert(index, elements.toList()))
             }
         }
 
         override fun add(index: Int, element: T) {
             doChange {
                 real.add(index, element).also {
-                    changes.add(ListChange.Insert(index, listOf(element)))
+                    record(ListChange.Insert(index, listOf(element)))
                 }
             }
         }
 
         override fun removeAt(index: Int) = doChange {
             real.removeAt(index).also {
-                changes.add(ListChange.Remove(index..index))
+                record(ListChange.Remove(index, it))
             }
         }
 
         override fun set(index: Int, element: T) = doChange {
             real.set(index, element).also {
-                changes.add(ListChange.Replace(index, listOf(element)))
+                record(ListChange.Replace(index, remove = it, add = element))
             }
         }
     }
 
     /** Add a [value] to the end of this list, returning true to indicate the list was changed. */
-    suspend fun add(value: T): Boolean =
+    suspend inline fun add(value: T): Boolean =
         use { add(value) }
 
     /** Add all elements of the collection to the end of this list, returning true if the list was changed. */
-    suspend fun addAll(elements: Collection<T>): Boolean =
+    suspend inline fun addAll(elements: Collection<T>): Boolean =
         use { addAll(elements) }
 
     /** Add all elements of the iterable to the end of this list, returning true if the list was changed. */
-    suspend fun addAll(elements: Iterable<T>): Boolean =
+    suspend inline fun addAll(elements: Iterable<T>): Boolean =
         use { addAll(elements) }
 
     /** Add all elements of the array to the end of this list, returning true if the list was changed. */
-    suspend fun addAll(elements: Array<T>): Boolean =
+    suspend inline fun addAll(elements: Array<T>): Boolean =
         use { addAll(elements) }
 
     /** Add all elements of the sequence to the end of this list, returning true if the list was changed. */
-    suspend fun addAll(elements: Sequence<T>): Boolean =
+    suspend inline fun addAll(elements: Sequence<T>): Boolean =
         use { addAll(elements) }
 
     /** Remove [value] from this list, returning true if it was present and false if it was not. */
-    suspend fun remove(value: T) = use { remove(value) }
+    suspend inline fun remove(value: T) = use { remove(value) }
 
-    /** Remove all matching elements in the collection from the list, returning true if the list was changed. */
-    suspend fun removeAll(elements: Collection<T>): Boolean =
+    /** Remove all matching elements in [elements] from this list, returning true if the list was changed. */
+    suspend inline fun removeAll(elements: Iterable<T>): Boolean =
+        use { removeAll(elements) }
+
+    /** Remove all matching elements in [elements] from this list, returning true if the list was changed. */
+    suspend inline fun removeAll(elements: Array<T>): Boolean =
+        use { removeAll(elements) }
+
+    /** Remove all matching elements in [elements] from this list, returning true if the list was changed. */
+    suspend inline fun removeAll(elements: Sequence<T>): Boolean =
         use { removeAll(elements) }
 
     /**
      * Retains only the elements in this list that are found in the collection, returning true if the list was
      * changed. */
-    suspend fun retainAll(elements: Collection<T>): Boolean =
+    suspend inline fun retainAll(elements: Iterable<T>): Boolean =
         use { retainAll(elements) }
 
     /** Clear all values from this list. */
     override suspend fun clear() = use { clear() }
 
+    /** Add [element] to this watchable collection. */
+    suspend inline operator fun plusAssign(element: T) {
+        add(element)
+    }
+
+    /** Adds all elements of the given [elements] collection to this watchable collection. */
+    suspend inline operator fun plusAssign(elements: Iterable<T>) {
+        addAll(elements)
+    }
+
+    /** Adds all elements of the given [elements] collection to this list. */
+    suspend inline operator fun plusAssign(elements: Array<T>) { addAll(elements) }
+
+    /** Adds all elements of the given [elements] collection to this list. */
+    suspend inline operator fun plusAssign(elements: Sequence<T>) { addAll(elements) }
+
+    /** Remove [element] from this watchable collection. */
+    suspend inline operator fun minusAssign(element: T) { remove(element) }
+
+    /** Remove all elements of the given [elements] collection from this list. */
+    suspend inline operator fun minusAssign(elements: Iterable<T>) { removeAll(elements) }
+
+    /** Remove all elements of the given [elements] collection from this list. */
+    suspend inline operator fun minusAssign(elements: Array<T>) { removeAll(elements) }
+
+    /** Remove all elements of the given [elements] collection from this list. */
+    suspend inline operator fun minusAssign(elements: Sequence<T>) { removeAll(elements) }
+
     override fun MutableList<T>.toImmutable() = toList()
 
-    override fun List<T>.toInitialChange() = takeIf { isNotEmpty() }?.let {
-        ListChange.Insert(0, toList())
-    }
+    override fun List<T>.toInitialChange() = ListChange.Initial(this)
 
     override fun MutableList<T>.applyBoundChange(change: ListChange<T>) {
         when (change) {
-            is ListChange.Insert -> addAll(change.index, change.items)
-            is ListChange.Remove -> (change.range).forEach { _ -> removeAt(change.range.first) }
-            is ListChange.Replace -> (change.items).forEachIndexed { index, element ->
-                this[change.index + index] = element
-            }
+            is ListChange.Initial -> { clear(); addAll(change.list) }
+            is ListChange.Insert -> addAll(change.index, change.insert)
+            is ListChange.Remove -> removeAt(change.index)
+            is ListChange.Replace -> set(change.index, change.add)
         }
     }
 
     /** Return an unmodifiable form of this [WatchableList]. */
-    fun readOnly(): ReadOnlyWatchableList<T> = object : ReadOnlyWatchableList<T> by this {
-        override fun toString() = "ReadOnlyWatchableList($immutable)"
-    }
+    override fun readOnly(): ReadOnlyWatchableList<T> = object : ReadOnlyWatchableList<T> by this { }
 }

@@ -17,20 +17,37 @@
 package io.gladed.watchable
 
 /** Describes a change to a [Map]. */
-sealed class MapChange<K, out V> : HasSimpleChange<MapChange.Simple<K, V>> {
-    /** The addition or replacement of values for keys in the map. */
-    data class Put<K, V>(val pairs: Collection<Pair<K, V>>) : MapChange<K, V>() {
+sealed class MapChange<K, V> : HasSimpleChange<MapChange.Simple<K, V>> {
+
+    /** The initial state of the map. */
+    data class Initial<K, V>(val map: Map<K, V>) : MapChange<K, V>() {
         override val simple by lazy {
-            pairs.map { (key, value) -> Simple(key, value) }
+            map.entries.map { Simple(key = it.key, add = it.value) }
         }
     }
 
-    /** The removal of elements corresponding to keys in the map. */
-    data class Remove<K, V>(val keys: Collection<K>) : MapChange<K, V>() {
-        override val simple by lazy {
-            keys.map { key -> Simple<K, V>(key) }
-        }
+    /** The addition of value [add], replacing value [remove] if present, for [key]. */
+    data class Put<K, V>(
+        val key: K,
+        /** Old value for [key] if any. */
+        val remove: V? = null,
+        /** New value for [key]. */
+        val add: V
+    ) : MapChange<K, V>() {
+        override val simple by lazy { listOf(Simple(key, remove, add)) }
     }
 
-    data class Simple<K, out V>(val key: K, val value: V? = null)
+    /** A removal of item [remove] for [key] */
+    data class Remove<K, V>(
+        val key: K,
+        val remove: V
+    ) : MapChange<K, V>() {
+        override val simple by lazy { listOf(Simple(key, remove)) }
+    }
+
+    data class Simple<K, V>(
+        val key: K,
+        val remove: V? = null,
+        val add: V? = null
+    )
 }

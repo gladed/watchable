@@ -16,17 +16,21 @@
 
 package io.gladed.watchable
 
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.isActive
-
 /**
- * A [Watchable] that allows for a more verbose series of simpler changes.
+ * Defines special values for watcher timing.
+ *
+ * When period is >0, changes are collected and delivered no more frequently than that many milliseconds.
  */
-interface SimpleWatchable<S, C : HasSimpleChange<S>> : Watchable<C> {
-    suspend fun simple(scope: CoroutineScope, func: suspend (S) -> Unit): Watcher =
-        watch(scope) {
-            for (simpleChange in it.simple) {
-                if (scope.isActive) func(simpleChange) else break
-            }
-        }
+object Period {
+    /**
+     * A watcher with this period run very soon after the change is made. This is the default for all
+     * watching operations.
+     */
+    const val IMMEDIATE = 0L
+
+    /**
+     * A watcher that runs before the change is fully applied. If it throws the change will be rolled
+     * back and the exception re-thrown at the site of the change.
+     */
+    const val INLINE = -1L
 }

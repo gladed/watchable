@@ -17,7 +17,6 @@
 package io.gladed.watchable
 
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /**
  * A group of [Watchable] objects that can be watched for any change, which arrives as a [GroupChange].
@@ -26,20 +25,25 @@ class WatchableGroup(
     private val watchables: List<Watchable<*>>
 ) : Watchable<GroupChange> {
 
-    @UseExperimental(ExperimentalCoroutinesApi::class)
-    override fun batch(
+    override suspend fun batch(
         scope: CoroutineScope,
-        minPeriod: Long,
+        period: Long,
         func: suspend (List<GroupChange>) -> Unit
-    ) = scope.operate { closeMutex ->
-        // Start watching others, delivering their changes here.
+    ): Watcher {
         val handles = watchables.map { watchable ->
             watchable.batch(scope) { changes ->
                 func(changes.map { GroupChange(watchable, it) })
             }
         }.toMutableList()
 
-        closeMutex.lock()
-        handles.forEach { it.closeAndJoin() }
+        return object : Watcher {
+            override fun cancel() {
+                handles.forEach { it.cancel() }
+            }
+
+            override suspend fun close() {
+                handles.forEach { it.close() }
+            }
+        }
     }
 }

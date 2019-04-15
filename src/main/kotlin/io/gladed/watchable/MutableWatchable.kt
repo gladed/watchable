@@ -16,6 +16,7 @@
 
 package io.gladed.watchable
 
+import io.gladed.watchable.Period.IMMEDIATE
 import kotlinx.coroutines.CoroutineScope
 
 /**
@@ -54,6 +55,7 @@ interface MutableWatchable<M, C : Change> : Watchable<C> {
     suspend fun <C2 : Change> bind(
         scope: CoroutineScope,
         origin: Watchable<C2>,
+        period: Long = IMMEDIATE,
         apply: M.(C2) -> Unit
     )
 
@@ -62,6 +64,8 @@ interface MutableWatchable<M, C : Change> : Watchable<C> {
 
     /** Return true if this object is already bound. */
     fun isBound() = boundTo != null
+
+    fun readOnly(): Watchable<C>
 
     /** The [Watchable] to which this object is bound, if any. */
     val boundTo: Watchable<*>?

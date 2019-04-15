@@ -16,15 +16,32 @@
 
 package io.gladed.watchable
 
+interface Mergeable<T> {
+    fun merge(other: T): T?
+}
+
 /** Describes a change to a [Set]. */
 sealed class SetChange<T> : HasSimpleChange<SetChange.Simple<T>> {
-    data class Add<T>(val items: List<T>) : SetChange<T>() {
-        override val simple by lazy { items.map { Simple(add = it) } }
+
+    /** The initial state of the set. */
+    data class Initial<T>(val set: Set<T>) : SetChange<T>() {
+        override val simple by lazy { set.map { Simple(add = it) } }
     }
 
-    data class Remove<T>(val items: List<T>) : SetChange<T>() {
-        override val simple by lazy { items.map { Simple(remove = it) } }
+    /** An addition of items. */
+    data class Add<T>(val add: List<T>) : SetChange<T>(), Mergeable<SetChange<T>> {
+        override val simple by lazy { add.map { Simple(add = it) } }
+        override fun merge(other: SetChange<T>) =
+            if (other is Add) Add(add + other.add) else null
     }
 
+    /** A removal of items. */
+    data class Remove<T>(val remove: List<T>) : SetChange<T>(), Mergeable<SetChange<T>> {
+        override val simple by lazy { remove.map { Simple(remove = it) } }
+        override fun merge(other: SetChange<T>) =
+            if (other is Remove) Remove(remove + other.remove) else null
+    }
+
+    /** The simplest form of a set change, affecting only a single item (either [add] or [remove]). */
     data class Simple<T>(val add: T? = null, val remove: T? = null)
 }

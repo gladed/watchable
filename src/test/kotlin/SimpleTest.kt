@@ -18,7 +18,6 @@ import io.gladed.watchable.ListChange
 import io.gladed.watchable.MapChange
 import io.gladed.watchable.SetChange
 import io.gladed.watchable.simple
-import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
@@ -33,28 +32,28 @@ class SimpleTest {
         simple(list) { channel.send(this) }
 
         channel.expect(
-            ListChange.Simple(index = 0, item = 1),
-            ListChange.Simple(index = 1, item = 2))
+            ListChange.Simple(index = 0, add = 1),
+            ListChange.Simple(index = 1, add = 2))
 
         list.use { removeAt(1); set(0, 3); add(4) }
         channel.expect(
-            ListChange.Simple(index = 1),
-            ListChange.Simple(index = 0, item = 3, insert = false),
-            ListChange.Simple(index = 1, item = 4))
+            ListChange.Simple(index = 1, remove = 2),
+            ListChange.Simple(index = 0, add = 3, remove = 1),
+            ListChange.Simple(index = 1, add = 4))
     }
 
     @Test fun `watch map simply`() = runBlocking {
         val map = watchableMapOf(1 to "1")
         val channel = Channel<MapChange.Simple<Int, String>>(Channel.UNLIMITED)
         simple(map) { channel.send(this) }
-        channel.expect(MapChange.Simple(key = 1, value = "1"))
+        channel.expect(MapChange.Simple(key = 1, add = "1"))
         map.use { put(2, "2"); remove(1); put(2, "22") }
         channel.expect(
-            MapChange.Simple(key = 2, value = "2"),
-            MapChange.Simple(key = 1),
-            MapChange.Simple(key = 2, value = "22"))
+            MapChange.Simple(key = 2, add = "2"),
+            MapChange.Simple(key = 1, remove = "1"),
+            MapChange.Simple(key = 2, remove = "2", add = "22"))
     }
-//
+
     @Test fun `watch set simply`() = runBlocking {
         val set = watchableSetOf(1, 2)
         val channel = Channel<SetChange.Simple<Int>>(Channel.UNLIMITED)

@@ -18,14 +18,10 @@ import io.gladed.watchable.GroupChange
 import io.gladed.watchable.SetChange
 import io.gladed.watchable.ValueChange
 import io.gladed.watchable.group
-import io.gladed.watchable.toWatchableList
-import io.gladed.watchable.toWatchableSet
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
 import org.junit.Test
 
 class GroupTest {
@@ -33,59 +29,46 @@ class GroupTest {
 
     @Test fun coverage() {
         val intValue = watchableValueOf(1)
-        cover(GroupChange(intValue, ValueChange(1)))
+        cover(GroupChange(intValue, ValueChange(null, 1)))
     }
 
-    @Test fun `subscribe to a group of watchables`() {
-        runBlocking {
-            val intValue = watchableValueOf(1)
-            val setValue = watchableSetOf("1")
-            group(intValue, setValue).watch(this) { changes.send(it) }
-            changes.expect(GroupChange(intValue, ValueChange(1)))
-            changes.expect(GroupChange(setValue, SetChange.Add(listOf("1"))))
-        }
+    @Test fun `subscribe to a group of watchables`() = runTest {
+        val intValue = watchableValueOf(1)
+        val setValue = watchableSetOf("1")
+        group(intValue, setValue).watch(this) { changes.send(it) }
+        changes.assert(GroupChange(intValue, ValueChange(null, 1)))
+        changes.assert(GroupChange(setValue, SetChange.Initial(setOf("1"))))
     }
 
-    @Test fun `watch a group of watchables`() {
-        runBlocking {
-            val intValue = watchableValueOf(1)
-            val setValue = watchableSetOf("1")
-            watch(group(intValue, setValue)) { changes.send(it) }
-            changes.expect(
-                GroupChange(intValue, ValueChange(1)),
-                GroupChange(setValue, SetChange.Add(listOf("1"))))
-        }
+    @Test fun `watch a group of watchables`() = runTest {
+        val intValue = watchableValueOf(1)
+        val setValue = watchableSetOf("1")
+        watch(group(intValue, setValue)) { changes.send(it) }
+        changes.assert(
+            GroupChange(intValue, ValueChange(null, 1)),
+            GroupChange(setValue, SetChange.Initial(setOf("1"))))
     }
 
-    @Test fun `cancel watching of a group`() {
-        runBlocking {
-            val intValue = watchableValueOf(1)
-            val setValue = watchableSetOf("1")
-            val handle = watch(group(intValue, setValue)) { changes.send(it) }
-            changes.expect(
-                GroupChange(intValue, ValueChange(1)),
-                GroupChange(setValue, SetChange.Add(listOf("1"))))
-            handle.close()
-            changes.expectNone()
-            setValue.use { add("2") }
-            changes.expectNone()
-        }
+    @Test fun `close watching of a group`() = runTest {
+        val intValue = watchableValueOf(1)
+        val setValue = watchableSetOf("1")
+        val handle = watch(group(intValue, setValue)) { changes.send(it) }
+        changes.assert(
+            GroupChange(intValue, ValueChange(null, 1)),
+            GroupChange(setValue, SetChange.Initial(setOf("1"))))
+        handle.close()
+        changes.assert()
+        setValue.use { add("2") }
+        changes.assert()
     }
 
-    @Test fun `example from readme`() {
-        val list = listOf(4).toWatchableList()
-        val set = setOf("a").toWatchableSet()
-        runBlocking {
-            watch(group(set, list)) { println(it) }
-            delay(25)
-            // Prints:
-            //   GroupChange(watchable=WatchableSet(), change=Initial(initial=[a]))
-            //   GroupChange(watchable=WatchableList(), change=Initial(initial=[4]))
-            list.use { add(6) }
-            set.use { add("b") }
-            //   GroupChange(watchable=WatchableList(), change=Add(index=1, added=6))
-            //   GroupChange(watchable=WatchableSet(), change=Add(added=b))
-            delay(25)
-        }
+    @Test fun `cancel watching of a group`() = runTest {
+        val intValue = watchableValueOf(1)
+        val setValue = watchableSetOf("1")
+        val handle = watch(group(intValue, setValue)) { changes.send(it) }
+        handle.cancel()
+        changes.assert()
+        setValue.use { add("2") }
+        changes.assert()
     }
 }

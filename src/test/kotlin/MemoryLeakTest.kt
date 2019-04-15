@@ -15,42 +15,68 @@
  */
 
 import io.gladed.watchable.ListChange
-import io.gladed.watchable.WatchHandle
 import io.gladed.watchable.WatchableList
 import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
-import org.junit.Ignore
 import org.junit.Test
 import java.lang.ref.WeakReference
 
 @Suppress("UNUSED_VALUE") // We mean to release items when we are done with them.
-//@Ignore // These tests simply aren't reliable since gc behavior can vary
 class MemoryLeakTest {
-    private val scope1 = CoroutineScope(Dispatchers.Default)
     val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
 
-    @Test fun `gc is detectable`() = runBlocking {
+    @Test fun `gc is detectable`() = runTest {
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)
         list1 = null
         scour { assertNull(ref.get()) }
     }
 
-    @Test fun `cancel of watch scope allows gc`() = runBlocking {
+    @UseExperimental(ObsoleteCoroutinesApi::class)
+    @Test(timeout = 2000) fun `watch does not get gc'ed while scope lives`() = runTest {
+        val list1 = watchableListOf(1, 2, 3)
+
+
+        // Watch it from the other scope
+        val scope1 = newScope()
+        val ref = WeakReference(scope1.watch(list1) {
+            changes.send(it)
+        })
+
+        try {
+            scour { assertNull(ref.get()) }
+        } catch (e: java.lang.AssertionError) { }
+        assertNotNull(ref.get())
+
+        // Show that it's still working despite no references kept
+        list1 += 4
+        assertEquals(ListChange.Initial(listOf(1, 2, 3)), changes.receive())
+        assertEquals(ListChange.Insert(3, listOf(4)), changes.receive())
+
+        // Now cancel the scope and show that it stops working
+        scope1.cancel()
+        list1 += 5
+        assertEquals(null, changes.poll())
+    }
+
+
+    @Test(timeout = 2000) fun `cancel of watch scope allows gc`() = runTest {
+        val scope1 = newScope()
+
         // Create a var in scope1
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)
 
-        // Watch it from scope 2
+        // Watch it from the other scope
         scope1.watch(list1) { changes.send(it) }
 
         // Cancel both scopes and drop the var
@@ -61,18 +87,20 @@ class MemoryLeakTest {
         scour { assertNull(ref.get()) }
     }
 
-    @Test fun `cancel of handle allows gc`() = runBlocking {
+    @Test(timeout = 2000) fun `cancel of handle allows gc`() = runTest {
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)
         // Watch and then cancel
-        scope1.watch(list1) { changes.send(it) }.cancel()
+        watch(list1) { changes.send(it) }.cancel()
         list1 = null
 
         // Detect gc of list1
         scour { assertNull(ref.get()) }
     }
 
-    @Test fun `join on scope used to bind allows gc`() = runBlocking {
+    @Test(timeout = 2000) fun `join on scope used to bind allows gc`() = runTest {
+        val scope1 = newScope()
+
         // Create a var in scope1
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)
