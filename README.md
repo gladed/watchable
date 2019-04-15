@@ -116,7 +116,7 @@ Complex binds are possible in which changes are received and may be arbitrarily 
 val from = listOf(4, 5).toWatchableList()
 val into = watchableValueOf(0)
 into.bind(this, from) {
-    // Update size whenever "from" changes
+    // Update size whenever "from" changes in any way
     value = from.size
 }
 // ...time passes...
@@ -153,8 +153,8 @@ watch(group(set, list)) { println(it) }
 // GroupChange(watchable=[a], change=Initial(set=[a]))
 // GroupChange(watchable=[4], change=Initial(list=[4]))
 
-list.use { add(6) }
-set.use { add("b") }
+list += 6
+set += "b"
 // Prints:
 // GroupChange(watchable=[4, 6], change=Insert(index=1, insert=[6]))
 // GroupChange(watchable=[a, b], change=Add(add=[b]))""")

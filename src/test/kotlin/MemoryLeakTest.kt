@@ -42,7 +42,7 @@ class MemoryLeakTest {
     }
 
     @UseExperimental(ObsoleteCoroutinesApi::class)
-    @Test(timeout = 1000) fun `watch does not get gc'ed while scope lives`() = runTest {
+    @Test(timeout = 2000) fun `watch does not get gc'ed while scope lives`() = runTest {
         val list1 = watchableListOf(1, 2, 3)
 
 
@@ -69,7 +69,7 @@ class MemoryLeakTest {
     }
 
 
-    @Test fun `cancel of watch scope allows gc`() = runTest {
+    @Test(timeout = 2000) fun `cancel of watch scope allows gc`() = runTest {
         val scope1 = newScope()
 
         // Create a var in scope1
@@ -87,7 +87,7 @@ class MemoryLeakTest {
         scour { assertNull(ref.get()) }
     }
 
-    @Test fun `cancel of handle allows gc`() = runTest {
+    @Test(timeout = 2000) fun `cancel of handle allows gc`() = runTest {
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)
         // Watch and then cancel
@@ -98,7 +98,7 @@ class MemoryLeakTest {
         scour { assertNull(ref.get()) }
     }
 
-    @Test fun `join on scope used to bind allows gc`() = runTest {
+    @Test(timeout = 2000) fun `join on scope used to bind allows gc`() = runTest {
         val scope1 = newScope()
 
         // Create a var in scope1

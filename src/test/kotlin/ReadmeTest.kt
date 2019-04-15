@@ -139,8 +139,8 @@ class ReadmeTest {
             GroupChange(watchable=[4], change=Initial(list=[4]))""")
 
         out.clear()
-        list.use { add(6) }
-        set.use { add("b") }
+        list += 6
+        set += "b"
         triggerActions()
         outputIs("""
             GroupChange(watchable=[4, 6], change=Insert(index=1, insert=[6]))
