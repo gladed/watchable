@@ -59,7 +59,7 @@ class WatchableValue<T> internal constructor(
     }
 
     /** Return an unmodifiable form of this [WatchableSet]. */
-    fun readOnly(): ReadOnlyWatchableValue<T> = object : ReadOnlyWatchableValue<T> by this { }
+    override fun readOnly(): ReadOnlyWatchableValue<T> = object : ReadOnlyWatchableValue<T> by this { }
 
     override fun equals(other: Any?) =
         when (other) {

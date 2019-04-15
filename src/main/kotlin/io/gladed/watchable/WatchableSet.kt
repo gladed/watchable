@@ -140,5 +140,5 @@ class WatchableSet<T> internal constructor(
     }
 
     /** Return an unmodifiable form of this [WatchableSet]. */
-    fun readOnly(): ReadOnlyWatchableSet<T> = object : ReadOnlyWatchableSet<T> by this { }
+    override fun readOnly(): ReadOnlyWatchableSet<T> = object : ReadOnlyWatchableSet<T> by this { }
 }

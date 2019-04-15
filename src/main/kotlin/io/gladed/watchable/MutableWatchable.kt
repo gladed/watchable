@@ -65,6 +65,8 @@ interface MutableWatchable<M, C : Change> : Watchable<C> {
     /** Return true if this object is already bound. */
     fun isBound() = boundTo != null
 
+    fun readOnly(): Watchable<C>
+
     /** The [Watchable] to which this object is bound, if any. */
     val boundTo: Watchable<*>?
 }

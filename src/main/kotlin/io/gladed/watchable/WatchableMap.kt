@@ -155,5 +155,5 @@ class WatchableMap<K, V> internal constructor(
     }
 
     /** Return an unmodifiable form of this [WatchableMap]. */
-    fun readOnly(): ReadOnlyWatchableMap<K, V> = object : ReadOnlyWatchableMap<K, V> by this { }
+    override fun readOnly(): ReadOnlyWatchableMap<K, V> = object : ReadOnlyWatchableMap<K, V> by this { }
 }

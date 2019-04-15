@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.WatchableList
 import io.gladed.watchable.batch
-import io.gladed.watchable.bind
 import io.gladed.watchable.group
+import io.gladed.watchable.simple
 import io.gladed.watchable.toWatchableList
 import io.gladed.watchable.toWatchableSet
 import io.gladed.watchable.watch
@@ -107,6 +106,17 @@ class ReadmeTest {
         outputIs("""2""")
     }
 
+    @Test fun `Batching readme`() = runTest {
+        val list = listOf(4, 5).toWatchableList()
+        batch(list, 50) { println(it) }
+        list.use { add(6); add(7) }
+        advanceTimeBy(60) // Not in doc
+        // After time passes, prints:
+        // [Initial(list=[4, 5]), Add(index=2, added=6), Add(index=3, added=7)]
+        outputIs("""
+            [Initial(list=[4, 5]), Insert(index=2, insert=[6, 7])]""")
+    }
+
     @Test fun `close watch handle`() = runTest {
         val list = watchableListOf(1)
         val handle = watch(list) { out += it.toString() }
@@ -114,24 +124,49 @@ class ReadmeTest {
         handle.close()
         list.add(3)
         triggerActions()
-        assertEquals("""
+        outputIs("""
             Initial(list=[1])
-            Insert(index=1, insert=[2])""".trimIndent(), out.joinToString("\n"))
+            Insert(index=1, insert=[2])""")
     }
 
-    @Test fun `example from readme`() = runTest {
-        val list = listOf(4).toWatchableList()
+    @Test fun `Grouping readme`() = runTest {
         val set = setOf("a").toWatchableSet()
+        val list = listOf(4).toWatchableList()
         watch(group(set, list)) { println(it) }
         triggerActions()
-        // Prints:
-        //   GroupChange(watchable=WatchableSet(), change=Initial(initial=[a]))
-        //   GroupChange(watchable=WatchableList(), change=Initial(initial=[4]))
+        outputIs("""
+            GroupChange(watchable=[a], change=Initial(set=[a]))
+            GroupChange(watchable=[4], change=Initial(list=[4]))""")
+
+        out.clear()
         list.use { add(6) }
         set.use { add("b") }
-        //   GroupChange(watchable=WatchableList(), change=Add(index=1, added=6))
-        //   GroupChange(watchable=WatchableSet(), change=Add(added=b))
         triggerActions()
+        outputIs("""
+            GroupChange(watchable=[4, 6], change=Insert(index=1, insert=[6]))
+            GroupChange(watchable=[a, b], change=Add(add=[b]))""")
+    }
+
+    @Test fun `Simple Watches`() = runTest {
+        val map = watchableMapOf(1 to "2")
+        simple(map) { println("at $key remove $remove add $add") }
+        map.put(1, "3")
+
+        outputIs("""
+            at 1 remove null add 2
+            at 1 remove 2 add 3""".trimIndent())
+    }
+
+    @Test fun `Object Lifetime`() = runTest {
+        val list = watchableListOf(1)
+        val handle = watch(list) { println(it) }
+        list.add(2)
+        handle.close() // No further notifications after this point
+        list.add(3)
+
+        outputIs("""
+            Initial(list=[1])
+            Insert(index=1, insert=[2])""".trimIndent())
     }
 
     private fun println(obj: Any) { out += obj.toString() }

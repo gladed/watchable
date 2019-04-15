@@ -160,5 +160,5 @@ class WatchableList<T> internal constructor(
     }
 
     /** Return an unmodifiable form of this [WatchableList]. */
-    fun readOnly(): ReadOnlyWatchableList<T> = object : ReadOnlyWatchableList<T> by this { }
+    override fun readOnly(): ReadOnlyWatchableList<T> = object : ReadOnlyWatchableList<T> by this { }
 }
