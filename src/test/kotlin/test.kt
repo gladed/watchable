@@ -24,6 +24,7 @@ import kotlinx.coroutines.test.TestCoroutineContext
 import kotlinx.coroutines.test.withTestContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
+import kotlin.reflect.KClass
 
 /** A scope in which tests may run. */
 @UseExperimental(ObsoleteCoroutinesApi::class)
@@ -51,6 +52,21 @@ fun runTest(func: suspend TestCoroutineScope.() -> Unit) {
                 override val coroutineContext = this@runBlocking.coroutineContext + TestContextWrapper(testContext)
             }.func()}
     }
+}
+
+/** Run a test within a [TestCoroutineScope]. */
+@UseExperimental(ObsoleteCoroutinesApi::class)
+fun <T : Throwable> failTest(failClass: Class<T>, func: suspend TestCoroutineScope.() -> Unit) {
+    withTestContext {
+        runBlocking(this) {
+            object : TestCoroutineScope {
+                override val testContext = this@withTestContext
+                override val coroutineContext = this@runBlocking.coroutineContext + TestContextWrapper(testContext)
+            }.func()}
+        exceptions.forEach { it.printStackTrace() }
+        assertUnhandledException { failClass.isInstance(it) }
+    }
+
 }
 
 @UseExperimental(ObsoleteCoroutinesApi::class)

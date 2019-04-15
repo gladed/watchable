@@ -100,4 +100,17 @@ class WatchableMapTest : ScopeTest() {
         assertEquals("2", map[2])
         assertFalse(map.isEmpty())
     }
+
+    @Test fun mapOperators() = runTest {
+        val map = watchableMapOf(1 to "1", 2 to "2")
+        map += 3 to "3"
+        map += mapOf(4 to "4", 5 to "5")
+        map += arrayOf(6 to "6", 7 to "7")
+        map += sequenceOf(8 to "8", 9 to "9")
+        map -= 1
+        map -= setOf(3)
+        map -= arrayOf(5)
+        map -= sequenceOf(7, 9)
+        assertEquals(mapOf(2 to "2", 4 to "4", 6 to "6", 8 to "8"), map)
+    }
 }

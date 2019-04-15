@@ -100,4 +100,20 @@ class WatchableListTest {
         assertEquals(2, list.listIterator(1).next())
         assertEquals(listOf(2), list.subList(1, 2))
     }
+
+    @Test fun listOperators() = runTest {
+        val list = watchableListOf(1, 2)
+        list += 3
+        list += listOf(4, 5)
+        list += arrayOf(6, 7)
+        list += sequenceOf(8, 9)
+        list -= 1
+        list -= listOf(3)
+        list -= arrayOf(5)
+        list -= sequenceOf(7, 9)
+        assertEquals(listOf(2, 4, 6, 8), list)
+
+        list.retainAll(listOf(4, 6, 7))
+        assertEquals(listOf(4, 6), list)
+    }
 }

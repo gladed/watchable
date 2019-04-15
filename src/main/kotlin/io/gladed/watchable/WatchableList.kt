@@ -135,7 +135,7 @@ class WatchableList<T> internal constructor(
     suspend inline operator fun plusAssign(elements: Sequence<T>) { addAll(elements) }
 
     /** Remove [element] from this watchable collection. */
-    suspend inline operator fun minusAssign(element: T) { add(element) }
+    suspend inline operator fun minusAssign(element: T) { remove(element) }
 
     /** Remove all elements of the given [elements] collection from this list. */
     suspend inline operator fun minusAssign(elements: Iterable<T>) { removeAll(elements) }

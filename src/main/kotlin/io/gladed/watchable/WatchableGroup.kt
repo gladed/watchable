@@ -29,14 +29,14 @@ class WatchableGroup(
         scope: CoroutineScope,
         period: Long,
         func: suspend (List<GroupChange>) -> Unit
-    ): Busy {
+    ): Watcher {
         val handles = watchables.map { watchable ->
             watchable.batch(scope) { changes ->
                 func(changes.map { GroupChange(watchable, it) })
             }
         }.toMutableList()
 
-        return object : Busy {
+        return object : Watcher {
             override fun cancel() {
                 handles.forEach { it.cancel() }
             }

@@ -69,7 +69,7 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(
         }
     }
 
-    /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
+    /** Run [func] if changes are currently allowed, or throw if not. */
     protected fun <U> doChange(func: () -> U): U =
         if (boundTo != null && !isOnBoundChange) {
             throw IllegalStateException("A bound object may not be modified.")
@@ -100,7 +100,7 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(
         }
 
     /** Wrapper for a binding. */
-    private class Binding(val other: Watchable<*>, val handle: Busy)
+    private class Binding(val other: Watchable<*>, val watcher: Watcher)
 
     override suspend fun bind(scope: CoroutineScope, origin: Watchable<C>) {
         bind(scope, origin) {
@@ -142,7 +142,7 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(
 
     override fun unbind() {
         binding?.apply {
-            handle.cancel()
+            watcher.cancel()
             binding = null
         }
     }

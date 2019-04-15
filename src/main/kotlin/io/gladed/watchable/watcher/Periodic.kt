@@ -28,10 +28,10 @@ import kotlinx.coroutines.withContext
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A [Watcher] that buffers changes and shares them out every so often.
+ * Buffers changes and shares them out every so often.
  */
 @UseExperimental(ExperimentalCoroutinesApi::class, ObsoleteCoroutinesApi::class)
-internal class PeriodicWatcher<C : Change>(
+internal class Periodic<C : Change>(
     context: CoroutineContext,
     /** A non-zero period between change announcements. */
     private val period: Long,

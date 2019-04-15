@@ -20,8 +20,12 @@ import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Test
 import java.lang.ref.WeakReference
@@ -37,19 +41,31 @@ class MemoryLeakTest {
         scour { assertNull(ref.get()) }
     }
 
-    @Test fun `watch does not get gc'ed while scope lives`() = runTest {
-        val scope1 = newScope()
+    @UseExperimental(ObsoleteCoroutinesApi::class)
+    @Test(timeout = 1000) fun `watch does not get gc'ed while scope lives`() = runTest {
+        val list1 = watchableListOf(1, 2, 3)
 
-        // Create a var in scope1
-        var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
-        val ref = WeakReference(list1!!)
 
         // Watch it from the other scope
-        scope1.watch(list1) { changes.send(it) }
-        list1 = null
+        val scope1 = newScope()
+        val ref = WeakReference(scope1.watch(list1) {
+            changes.send(it)
+        })
 
-        // TODO: THIS SHOULD FAIL
-        scour { assertNull(ref.get()) }
+        try {
+            scour { assertNull(ref.get()) }
+        } catch (e: java.lang.AssertionError) { }
+        assertNotNull(ref.get())
+
+        // Show that it's still working despite no references kept
+        list1 += 4
+        assertEquals(ListChange.Initial(listOf(1, 2, 3)), changes.receive())
+        assertEquals(ListChange.Insert(3, listOf(4)), changes.receive())
+
+        // Now cancel the scope and show that it stops working
+        scope1.cancel()
+        list1 += 5
+        assertEquals(null, changes.poll())
     }
 
 

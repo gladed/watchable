@@ -42,7 +42,7 @@ interface Watchable<out C : Change> {
         period: Long = IMMEDIATE,
         /** Function which processes elements as they arrive. */
         func: suspend (List<C>) -> Unit
-    ): Busy
+    ): Watcher
 
     /**
      * Deliver all changes from this [Watchable] to [func] as individual [Change] objects until [scope] completes.
@@ -52,7 +52,7 @@ interface Watchable<out C : Change> {
         /** When to receive changes, see [Period]. */
         period: Long = IMMEDIATE,
         func: suspend (C) -> Unit
-    ): Busy =
+    ): Watcher =
         batch(scope, period) { changes ->
             for (change in changes) {
                 if (scope.isActive) func(change) else break

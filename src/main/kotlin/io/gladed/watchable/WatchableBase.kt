@@ -19,18 +19,26 @@ package io.gladed.watchable
 import io.gladed.watchable.Period.IMMEDIATE
 import io.gladed.watchable.Period.INLINE
 import io.gladed.watchable.util.Guard
-import io.gladed.watchable.watcher.ImmediateWatcher
-import io.gladed.watchable.watcher.InlineWatcher
-import io.gladed.watchable.watcher.PeriodicWatcher
-import io.gladed.watchable.watcher.Watcher
+import io.gladed.watchable.watcher.Immediate
+import io.gladed.watchable.watcher.Inline
+import io.gladed.watchable.watcher.Periodic
+import io.gladed.watchable.watcher.WatcherBase
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import java.lang.ref.WeakReference
 
 /** Base for an object that generates change events of type [C] as its underlying data changes. */
 abstract class WatchableBase<C : Change> : Watchable<C> {
 
+    class Droppable<T : Any>(value: T) {
+        private val ref = WeakReference(value)
+        private var holding: T? = value
+        fun drop() { holding = null }
+        fun get(): T? { return ref.get() }
+    }
+
     /** Objects watching this one. */
-    private val watchers = Guard(mutableListOf<WeakReference<Watcher<C>>>())
+    private val watchers = Guard(mutableListOf<Droppable<WatcherBase<C>>>())
 
     /** Deliver changes to watchers if any. */
     protected suspend fun dispatch(change: List<C>) {
@@ -51,18 +59,19 @@ abstract class WatchableBase<C : Change> : Watchable<C> {
         scope: CoroutineScope,
         period: Long,
         func: suspend (List<C>) -> Unit
-    ): Busy =
+    ): Watcher =
         when {
-            period == INLINE -> InlineWatcher(scope.coroutineContext, func)
-            period == IMMEDIATE -> ImmediateWatcher(scope.coroutineContext, func)
+            period == INLINE -> Inline(scope.coroutineContext, func)
+            period == IMMEDIATE -> Immediate(scope.coroutineContext, func)
             period < 0 -> throw IllegalArgumentException("Invalid period")
-            else -> PeriodicWatcher(scope.coroutineContext, period, func)
+            else -> Periodic(scope.coroutineContext, period, func)
         }.also { watcher ->
+            val droppable = Droppable(watcher)
             watchers {
-                add(WeakReference(watcher))
+                add(droppable)
                 sortBy {
                     when (it) {
-                        is InlineWatcher<*> -> 1 // INLINE always comes first
+                        is Inline<*> -> 1 // INLINE always comes first
                         else -> 2
                     }
                 }
@@ -70,6 +79,10 @@ abstract class WatchableBase<C : Change> : Watchable<C> {
                 getInitialChange()?.also { change ->
                     watcher.dispatch(listOf(change))
                 }
+            }
+
+            scope.coroutineContext[Job]?.invokeOnCompletion {
+                droppable.drop()
             }
         }
 }

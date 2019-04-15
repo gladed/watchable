@@ -23,7 +23,7 @@ import kotlin.coroutines.CoroutineContext
 /**
  * Respond to changes while they are being made.
  */
-internal class InlineWatcher<C : Change>(
+internal class Inline<C : Change>(
     context: CoroutineContext,
     private val action: suspend (List<C>) -> Unit
 ) : WatcherBase<C>(context) {

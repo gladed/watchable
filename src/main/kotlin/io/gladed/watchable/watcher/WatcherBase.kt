@@ -17,21 +17,23 @@
 package io.gladed.watchable.watcher
 
 import io.gladed.watchable.Change
-import io.gladed.watchable.Busy
+import io.gladed.watchable.Watcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.isActive
 import kotlin.coroutines.CoroutineContext
 
+/** Parent for all types of dispatchers. */
 internal abstract class WatcherBase<C : Change>(
     val context: CoroutineContext
-) : Watcher<C>, Busy, CoroutineScope {
+) : Watcher, CoroutineScope {
     override val coroutineContext = context + Job()
 
     abstract suspend fun onDispatch(changes: List<C>)
 
-    override suspend fun dispatch(changes: List<C>) =
+    /** Deliver this change to the watcher according to its timing rules. */
+    suspend fun dispatch(changes: List<C>) =
         if (context.isActive && coroutineContext.isActive) {
             onDispatch(changes)
             true

@@ -24,7 +24,6 @@ import kotlinx.coroutines.yield
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
-import org.junit.Ignore
 import org.junit.Test
 
 @UseExperimental(ObsoleteCoroutinesApi::class)
@@ -117,21 +116,6 @@ class OnDemandTest {
             fail("Should throw")
         } catch (failure: AssertionError) {  }
 
-        change(3)
-    }
-
-    @Ignore // This throws -- where and how?
-    @Test(timeout = 500) fun `ignore throw`() = runTest {
-        val scope1 = newScope()
-
-        watchable.batch(scope1) {
-            if (it.contains(MyChange("2"))) {
-                fail("do not like")
-            }
-            delivered(it)
-        }
-        change(1)
-        change(2)
         change(3)
     }
 

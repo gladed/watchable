@@ -94,6 +94,8 @@ class WatchableMap<K, V> internal constructor(
     /** Associate the [value] with the [key] in this map, returning the previous value for this [key] if any. */
     suspend inline fun put(key: K, value: V): V? = use { put(key, value) }
 
+    // Note: suspend operator for set would be more natural but is not yet supported by Kotlin.
+
     suspend inline fun putAll(from: Map<K, V>) {
         use { putAll(from) }
     }

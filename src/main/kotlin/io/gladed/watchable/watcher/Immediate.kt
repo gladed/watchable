@@ -25,7 +25,7 @@ import kotlin.coroutines.CoroutineContext
 /**
  * Launch changes into a scope to be processed soon.
  */
-internal class ImmediateWatcher<C : Change>(
+internal class Immediate<C : Change>(
     context: CoroutineContext,
     private val action: suspend (List<C>) -> Unit
 ) : WatcherBase<C>(context) {

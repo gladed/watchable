@@ -16,8 +16,8 @@
 
 package io.gladed.watchable
 
-/** An ongoing operation that can be closed or cancelled. */
-interface Busy {
+/** An ongoing watch operation that can be closed or cancelled. */
+interface Watcher {
 
     /** Immediately stop. Repeated invocations have no effect. */
     fun cancel()
@@ -28,15 +28,15 @@ interface Busy {
      */
     suspend fun close()
 
-    /** Combine two [Busy] objects, returning a single one that spans both. */
-    operator fun plus(right: Busy) = object : Busy {
+    /** Combine two [Watcher] objects, returning a single one that spans both. */
+    operator fun plus(right: Watcher) = object : Watcher {
         override fun cancel() {
-            this@Busy.cancel()
+            this@Watcher.cancel()
             right.cancel()
         }
 
         override suspend fun close() {
-            this@Busy.close()
+            this@Watcher.close()
             right.close()
         }
     }
