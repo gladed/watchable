@@ -51,7 +51,7 @@ internal class Periodic<C : Change>(
     }
 
     /** Return the current system time (or test time if in unit test). */
-    private fun now(): Long =
+    private fun now() =
         context[TestContextWrapper]?.testContext?.now() ?: System.currentTimeMillis()
 
     private suspend fun handleChanges(): Boolean = select {

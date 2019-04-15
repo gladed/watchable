@@ -1,5 +1,13 @@
 # Version History
 
+## 0.6.8
+* Renamed `WatchHandle` to `Watcher` and simplified `close()` semantics.
+* Removed `value` and added suspend operators to `WatchableList`, `WatchableSet`, and `WatchableMap` for easier modification.
+* Support for INLINE vs IMMEDIATE watch periods.
+* Restored access to removed values in change notifications
+* Simplified generic types
+* Eliminated some use of coroutine APIs marked "Obsolete".
+
 ## 0.6.x
 * Closed `WatchHandle` but retained objects no longer leak memory.
 * `watchSimple` allows for simplified handling of add/removes when efficiency and completeness aren't as important.

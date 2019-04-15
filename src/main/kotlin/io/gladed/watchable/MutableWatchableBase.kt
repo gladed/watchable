@@ -21,8 +21,6 @@ import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
 /** Base for implementing a type that is watchable, mutable, and bindable. */
-@UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class,
-    kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 @Suppress("TooManyFunctions") // Useful
 abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(), MutableWatchable<M, C> {
 

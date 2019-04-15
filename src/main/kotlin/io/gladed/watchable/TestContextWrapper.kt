@@ -25,6 +25,6 @@ import kotlin.coroutines.CoroutineContext
  */
 @UseExperimental(ObsoleteCoroutinesApi::class)
 class TestContextWrapper(val testContext: TestCoroutineContext) : CoroutineContext.Element {
-    override val key: CoroutineContext.Key<*> = TestContextWrapper.Key
+    override val key: CoroutineContext.Key<*> = Key
     companion object Key : CoroutineContext.Key<TestContextWrapper>
 }

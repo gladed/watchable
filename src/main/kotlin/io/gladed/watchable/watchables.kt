@@ -35,10 +35,10 @@ fun <T> Collection<T>.toWatchableList() = WatchableList(this)
 fun <T> watchableListOf(vararg values: T) = values.toList().toWatchableList()
 
 /** Return a new [WatchableMap] containing the elements of this [Map]. */
-fun <K : Any, V : Any> Map<K, V>.toWatchableMap() = WatchableMap(this)
+fun <K, V> Map<K, V>.toWatchableMap() = WatchableMap(this)
 
 /** Return a new [WatchableMap] containing a map of [values]. */
-fun <K : Any, V : Any> watchableMapOf(vararg values: Pair<K, V>) = values.toMap().toWatchableMap()
+fun <K, V> watchableMapOf(vararg values: Pair<K, V>) = values.toMap().toWatchableMap()
 
 /** Create and return a group of watchable objects that itself is watchable. */
 fun <C : Change> group(vararg watchables: Watchable<C>) =
