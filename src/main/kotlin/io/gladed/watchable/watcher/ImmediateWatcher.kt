@@ -30,12 +30,12 @@ internal class ImmediateWatcher<C : Change>(
     private val action: suspend (List<C>) -> Unit
 ) : WatcherBase<C>(context) {
 
-    private val order = Mutex()
+    private val inOrder = Mutex()
 
     override suspend fun onDispatch(changes: List<C>) {
         // In the background, wait for order lock and run action within it to prevent overlapping calls
         launch(context) {
-            order.withLock { action(changes) }
+            inOrder.withLock { action(changes) }
         }
     }
 }
