@@ -44,7 +44,7 @@ class MemoryLeakTest {
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)
 
-        // Watch it from scope 2
+        // Watch it from the other scope
         scope1.watch(list1) { changes.send(it) }
 
         // Cancel both scopes and drop the var
@@ -56,12 +56,10 @@ class MemoryLeakTest {
     }
 
     @Test fun `cancel of handle allows gc`() = runTest {
-        val scope1 = newScope()
-
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
         val ref = WeakReference(list1!!)
         // Watch and then cancel
-        scope1.watch(list1) { changes.send(it) }.cancel()
+        watch(list1) { changes.send(it) }.cancel()
         list1 = null
 
         // Detect gc of list1

@@ -45,7 +45,7 @@ suspend fun <C> ReceiveChannel<C>.assert(vararg items: C) {
     } else {
         for (item in items) {
             val rx = withTimeoutOrNull(150) { receiveOrNull() }
-            log("Rx: $rx")
+            log("Rx: ${rx ?: "timeout"}")
             assertEquals(item, rx)
         }
     }

@@ -83,12 +83,11 @@ class FileStore(
         /** Return this suspending function's current context. */
         private suspend fun callerContext() = coroutineContext
 
-        private fun <T: Any> File.writeJson(strategy: SerializationStrategy<T>, value: T) {
+        private fun <T : Any> File.writeJson(strategy: SerializationStrategy<T>, value: T) {
             bufferedWriter().use { it.write(Json.stringify(strategy, value)) }
         }
 
-        private fun <T: Any> File.readJson(strategy: DeserializationStrategy<T>): T =
+        private fun <T : Any> File.readJson(strategy: DeserializationStrategy<T>): T =
             bufferedReader().use { (Json.parse(strategy, it.readText())) }
-
     }
 }
