@@ -36,7 +36,7 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(
     /** Given the current state [T] return [C] representing the initial state, if any. */
     protected abstract fun T.toInitialChange(): C?
 
-    /** Apply all [changes] to [M]. */
+    /** Apply [change] to [M]. */
     protected abstract fun M.applyBoundChange(change: C)
 
     /** Collects changes applied during any mutation of [mutable]. */

@@ -27,7 +27,7 @@ import kotlinx.coroutines.sync.Mutex
  * Each watch operation takes a [CoroutineScope]. Callbacks are delivered using this scope's context, and stop
  * automatically when this scope cancels or completes.
  *
- * Each watch operation also returns a [Busy] which may be used to independently cancel or join the watch
+ * Each watch operation also returns a [Watcher] which may be used to independently cancel or join the watch
  * operation.
  */
 interface Watchable<out C : Change> {

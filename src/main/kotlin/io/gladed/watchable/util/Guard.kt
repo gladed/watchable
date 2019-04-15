@@ -23,7 +23,7 @@ import kotlinx.coroutines.sync.withLock
 class Guard<T>(private val item: T) {
     private val mutex = Mutex()
 
-    /** Operate directly on [item] while holding a [Mutex]. */
+    /** Operate directly on the guarded item while holding a [Mutex]. */
     suspend operator fun <U> invoke(func: suspend T.() -> U): U =
         mutex.withLock { item.func() }
 }

@@ -48,9 +48,7 @@ class MemoryLeakTest {
 
         // Watch it from the other scope
         val scope1 = newScope()
-        val ref = WeakReference(scope1.watch(list1) {
-            changes.send(it)
-        })
+        val ref = WeakReference(scope1.watch(list1) { changes.send(it) })
 
         try {
             scour { assertNull(ref.get()) }

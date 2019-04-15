@@ -27,7 +27,7 @@ suspend fun <M, C : Change> CoroutineScope.bind(
 
 /**
  * Deliver simplified changes for this [Watchable] as receiver objects to [func] until
- * the returned [Busy] is closed or this [CoroutineScope] completes.
+ * the returned [Watcher] is closed or this [CoroutineScope] completes.
  */
 suspend fun <S, C : HasSimpleChange<S>> CoroutineScope.simple(
     watchable: SimpleWatchable<S, C>,
@@ -35,7 +35,7 @@ suspend fun <S, C : HasSimpleChange<S>> CoroutineScope.simple(
 ) = watchable.simple(this@simple, func)
 
 /**
- * Deliver changes for this [Watchable] to [func] until the returned [Busy] is closed or this
+ * Deliver changes for this [Watchable] to [func] until the returned [Watcher] is closed or this
  * [CoroutineScope] completes.
  */
 suspend fun <C : Change> CoroutineScope.watch(
@@ -46,7 +46,7 @@ suspend fun <C : Change> CoroutineScope.watch(
 ) = watchable.watch(this@watch, period, func)
 
 /**
- * Deliver multiple changes for this [Watchable] to [func] until the returned [Busy] is closed or this
+ * Deliver multiple changes for this [Watchable] to [func] until the returned [Watcher] is closed or this
  * [CoroutineScope] completes.
  */
 suspend fun <C : Change> CoroutineScope.batch(
