@@ -83,8 +83,6 @@ class WatchableValueTest {
         runBlocking {
             intValue = watchableValueOf(4)
             val readOnly = intValue.readOnly()
-            assertThat(readOnly.toString(), startsWith("ReadOnlyWatchableValue("))
-            assertThat(intValue.toString(), startsWith("WatchableValue("))
             watch(readOnly) {
                 changes.send(it)
             }

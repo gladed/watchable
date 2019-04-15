@@ -42,7 +42,7 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(
     protected abstract fun M.applyBoundChange(change: C)
 
     /** Collects changes applied during any mutation of [mutable]. */
-    protected val changes = mutableListOf<C>()
+    private val changes = mutableListOf<C>()
 
     /** The current immutable [T] form of [M]. */
     protected abstract var immutable: T
@@ -57,6 +57,17 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(
 
     override fun getInitialChange(): C? =
         immutable.toInitialChange()
+
+    /** Record the latest change. */
+    protected fun record(change: C) {
+        @Suppress("UNCHECKED_CAST")
+        val replace = (changes.lastOrNull() as? Mergeable<C>)?.merge(change)
+        if (replace != null) {
+            changes[changes.lastIndex] = replace
+        } else {
+            changes += change
+        }
+    }
 
     /** Run [func] if changes are currently allowed on [immutable], or throw if not. */
     protected fun <U> doChange(func: () -> U): U =

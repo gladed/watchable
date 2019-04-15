@@ -34,8 +34,6 @@ class WatchableSetTest : ScopeTest() {
         val set = watchableSetOf(1)
         val set2 = set.readOnly()
         watch(set2) { changes.send(it) }
-        assertThat(set.toString(), startsWith("WatchableSet("))
-        assertThat(set2.toString(), startsWith("ReadOnlyWatchableSet("))
         set.add(3)
         eventually { assertEquals(setOf(1, 3), set2) }
     }

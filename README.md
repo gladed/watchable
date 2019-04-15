@@ -11,18 +11,15 @@
 This library provides lock-free, concurrent, listenable data structures using [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html).
 
 ```kotlin
-// Inside of CoroutineScope...
-val set = watchableSetOf(1, 2)
-
-// Start watching the set for changes
-watch(set) { println("Got $it") }
-
-// ...Later, make a modification which will notify watchers
-set.use { add(3) }
+coroutineScope {
+    val set = watchableSetOf(1, 2)
+    watch(set) { println("Got $it") }
+    set.add(3)
+}
 
 // Output:
-//   Got SetChange.Initial(initial=[1, 2])"
-//   Got SetChange.Add(added=3)
+// Got Initial(set=[1, 2])
+// Got Add(add=[3])
 ```
 
 ## Why?
@@ -31,7 +28,7 @@ Sometimes, you want a data structure that can be shared between objects and list
 
 `Watchable` solves this by allowing operations (like `watch` and`bind`) which are limited to the lifetime of the `CoroutineScope` where they are created. When the scope completes, its watchable operations also stop and cleaned up automatically.
 
-This is useful in [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) designs, in which the data model lives at the center, and everyone depends on it. If the data model is defined in terms of `Watchable` objects, then other components (having their own lifecycles) can simply watch for changes and react accordingly, without coupling directly to each other.
+This can be useful in [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) designs, in which the data model lives at the center, and everyone depends on it. If the data model is defined in terms of `Watchable` objects, then other components (having their own lifecycles) can simply watch for changes and react accordingly, without coupling directly to each other.
 
 # Usage
 
@@ -62,27 +59,24 @@ val value = watchableValueOf(URI.create("https://github.com"))
 
 Each data type can be accessed, modified, watched, bound, etc. as described below.
 
-## Reading Data
+## Reading and Writing Data
 
-You can obtain a read-only, immutable copy of the underlying data with [`value`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/value.html). In the case of `WatchableList`, `WatchableSet`, and `WatchableMap` can also be treated as read-only views of the underlying content, but be warned that this content may change at any time.
+You can use WatchableMap, WatchableList, and WatchableSet anywhere you would use a normal Kotlin Map, List, or Set. WatchableValue wraps a single object. Their contents may be changed safely at any time:
+
+```kotlin
+val map = watchableMapOf(1 to "1")
+println(map) // Prints {1=1}
+map.put(2, "2") // Suspends if concurrent modification attempted
+println(map) // Prints {1=1, 2=2}
+```
+
+To do multiple operations in a protected way, [`use`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/use.html) the object:
 
 ```kotlin
 val list = watchableListOf(1, 2, 3)
-println(list) // Prints WatchableList([1, 2, 3])
-println(list.value) // Prints [1, 2, 3]
+// Remove last element safely
+println(list.use { removeAt(list.size - 1) }) // Removes last element, prints 3
 ```
-
-## Modifying Contents
-
-Any [`MutableWatchable`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/) can be modified with [`use`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/use.html), which receives a temporary, modifiable form of the underlying data. Any changes to this data are captured and delivered to watchers.
-
-```kotlin
-val list = watchableListOf(1, 2)
-list.use { add(3) }
-println(list.value) // Prints [1, 2, 3]
-```  
-
-NOTE: Your `use` function must NOT block.
 
 ## Watching for Changes
 
@@ -90,9 +84,17 @@ You can watch any `Watchable` for changes from any `CoroutineScope` using [`watc
 
 ```kotlin
 val set = watchableSetOf(1, 2)
-watch(set) { println(it) } // Prints: Initial(initial=[1, 2])
-set.use { add(3) } // Prints: Add(added=3)
+watch(set) { println(it) }
+set += 3
+set -= listOf(3, 2)
+
+// Prints:
+// Initial(set=[1, 2])
+// Add(add=[3])
+// Remove(remove=[3, 2])
 ```
+
+The `watch` operation lasts as long as the current coroutine scope. 
 
 ## Binding
 
@@ -101,13 +103,27 @@ A [`bind`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutabl
 ```kotlin
 val from = listOf(4, 5).toWatchableList()
 val into = watchableListOf<Int>()
-bind(into, from)
-// Eventually, destination will match origin, and will stay in sync with any further changes to origin.
+bind(into, from) // "this" is the current coroutine scope
+// ...time passes...
+println(from == into) // true
 ```
 
 While bound, a watchable cannot be independently modified, and attempts to do so in `use` will throw.
 
-Complex binds are possible in which changes are received and may be arbitrarily mapped into changes on a bound item. See the `apply` parameter.
+Complex binds are possible in which changes are received and may be arbitrarily mapped into changes on a bound item:
+
+```kotlin
+val from = listOf(4, 5).toWatchableList()
+val into = watchableValueOf(0)
+into.bind(this, from) {
+    // Update size whenever "from" changes
+    value = from.size
+}
+// ...time passes...
+println(into) // 2
+
+```
+
 
 ## Batching
 

@@ -37,6 +37,22 @@ class MemoryLeakTest {
         scour { assertNull(ref.get()) }
     }
 
+    @Test fun `watch does not get gc'ed while scope lives`() = runTest {
+        val scope1 = newScope()
+
+        // Create a var in scope1
+        var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
+        val ref = WeakReference(list1!!)
+
+        // Watch it from the other scope
+        scope1.watch(list1) { changes.send(it) }
+        list1 = null
+
+        // TODO: THIS SHOULD FAIL
+        scour { assertNull(ref.get()) }
+    }
+
+
     @Test fun `cancel of watch scope allows gc`() = runTest {
         val scope1 = newScope()
 

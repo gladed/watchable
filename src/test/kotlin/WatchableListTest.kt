@@ -43,8 +43,6 @@ class WatchableListTest {
         val readOnlyList = list.readOnly()
         watch(readOnlyList) { changes.send(it) }
         changes.expect(ListChange.Initial(listOf(1)))
-        assertThat(list.toString(), startsWith("WatchableList("))
-        assertThat(readOnlyList.toString(), startsWith("ReadOnlyWatchableList("))
     }
 
     @Test fun withNull() = runTest {

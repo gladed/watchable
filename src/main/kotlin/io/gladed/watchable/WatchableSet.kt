@@ -30,7 +30,7 @@ class WatchableSet<T> internal constructor(
     override fun iterator(): Iterator<T> = immutable.iterator()
     override fun equals(other: Any?) = immutable == other
     override fun hashCode() = immutable.hashCode()
-    override fun toString() = "WatchableSet($immutable)"
+    override fun toString() = "$immutable"
 
     override val mutable = object : AbstractMutableSet<T>() {
         private val real = initial.toMutableSet()
@@ -39,7 +39,7 @@ class WatchableSet<T> internal constructor(
 
         override fun add(element: T) = doChange {
             real.add(element).also { success ->
-                if (success) changes.add(SetChange.Add(listOf(element)))
+                if (success) record(SetChange.Add(listOf(element)))
             }
         }
 
@@ -58,7 +58,7 @@ class WatchableSet<T> internal constructor(
                     realIterator.remove()
                     // Last must be OK if remove() didn't throw
                     @Suppress("UNCHECKED_CAST")
-                    changes.add(SetChange.Remove(listOf(last as T)))
+                    record(SetChange.Remove(listOf(last as T)))
                 }
             }
         }
@@ -88,18 +88,42 @@ class WatchableSet<T> internal constructor(
     suspend fun remove(value: T) = use { remove(value) }
 
     /** Remove all matching elements in the collection from the set, returning true if the set was changed. */
-    suspend fun removeAll(elements: Collection<T>): Boolean =
+    suspend fun removeAll(elements: Iterable<T>): Boolean =
+        use { removeAll(elements) }
+
+    /** Remove all matching elements in the collection from the set, returning true if the set was changed. */
+    suspend fun removeAll(elements: Array<T>): Boolean =
+        use { removeAll(elements) }
+
+    /** Remove all matching elements in the collection from the set, returning true if the set was changed. */
+    suspend fun removeAll(elements: Sequence<T>): Boolean =
         use { removeAll(elements) }
 
     /**
      * Retains only the elements in this set that are found in the collection, returning true if the set was
      * changed.
      */
-    suspend fun retainAll(elements: Collection<T>): Boolean =
+    suspend fun retainAll(elements: Iterable<T>): Boolean =
         use { retainAll(elements) }
 
     /** Clear all values from this set. */
     override suspend fun clear() = use { clear() }
+
+    suspend inline operator fun plusAssign(value: T) { add(value) }
+
+    suspend inline operator fun plusAssign(elements: Array<T>) { addAll(elements) }
+
+    suspend inline operator fun plusAssign(elements: Iterable<T>) { addAll(elements) }
+
+    suspend inline operator fun plusAssign(elements: Sequence<T>) { addAll(elements) }
+
+    suspend inline operator fun minusAssign(value: T) { remove(value) }
+
+    suspend inline operator fun minusAssign(elements: Array<T>) { removeAll(elements) }
+
+    suspend inline operator fun minusAssign(elements: Iterable<T>) { removeAll(elements) }
+
+    suspend inline operator fun minusAssign(elements: Sequence<T>) { removeAll(elements) }
 
     override fun MutableSet<T>.toImmutable() = toSet()
 
@@ -116,7 +140,5 @@ class WatchableSet<T> internal constructor(
     }
 
     /** Return an unmodifiable form of this [WatchableSet]. */
-    fun readOnly(): ReadOnlyWatchableSet<T> = object : ReadOnlyWatchableSet<T> by this {
-        override fun toString() = "ReadOnlyWatchableSet($immutable)"
-    }
+    fun readOnly(): ReadOnlyWatchableSet<T> = object : ReadOnlyWatchableSet<T> by this { }
 }

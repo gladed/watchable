@@ -33,7 +33,7 @@ class WatchableMap<K, V> internal constructor(
     override fun isEmpty() = immutable.isEmpty()
     override fun equals(other: Any?) = immutable == other
     override fun hashCode() = immutable.hashCode()
-    override fun toString() = "WatchableMap($immutable)"
+    override fun toString() = "$immutable"
 
     /** A map that checks and reports all change attempts. */
     override val mutable = object : AbstractMutableMap<K, V>() {
@@ -61,7 +61,7 @@ class WatchableMap<K, V> internal constructor(
                                 object : MutableMap.MutableEntry<K, V> by original {
                                     override fun setValue(newValue: V): V = doChange {
                                         original.setValue(newValue).also {
-                                            changes += MapChange.Put(key, remove = value, add = newValue)
+                                            record(MapChange.Put(key, remove = value, add = newValue))
                                         }
                                     }
 
@@ -76,7 +76,7 @@ class WatchableMap<K, V> internal constructor(
                         doChange {
                             realIterator.remove()
                             // Last cannot be null if remove() succeeded
-                            last?.also { changes += MapChange.Remove(it.key, it.value) }
+                            last?.also { record(MapChange.Remove(it.key, it.value)) }
                         }
                     }
                 }
@@ -85,33 +85,57 @@ class WatchableMap<K, V> internal constructor(
         override fun put(key: K, value: V): V? = doChange {
             doChange {
                 real.put(key, value).also { oldValue ->
-                    changes += MapChange.Put(key, remove = oldValue, add = value)
+                    record(MapChange.Put(key, remove = oldValue, add = value))
                 }
             }
         }
     }
 
     /** Associate the [value] with the [key] in this map, returning the previous value for this [key] if any. */
-    suspend fun put(key: K, value: V): V? = use { put(key, value) }
+    suspend inline fun put(key: K, value: V): V? = use { put(key, value) }
 
-    suspend fun putAll(from: Map<K, V>) {
+    suspend inline fun putAll(from: Map<K, V>) {
         use { putAll(from) }
     }
 
-    suspend fun putAll(pairs: Array<out Pair<K, V>>) {
+    suspend inline fun putAll(pairs: Array<out Pair<K, V>>) {
         use { putAll(pairs) }
     }
 
-    suspend fun putAll(pairs: Iterable<Pair<K, V>>) {
+    suspend inline fun putAll(pairs: Iterable<Pair<K, V>>) {
         use { putAll(pairs) }
     }
 
-    suspend fun putAll(pairs: Sequence<Pair<K, V>>) {
+    suspend inline fun putAll(pairs: Sequence<Pair<K, V>>) {
         use { putAll(pairs) }
+    }
+
+    suspend inline operator fun plusAssign(from: Pair<K, V>) { put(from.first, from.second) }
+
+    suspend inline operator fun plusAssign(from: Map<K, V>) { putAll(from) }
+
+    suspend inline operator fun plusAssign(pairs: Array<out Pair<K, V>>) { putAll(pairs) }
+
+    suspend inline operator fun plusAssign(pairs: Iterable<Pair<K, V>>) { putAll(pairs) }
+
+    suspend inline operator fun plusAssign(pairs: Sequence<Pair<K, V>>) { putAll(pairs) }
+
+    suspend inline operator fun minusAssign(key: K) { remove(key) }
+
+    suspend inline operator fun minusAssign(pairs: Array<K>) {
+        use { keys.removeAll(pairs) }
+    }
+
+    suspend inline operator fun minusAssign(pairs: Iterable<K>) {
+        use { keys.removeAll(pairs) }
+    }
+
+    suspend inline operator fun minusAssign(pairs: Sequence<K>) {
+        use { keys.removeAll(pairs) }
     }
 
     /** Remove the value associated with [key], returning it if it was present. */
-    suspend fun remove(key: K): V? = use { remove(key) }
+    suspend inline fun remove(key: K): V? = use { remove(key) }
 
     /**  all values from this map. */
     override suspend fun clear() = use { clear() }
@@ -129,7 +153,5 @@ class WatchableMap<K, V> internal constructor(
     }
 
     /** Return an unmodifiable form of this [WatchableMap]. */
-    fun readOnly(): ReadOnlyWatchableMap<K, V> = object : ReadOnlyWatchableMap<K, V> by this {
-        override fun toString() = "ReadOnlyWatchableMap($immutable)"
-    }
+    fun readOnly(): ReadOnlyWatchableMap<K, V> = object : ReadOnlyWatchableMap<K, V> by this { }
 }

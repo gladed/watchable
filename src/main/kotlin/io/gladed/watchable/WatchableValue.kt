@@ -30,7 +30,7 @@ class WatchableValue<T> internal constructor(
         override var value: T = initial
             set(value) {
                 doChange {
-                    changes += ValueChange(field, value)
+                    record(ValueChange(field, value))
                     field = value
                 }
             }
@@ -59,9 +59,7 @@ class WatchableValue<T> internal constructor(
     }
 
     /** Return an unmodifiable form of this [WatchableSet]. */
-    fun readOnly(): ReadOnlyWatchableValue<T> = object : ReadOnlyWatchableValue<T> by this {
-        override fun toString() = "ReadOnlyWatchableValue($value)"
-    }
+    fun readOnly(): ReadOnlyWatchableValue<T> = object : ReadOnlyWatchableValue<T> by this { }
 
     override fun equals(other: Any?) =
         when (other) {
@@ -71,5 +69,5 @@ class WatchableValue<T> internal constructor(
         }
 
     override fun hashCode() = value.hashCode()
-    override fun toString() = "WatchableValue($value)"
+    override fun toString() = "$value"
 }

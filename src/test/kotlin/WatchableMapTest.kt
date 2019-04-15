@@ -57,8 +57,6 @@ class WatchableMapTest : ScopeTest() {
         changes.expect(MapChange.Initial(mapOf(2 to "2")))
         map2.bind(this, map)
         changes.expect(MapChange.Remove(2, "2"), MapChange.Put(1, null, "1"))
-        assertThat(map.toString(), startsWith("WatchableMap("))
-        assertThat(map3.toString(), startsWith("ReadOnlyWatchableMap("))
     }
 
     @Test fun bindReadOnly() = runBlocking {
