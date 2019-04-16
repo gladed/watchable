@@ -20,10 +20,8 @@ import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
-import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
 import org.junit.Test
 

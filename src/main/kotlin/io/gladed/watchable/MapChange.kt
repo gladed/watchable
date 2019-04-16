@@ -37,7 +37,7 @@ sealed class MapChange<K, V> : HasSimpleChange<MapChange.Simple<K, V>> {
         override val simple by lazy { listOf(Simple(key, remove, add)) }
     }
 
-    /** A removal of item [remove] for [key] */
+    /** A removal of item [remove] for [key]. */
     data class Remove<K, V>(
         val key: K,
         val remove: V
@@ -45,9 +45,13 @@ sealed class MapChange<K, V> : HasSimpleChange<MapChange.Simple<K, V>> {
         override val simple by lazy { listOf(Simple(key, remove)) }
     }
 
+    /** The simplified form of a [MapChange]. */
     data class Simple<K, V>(
+        /** Key at which a change occurred. */
         val key: K,
+        /** Value removed or replaced for [key] if any. */
         val remove: V? = null,
+        /** Value added or updated for [key] if any. */
         val add: V? = null
     )
 }

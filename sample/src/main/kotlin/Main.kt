@@ -8,10 +8,10 @@ fun main() = Main().go()
 
 class Main : CoroutineScope {
     override val coroutineContext = Dispatchers.Default
-    val store = FileStore(coroutineContext, File("store"))
+    private val store = FileStore(coroutineContext, File("store"))
     fun go() {
         runBlocking {
-            store.makeBird("tweety")
+            store.makeBird("robin")
             println("Hello world")
         }
     }

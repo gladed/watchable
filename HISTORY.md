@@ -3,18 +3,17 @@
 ## 0.6.9
 * `Watcher.close` -> `Watcher.stop` to prevent confusion with file close operations
 * Fixed a problem with watchers on multi-threaded scopes 
-
-## 0.6.8
 * Renamed `WatchHandle` to `Watcher` and simplified `close()` semantics.
 * Removed `value` and added suspend operators to `WatchableList`, `WatchableSet`, and `WatchableMap` for easier modification.
-* Support for INLINE vs IMMEDIATE watch periods.
+* Support for `INLINE` vs `IMMEDIATE` watch periods.
 * Restored access to removed values in change notifications
 * Simplified generic types
 * Eliminated some use of coroutine APIs marked "Obsolete".
+* Changed `watchSimple` to `simple`
 
 ## 0.6.x
 * Closed `WatchHandle` but retained objects no longer leak memory.
-* `watchSimple` allows for simplified handling of add/removes when efficiency and completeness aren't as important.
+* `watchSimple` allows for simplified handling of add/removes when efficiency and completeness are not as important.
 * `MutableWatchable` objects support suspending modifiers for one-shot operations like add/remove/clear.
 * Support `null` in list, value, and set.
 * Support equality tests for value as much as possible.

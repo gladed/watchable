@@ -27,12 +27,12 @@ sealed class ListChange<T> : HasSimpleChange<ListChange.Simple<T>> {
     }
 
     /** An insertion of items at [index]. */
-    data class Insert<T>(val index: Int, val insert: List<T>) : ListChange<T>(), Mergeable<ListChange<T>> {
+    data class Insert<T>(val index: Int, val insert: List<T>) : ListChange<T>(), Addable<ListChange<T>> {
         override val simple by lazy {
             insert.mapIndexed { addIndex, item -> Simple(index + addIndex, add = item) }
         }
 
-        override fun merge(other: ListChange<T>): ListChange<T>? =
+        override operator fun plus(other: ListChange<T>): ListChange<T>? =
             if (other is Insert && index + insert.size == other.index) {
                 copy(insert = insert + other.insert)
             } else null

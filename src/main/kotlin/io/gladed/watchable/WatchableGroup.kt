@@ -20,6 +20,7 @@ import kotlinx.coroutines.CoroutineScope
 
 /**
  * A group of [Watchable] objects that can be watched for any change, which arrives as a [GroupChange].
+ * Can also be created with [group].
  */
 class WatchableGroup(
     private val watchables: List<Watchable<*>>

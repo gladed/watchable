@@ -16,29 +16,29 @@
 
 package io.gladed.watchable
 
-/** Return a new [WatchableValue] wrapping [value]. */
-fun <T> watchableValueOf(value: T) = WatchableValue(value)
-
 /** Convert this [T] to a watchable value of [T]. */
-fun <T> T.toWatchableValue() = WatchableValue(this)
+fun <T> T.toWatchableValue(): WatchableValue<T> = WatchableValueBase(this)
+
+/** Return a new [WatchableValue] wrapping [value]. */
+fun <T> watchableValueOf(value: T): WatchableValue<T> = value.toWatchableValue()
 
 /** Return a new [WatchableSet] containing the elements of this [Collection]. */
-fun <T> Collection<T>.toWatchableSet() = WatchableSet(this)
+fun <T> Collection<T>.toWatchableSet(): WatchableSet<T> = WatchableSetBase(this)
 
 /** Return a new [WatchableSet] containing [values]. */
-fun <T> watchableSetOf(vararg values: T) = values.toSet().toWatchableSet()
+fun <T> watchableSetOf(vararg values: T): WatchableSet<T> = values.toSet().toWatchableSet()
 
 /** Return a new [WatchableList] containing the elements of this [Collection]. */
-fun <T> Collection<T>.toWatchableList() = WatchableList(this)
+fun <T> Collection<T>.toWatchableList(): WatchableList<T> = WatchableListBase(this)
 
 /** Return a new [WatchableList] containing [values]. */
-fun <T> watchableListOf(vararg values: T) = values.toList().toWatchableList()
+fun <T> watchableListOf(vararg values: T): WatchableList<T> = values.toList().toWatchableList()
 
 /** Return a new [WatchableMap] containing the elements of this [Map]. */
-fun <K, V> Map<K, V>.toWatchableMap() = WatchableMap(this)
+fun <K, V> Map<K, V>.toWatchableMap(): WatchableMap<K, V> = WatchableMapBase(this)
 
 /** Return a new [WatchableMap] containing a map of [values]. */
-fun <K, V> watchableMapOf(vararg values: Pair<K, V>) = values.toMap().toWatchableMap()
+fun <K, V> watchableMapOf(vararg values: Pair<K, V>): WatchableMap<K, V> = values.toMap().toWatchableMap()
 
 /** Create and return a group of watchable objects that itself is watchable. */
 fun <C : Change> group(vararg watchables: Watchable<C>) =

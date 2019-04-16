@@ -21,7 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 
 /** Base for implementing a type that is watchable, mutable, and bindable. */
 @Suppress("TooManyFunctions") // Useful
-abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(), MutableWatchable<M, C> {
+internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(), MutableWatchable<M, C> {
 
     /** The underlying mutable form of the data this object. When changes are applied, [changes] must be updated. */
     protected abstract val mutable: Guard<M>
@@ -55,7 +55,7 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(
     /** Record the latest change. */
     protected fun record(change: C) {
         @Suppress("UNCHECKED_CAST")
-        val replace = (changes.lastOrNull() as? Mergeable<C>)?.merge(change)
+        val replace = (changes.lastOrNull() as? Addable<C>)?.plus(change)
         if (replace != null) {
             changes[changes.lastIndex] = replace
         } else {

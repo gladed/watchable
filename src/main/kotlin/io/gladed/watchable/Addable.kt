@@ -16,11 +16,7 @@
 
 package io.gladed.watchable
 
-/** A [Watchable] value of [T] which may also be replaced or bound. Use [watchableValueOf] to create. */
-interface WatchableValue<T> : MutableWatchable<MutableValue<T>, ValueChange<T>>, ReadOnlyWatchableValue<T> {
-    /** Replace the old value with [value]. */
-    suspend fun set(value: T)
-
-    /** Return an unmodifiable form of this [WatchableSet]. */
-    override fun readOnly(): ReadOnlyWatchableValue<T>
+/** Something that can be conditionally merged with something else. */
+interface Addable<T> {
+    operator fun plus(other: T): T?
 }
