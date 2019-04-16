@@ -55,7 +55,12 @@ interface Watchable<out C : Change> {
     ): Watcher =
         batch(scope, period) { changes ->
             for (change in changes) {
-                if (scope.isActive) func(change) else break
+                if (scope.isActive) {
+                    func(change)
+                } else {
+                    println("Ignoring change because $scope is not active")
+                    break
+                }
             }
         }
 

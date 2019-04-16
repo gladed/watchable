@@ -18,6 +18,8 @@ package io.gladed.watchable.watcher
 
 import io.gladed.watchable.Change
 import io.gladed.watchable.util.guarded
+import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -31,19 +33,16 @@ internal class Immediate<C : Change>(
     private val action: suspend (List<C>) -> Unit
 ) : WatcherBase<C>(context) {
 
-    private val changes = mutableListOf<C>().guarded()
+    private val channel = Channel<List<C>>(UNLIMITED)
+    private val sequencer = Mutex()
 
     override suspend fun onDispatch(changes: List<C>) {
-        changes { addAll(changes) }
-
-        // TODO: Not working because action may turn around and cause dispatch of changes
-        // Deliver changes into the supplied context
+        channel.send(changes)
+        // Launch changes into the watcher's context
         launch(context) {
-            changes {
-                if (!isEmpty()) {
-                    action(toList())
-                    clear()
-                }
+            while (true) {
+                val latest = channel.poll() ?: break
+                sequencer.withLock { action(latest) }
             }
         }
     }

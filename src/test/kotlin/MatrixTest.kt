@@ -169,7 +169,7 @@ class MatrixTest<M, C: Change> {
     @Test fun stress() {
         runBlocking(Dispatchers.Default) {
             val start = System.currentTimeMillis()
-            val count = 10
+            val count = 1000
 
             bind(watchable2, watchable1)
 
@@ -191,7 +191,7 @@ class MatrixTest<M, C: Change> {
                 }
             }
 
-            // Join up
+            // Wait for all modifications to be complete
             allJobs.joinAll()
             watchable1.use { finalMod(this) }
 
