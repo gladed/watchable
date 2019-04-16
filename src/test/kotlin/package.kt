@@ -14,14 +14,23 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.TestContextWrapper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.ReceiveChannel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.isActive
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.TestCoroutineContext
+import kotlinx.coroutines.test.withTestContext
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.fail
 import java.time.ZoneOffset
@@ -54,18 +63,6 @@ suspend fun eventually(timeout: Int = 250, delay: Int = 10, test: suspend () -> 
     }
 }
 
-suspend fun always(timeout: Int = 100, delay: Int = 10, test: suspend () -> Unit) {
-    try {
-        withTimeout(timeout.toLong()) {
-            // Yield until it gets to what we want
-            while (isActive) {
-                test()
-                delay(delay.toLong())
-            }
-        }
-    } catch (e: TimeoutCancellationException) {  } // expected
-}
-
 /** Keep garbage collecting and running [untilSuccess] until it doesn't throw or until we exhaust attempts. */
 suspend fun scour(maxIterations: Int = 20, delay: Int = 10, untilSuccess: () -> Unit) {
     val runtime = Runtime.getRuntime()
@@ -95,11 +92,11 @@ inline fun mustThrow(cls: Class<out Any> = Throwable::class.java, func: () -> Un
 
 /** Call all the things on a Kotlin data class. */
 fun <T : Any> cover(obj: T) {
-    Assert.assertEquals(obj, obj)
+    assertEquals(obj, obj)
     @Suppress("SENSELESS_COMPARISON")
-    (Assert.assertFalse(obj == null))
-    Assert.assertFalse(obj == 1)
-    Assert.assertNotNull(obj.toString())
+    assertFalse(obj == null)
+    assertFalse(obj == 1)
+    assertNotNull(obj.toString())
     obj.hashCode()
     obj::class.java.declaredMethods.forEach { method ->
         // Invoke all available accessors
@@ -115,27 +112,43 @@ fun <T : Any> cover(obj: T) {
     }
 }
 
-suspend fun <C> ReceiveChannel<C>.expect(vararg expected: C, timeout: Long = 250, strict: Boolean = true) {
-    val expectedList = expected.toList()
-    val current = mutableListOf<C>()
+/** A scope in which tests may run. */
+@UseExperimental(ObsoleteCoroutinesApi::class)
+interface TestCoroutineScope : CoroutineScope {
+    val testContext: TestCoroutineContext
 
-    val result = withTimeoutOrNull(timeout) {
-        while (expectedList != current) {
-            if (strict && current.isNotEmpty()) {
-                assertEquals(expectedList.take(current.size), current)
-            }
-            current.add(receive())
-            if (!strict && current.size > expectedList.size) {
-                current.removeAt(0)
-            }
-        }
+    fun advanceTimeBy(amount: Int) {
+        testContext.advanceTimeBy(amount.toLong())
     }
-    if (result == null) {
-        assertEquals(expectedList, current)
+
+    fun triggerActions() {
+        testContext.triggerActions()
+    }
+
+    fun newScope() = CoroutineScope(coroutineContext + Job())
+}
+
+/** Run a test within a [TestCoroutineScope]. */
+@UseExperimental(ObsoleteCoroutinesApi::class)
+fun runTest(func: suspend TestCoroutineScope.() -> Unit) {
+    withTestContext {
+        runBlocking(this) {
+            object : TestCoroutineScope {
+                override val testContext = this@withTestContext
+                override val coroutineContext = this@runBlocking.coroutineContext + TestContextWrapper(testContext)
+            }.func()}
     }
 }
 
-suspend fun <C> ReceiveChannel<C>.expectNone(delayMillis: Long = 25) {
-    delay(delayMillis)
-    assertNull(poll())
+@UseExperimental(ObsoleteCoroutinesApi::class)
+suspend fun <C> ReceiveChannel<C>.mustBe(vararg items: C) {
+    if (items.isEmpty()) {
+        assertEquals(null, poll())
+    } else {
+        for (item in items) {
+            val rx = withTimeoutOrNull(150) { receiveOrNull() }
+            log("Rx: ${rx ?: "timeout"}")
+            assertEquals(item, rx)
+        }
+    }
 }

@@ -45,7 +45,7 @@ internal abstract class WatcherBase<C : Change>(
         coroutineContext[Job]?.cancel()
     }
 
-    override suspend fun close() {
+    override suspend fun stop() {
         // Allow all current children to complete
         coroutineContext[Job]?.children?.forEach { it.join() }
         // Cancel now and wait for completion

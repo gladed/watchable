@@ -23,6 +23,7 @@ import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -166,43 +167,41 @@ class MatrixTest<M, C: Change> {
         watchable1.use { assertEquals(this, watchable2)}
     }
 
-    @Test fun stress() {
-        runBlocking(Dispatchers.Default) {
-            val start = System.currentTimeMillis()
-            val count = 1000
+    @Test fun stress() = runBlocking(Dispatchers.Default) {
+        val start = System.currentTimeMillis()
+        val count = 1000
 
-            bind(watchable2, watchable1)
+        bind(watchable2, watchable1)
 
-            log("Launching $count modification jobs while bound")
-            val allJobs = (0 until count).map {
-                launch {
-                    watchable1.use {
-                        modify()
-                    }
+        log("Launching $count modification jobs while bound")
+        val allJobs = (0 until count).map {
+            launch {
+                watchable1.use {
+                    modify()
                 }
             }
-
-            watch(watchable2) {
-                // Randomly read while modifying
-                try {
-                    if (0 == chooser(10)) watchable2.toString()
-                } catch (e: Exception) {
-                    log("THIS IS A PROBLEM: $e")
-                }
-            }
-
-            // Wait for all modifications to be complete
-            allJobs.joinAll()
-            watchable1.use { finalMod(this) }
-
-            // Eventually w2 will catch up to w1
-            log("Waiting for everything to match")
-            eventually(timeout = 5000) {
-                assertEquals(watchable1, watchable2)
-            }
-            val elapsed = System.currentTimeMillis() - start
-            log("$count in $elapsed ms. ${elapsed * 1000 / count} μs per iteration.")
         }
+
+        watch(watchable2) {
+            // Randomly read while modifying
+            try {
+                if (0 == chooser(10)) watchable2.toString()
+            } catch (e: Exception) {
+                log("THIS IS A PROBLEM: $e")
+            }
+        }
+
+        // Wait for all modifications to be complete
+        allJobs.joinAll()
+        watchable1.use { finalMod(this) }
+
+        // Eventually w2 will catch up to w1
+        log("Waiting for everything to match")
+        eventually(timeout = 5000) {
+            assertEquals(watchable1, watchable2)
+        }
+        val elapsed = System.currentTimeMillis() - start
+        log("$count in $elapsed ms. ${elapsed * 1000 / count} μs per iteration.")
     }
 
     companion object {

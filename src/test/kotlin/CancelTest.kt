@@ -21,6 +21,8 @@ import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import org.junit.Assert
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.fail
 import org.junit.Test
 
 class CancelTest {
@@ -31,7 +33,7 @@ class CancelTest {
         runTest {
             intValue = watchableValueOf(5)
             watch(intValue) { changes.send(it) }
-            changes.expect(ValueChange(null, 5))
+            changes.mustBe(ValueChange(null, 5))
         }
 
         runTest {
@@ -39,7 +41,7 @@ class CancelTest {
             intValue.set(88)
             Assert.assertEquals(88, intValue.value)
             // And it generates no changes
-            changes.expectNone()
+            changes.mustBe()
         }
     }
 
@@ -47,46 +49,50 @@ class CancelTest {
         intValue = watchableValueOf(5)
         val scope1 = newScope()
         scope1.watch(intValue) { changes.send(it) }
-        changes.expect(ValueChange(null, 5))
+        changes.mustBe(ValueChange(null, 5))
         intValue.set(17)
-        changes.expect(ValueChange(5, 17))
+        changes.mustBe(ValueChange(5, 17))
 
         // Shut down the watching scope
         scope1.coroutineContext.cancel()
         intValue.set(88)
-        changes.expectNone()
+        changes.mustBe()
     }
 
-    @Test
-    fun `callbacks stop when job cancelled`() = runTest {
+    @Test fun `callbacks stop when job cancelled`() = runTest {
         intValue = watchableValueOf(5)
         val scope1 = newScope()
         val job = scope1.watch(intValue) { changes.send(it) }
 
-        changes.expect(ValueChange(null, 5))
+        changes.mustBe(ValueChange(null, 5))
         intValue.set(17)
-        changes.expect(ValueChange(5, 17))
+        changes.mustBe(ValueChange(5, 17))
 
         // Shut down the job
         job.cancel()
         intValue.set(88)
-        changes.expectNone()
+        changes.mustBe()
     }
 
-    @Test
-    fun `watch allows parent scope to join`() = runTest {
+    @Test fun `watch allows parent scope to join`() = runTest {
         intValue = watchableValueOf(5)
         watch(intValue) { changes.send(it) }
-        changes.expect(ValueChange(null, 5))
+        changes.mustBe(ValueChange(null, 5))
     }
 
-    @Test(expected = IllegalStateException::class)
-    fun `throw during watch destroys everything`() = runTest {
-        intValue = watchableValueOf(5)
-        watch(intValue) {
-            changes.send(it)
-            throw IllegalStateException("Whoops!")
+    @Test fun `throw during watch destroys everything`(){
+        try {
+            runTest {
+                intValue = watchableValueOf(5)
+                watch(intValue) {
+                    changes.send(it)
+                    throw IllegalStateException("Whoops!")
+                }
+                triggerActions()
+            }
+            fail("must not reach")
+        } catch (e: AssertionError) {
+            assertNotEquals("must not reach", e.message)
         }
-        triggerActions()
     }
 }

@@ -43,7 +43,7 @@ class WatchableList<T> internal constructor(
     override fun hashCode() = immutable.hashCode()
     override fun toString() = "$immutable"
 
-    override val mutable : Guard<MutableList<T>> = object : AbstractMutableList<T>() {
+    override val mutable: Guard<MutableList<T>> = object : AbstractMutableList<T>() {
         val real = initial.toMutableList()
 
         override val size get() = real.size

@@ -17,33 +17,37 @@
 package io.gladed.watchable.watcher
 
 import io.gladed.watchable.Change
-import io.gladed.watchable.util.guarded
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlin.coroutines.CoroutineContext
 
 /**
  * Launch changes into a scope to be processed soon.
  */
+@UseExperimental(ObsoleteCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 internal class Immediate<C : Change>(
     context: CoroutineContext,
     private val action: suspend (List<C>) -> Unit
 ) : WatcherBase<C>(context) {
 
     private val channel = Channel<List<C>>(UNLIMITED)
-    private val sequencer = Mutex()
+
+    // This is /terminal/. So that's a problem
+    val job = launch {
+        channel.consumeEach { action(it) }
+    }
 
     override suspend fun onDispatch(changes: List<C>) {
         channel.send(changes)
-        // Launch changes into the watcher's context
-        launch(context) {
-            while (true) {
-                val latest = channel.poll() ?: break
-                sequencer.withLock { action(latest) }
-            }
-        }
+    }
+
+    override suspend fun stop() {
+        if (!channel.isClosedForSend) channel.close()
+        job.join()
+        super.stop()
     }
 }

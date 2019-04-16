@@ -17,6 +17,7 @@
 import io.gladed.watchable.ValueChange
 import io.gladed.watchable.bind
 import io.gladed.watchable.toWatchableList
+import io.gladed.watchable.waitFor
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableValueOf
@@ -51,12 +52,12 @@ class BindValueTest {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         watch(dest) { changes.send(it) }
-        changes.assert(ValueChange(null, 6))
+        changes.mustBe(ValueChange(null, 6))
 
         bind(dest, origin)
         origin.set(7)
 
-        changes.assert(ValueChange(6, 5), ValueChange(5, 7))
+        changes.mustBe(ValueChange(6, 5), ValueChange(5, 7))
         assertEquals(7, dest.value)
     }
 
@@ -117,10 +118,11 @@ class BindValueTest {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         bind(dest, origin)
-        eventually { assertEquals(5, dest.value) }
+        waitFor(dest) { 5 == dest.value }
         dest.unbind()
         origin.set(7)
-        always { assertEquals(5, dest.value) }
+        triggerActions()
+        assertEquals(5, dest.value)
     }
 
     @Test fun `watch from different scope`() = runTest {
@@ -130,9 +132,9 @@ class BindValueTest {
             changes.send(it)
         }
         log("Asserting after $scope1 launch")
-        changes.assert(ValueChange(null, 5))
+        changes.mustBe(ValueChange(null, 5))
         origin.set(6)
-        changes.assert(ValueChange(5, 6))
+        changes.mustBe(ValueChange(5, 6))
     }
 
     @Test fun `kill binding scope`() = runTest {

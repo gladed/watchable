@@ -21,10 +21,8 @@ import io.gladed.watchable.watch
 import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
-import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
-import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
@@ -54,9 +52,9 @@ class WatchableMapTest {
         val map2 = watchableMapOf(2 to "2")
         val map3 = map2.readOnly()
         watch(map3) { log(it); changes.send(it) }
-        changes.expect(MapChange.Initial(mapOf(2 to "2")))
+        changes.mustBe(MapChange.Initial(mapOf(2 to "2")))
         map2.bind(this, map)
-        changes.expect(MapChange.Remove(2, "2"), MapChange.Put(1, null, "1"))
+        changes.mustBe(MapChange.Remove(2, "2"), MapChange.Put(1, null, "1"))
     }
 
     @Test fun bindReadOnly() = runBlocking {

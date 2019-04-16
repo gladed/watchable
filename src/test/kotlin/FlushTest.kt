@@ -29,10 +29,10 @@ class FlushTest {
     @Test fun `receive events while flushing`() = runTest {
         val value = watchableValueOf(1)
         val handle = watch(value) { changes.send(it) }
-        changes.assert(ValueChange(null, 1))
+        changes.mustBe(ValueChange(null, 1))
         value.set(2)
-        handle.close()
-        changes.assert(ValueChange(1, 2))
+        handle.stop()
+        changes.mustBe(ValueChange(1, 2))
     }
 
     @Test fun `get final batch`() = runTest {
@@ -40,19 +40,19 @@ class FlushTest {
         val value = watchableValueOf(1)
         val handle = batch(value, 500) { changes.send(it) }
         value.set(2)
-        changes.assert()
+        changes.mustBe()
 
         // close should cause an immediate flush of outstanding batch items regardless of its timeout.
-        handle.close()
-        changes.assert(listOf(ValueChange(null, 1), ValueChange(1, 2)))
+        handle.stop()
+        changes.mustBe(listOf(ValueChange(null, 1), ValueChange(1, 2)))
     }
 
     @Test fun `flush two`() = runTest {
         val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
         val list = watchableListOf(1)
         val handle = watch(list) { changes.send(it) } + watch(list) { changes.send(it) }
-        handle.close()
-        changes.assert(ListChange.Initial(listOf(1)), ListChange.Initial(listOf(1)))
+        handle.stop()
+        changes.mustBe(ListChange.Initial(listOf(1)), ListChange.Initial(listOf(1)))
     }
 
     @Test fun `cancel two`() = runTest {
@@ -60,6 +60,6 @@ class FlushTest {
         val list = watchableListOf(1)
         val handle = watch(list) { changes.send(it) } + watch(list) { changes.send(it) }
         handle.cancel()
-        changes.assert()
+        changes.mustBe()
     }
 }

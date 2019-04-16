@@ -79,10 +79,10 @@ internal class Periodic<C : Change>(
         changeChannel.send(changes)
     }
 
-    override suspend fun close() {
+    override suspend fun stop() {
         if (isActive) withContext(coroutineContext) {
             changeChannel.close()
         }
-        super.close()
+        super.stop()
     }
 }

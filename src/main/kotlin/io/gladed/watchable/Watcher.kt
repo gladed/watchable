@@ -16,17 +16,17 @@
 
 package io.gladed.watchable
 
-/** An ongoing watch operation that can be closed or cancelled. */
+/** An ongoing watch operation. */
 interface Watcher {
 
     /** Immediately stop. Repeated invocations have no effect. */
     fun cancel()
 
     /**
-     * Gracefully stop, suspending if necessary to allow underlying operations to complete.
+     * Gracefully stop, suspending if necessary to allow outstanding operations to complete.
      * Repeated invocations have no effect.
      */
-    suspend fun close()
+    suspend fun stop()
 
     /** Combine two [Watcher] objects, returning a single one that spans both. */
     operator fun plus(right: Watcher) = object : Watcher {
@@ -35,9 +35,9 @@ interface Watcher {
             right.cancel()
         }
 
-        override suspend fun close() {
-            this@Watcher.close()
-            right.close()
+        override suspend fun stop() {
+            this@Watcher.stop()
+            right.stop()
         }
     }
 }

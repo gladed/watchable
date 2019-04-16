@@ -8,25 +8,24 @@
 
 # Watchable
 
-This library provides lock-free, concurrent, listenable data structures using [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html).
+This library uses [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html) to provide data structures that are mutable, concurrent, lock-free, thread-safe, and listenable.
 
 ```kotlin
 coroutineScope {
     val set = watchableSetOf(1, 2)
     watch(set) { println("Got $it") }
     set.add(3)
-}
 
-// Output:
-// Got Initial(set=[1, 2])
-// Got Add(add=[3])
+    // Output:
+    // Got Initial(set=[1, 2])
+    // Got Add(add=[3])
 ```
 
 ## Why?
 
-Sometimes, you want a data structure that can be shared between objects and listen for changes to that data. But it's hard to remember and unregister all of those listeners. If you don't, you'll leak memory.
+Sometimes, you want a data structure that can be shared between objects and listen for changes to that data. But it's hard to remember and unregister all of those listeners. If you don't, you'll leak memory. This is known as the [Lapsed Listener Problem](https://en.wikipedia.org/wiki/Lapsed_listener_problem)
 
-`Watchable` solves this by allowing operations (like `watch` and`bind`) which are limited to the lifetime of the `CoroutineScope` where they are created. When the scope completes, its watchable operations also stop and cleaned up automatically.
+`Watchable` solves this by allowing operations (like `watch` and`bind`) which are limited to the lifetime of the initiating `CoroutineScope`. When the scope completes, its watchable operations are cleaned up automatically.
 
 This can be useful in [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) designs, in which the data model lives at the center, and everyone depends on it. If the data model is defined in terms of `Watchable` objects, then other components (having their own lifecycles) can simply watch for changes and react accordingly, without coupling directly to each other.
 
@@ -57,11 +56,11 @@ val set = watchableSetOf(5.0, 6.0)
 val value = watchableValueOf(URI.create("https://github.com"))
 ```
 
-Each data type can be accessed, modified, watched, bound, etc. as described below.
+Each data type can be accessed normally, but it can also be modified, watched, bound, etc. as described below.
 
 ## Reading and Writing Data
 
-You can use WatchableMap, WatchableList, and WatchableSet anywhere you would use a normal Kotlin Map, List, or Set. WatchableValue wraps a single object. Their contents may be changed safely at any time:
+Use WatchableMap, WatchableList, and WatchableSet anywhere you would use a normal Kotlin Map, List, or Set. Use WatchableValue to wrap a single object. Contents may be changed from within a suspending function at any time.
 
 ```kotlin
 val map = watchableMapOf(1 to "1")
@@ -70,7 +69,7 @@ map.put(2, "2") // Suspends if concurrent modification attempted
 println(map) // Prints {1=1, 2=2}
 ```
 
-To do multiple operations in a protected way, [`use`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/use.html) the object:
+To do multiple operations while protecting from concurrent access, [`use`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/use.html) the object:
 
 ```kotlin
 val list = watchableListOf(1, 2, 3)
@@ -82,7 +81,7 @@ Note: some extension functions on List are unreliable if the data is modified fr
 
 ## Watching for Changes
 
-You can watch any `Watchable` for changes from any `CoroutineScope` using [`watch`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/watch.html):
+Watch any `Watchable` for changes from within any `CoroutineScope` using [`watch`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/watch.html):
 
 ```kotlin
 val set = watchableSetOf(1, 2)
@@ -178,15 +177,15 @@ map.put(1, "3")
 
 ## Object Lifetime
 
-The initiating `CoroutineScope` lifetime is respected. Operations such as `watch` or `bind` will automatically stop when the initiating scope completes. No additional cleanup code is required.
+All operations (`watch`, `bind`, etc.) are initiated from a `CoroutineScope`. When that scope completes, the corresponding operations cease. No additional cleanup code is required.
 
-Some operations return return a `WatchHandle` which can be used to stop the operation with more granular control. For example, calling `close` on the [`WatchHandle`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watch-handle/) returned by `watch` operation allows any pending changes to be processed to completion.
+In addition, all operations return a [`Watcher`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watcher/) which can be used to immediately [`cancel`]((https://gladed.github.io/watchable/latest/io.gladed.watchable/-watcher/cancel.html)) or gracefully [`stop`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watcher/stop.html) the operation.
 
 ```kotlin
 val list = watchableListOf(1)
 val handle = watch(list) { println(it) }
 list.add(2)
-handle.close() // No further notifications after this point
+handle.stop() // No further notifications after this point
 list.add(3)
 
 // Prints:

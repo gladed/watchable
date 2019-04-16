@@ -36,15 +36,15 @@ class GroupTest {
         val intValue = watchableValueOf(1)
         val setValue = watchableSetOf("1")
         group(intValue, setValue).watch(this) { changes.send(it) }
-        changes.assert(GroupChange(intValue, ValueChange(null, 1)))
-        changes.assert(GroupChange(setValue, SetChange.Initial(setOf("1"))))
+        changes.mustBe(GroupChange(intValue, ValueChange(null, 1)))
+        changes.mustBe(GroupChange(setValue, SetChange.Initial(setOf("1"))))
     }
 
     @Test fun `watch a group of watchables`() = runTest {
         val intValue = watchableValueOf(1)
         val setValue = watchableSetOf("1")
         watch(group(intValue, setValue)) { changes.send(it) }
-        changes.assert(
+        changes.mustBe(
             GroupChange(intValue, ValueChange(null, 1)),
             GroupChange(setValue, SetChange.Initial(setOf("1"))))
     }
@@ -53,13 +53,13 @@ class GroupTest {
         val intValue = watchableValueOf(1)
         val setValue = watchableSetOf("1")
         val handle = watch(group(intValue, setValue)) { changes.send(it) }
-        changes.assert(
+        changes.mustBe(
             GroupChange(intValue, ValueChange(null, 1)),
             GroupChange(setValue, SetChange.Initial(setOf("1"))))
-        handle.close()
-        changes.assert()
+        handle.stop()
+        changes.mustBe()
         setValue.use { add("2") }
-        changes.assert()
+        changes.mustBe()
     }
 
     @Test fun `cancel watching of a group`() = runTest {
@@ -67,8 +67,8 @@ class GroupTest {
         val setValue = watchableSetOf("1")
         val handle = watch(group(intValue, setValue)) { changes.send(it) }
         handle.cancel()
-        changes.assert()
+        changes.mustBe()
         setValue.use { add("2") }
-        changes.assert()
+        changes.mustBe()
     }
 }

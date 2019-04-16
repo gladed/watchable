@@ -38,11 +38,11 @@ class ReadmeTest {
             val set = watchableSetOf(1, 2)
             watch(set) { println("Got $it") }
             set.add(3)
-        }
 
-        outputIs("""
-            Got Initial(set=[1, 2])
-            Got Add(add=[3])""")
+            outputIs("""
+                Got Initial(set=[1, 2])
+                Got Add(add=[3])""")
+        }
     }
 
     @Suppress("UNUSED_VARIABLE")
@@ -121,7 +121,7 @@ class ReadmeTest {
         val list = watchableListOf(1)
         val handle = watch(list) { out += it.toString() }
         list.add(2)
-        handle.close()
+        handle.stop()
         list.add(3)
         triggerActions()
         outputIs("""
@@ -161,7 +161,7 @@ class ReadmeTest {
         val list = watchableListOf(1)
         val handle = watch(list) { println(it) }
         list.add(2)
-        handle.close() // No further notifications after this point
+        handle.stop() // No further notifications after this point
         list.add(3)
 
         outputIs("""

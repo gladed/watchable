@@ -36,23 +36,23 @@ class SubscriptionTest {
     @Test fun `cancel immediately`() {
         runThenCancel {
             val handle = watch(set) { changes.send(it) }
-            changes.expect(SetChange.Initial(setOf(1)))
+            changes.mustBe(SetChange.Initial(setOf(1)))
             handle.cancel() // Instantly cancel, no more changes!
             set.use { add(2) }
-            changes.expectNone()
+            changes.mustBe()
         }
     }
 
     @Test fun `close drains all pending changes`() {
         runThenCancel {
             val handle = watch(set) { changes.send(it) }
-            changes.expect(SetChange.Initial(setOf(1)))
+            changes.mustBe(SetChange.Initial(setOf(1)))
             set.use { add(2) }
-            handle.close()
+            handle.stop()
             yield() // Allow other coroutines to process
             set.use { add(3) }
-            changes.expect(SetChange.Add(listOf(2)))
-            changes.expectNone()
+            changes.mustBe(SetChange.Add(listOf(2)))
+            changes.mustBe()
         }
     }
 }

@@ -55,12 +55,7 @@ interface Watchable<out C : Change> {
     ): Watcher =
         batch(scope, period) { changes ->
             for (change in changes) {
-                if (scope.isActive) {
-                    func(change)
-                } else {
-                    println("Ignoring change because $scope is not active")
-                    break
-                }
+                if (scope.isActive) func(change) else break
             }
         }
 
@@ -72,7 +67,6 @@ interface Watchable<out C : Change> {
             if (mutex.isLocked && func()) mutex.unlock()
         }
         mutex.lock() // Suspend until success
-        println("Cancelling handle RIGHT NOW")
         handle.cancel() // Cancel listening
     }
 }

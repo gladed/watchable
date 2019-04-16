@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.SetChange
+import io.gladed.watchable.waitFor
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.channels.Channel
@@ -30,12 +31,12 @@ class WatchableSetTest {
     val changes = Channel<SetChange<Int>>(Channel.UNLIMITED)
 
     @Test
-    fun readOnly() = runBlocking {
+    fun readOnly() = runTest {
         val set = watchableSetOf(1)
         val set2 = set.readOnly()
         watch(set2) { changes.send(it) }
         set.add(3)
-        eventually { assertEquals(setOf(1, 3), set2) }
+        waitFor(set2) { setOf(1, 3) == set2 }
     }
 
     @Test

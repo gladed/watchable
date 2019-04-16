@@ -21,10 +21,8 @@ import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
-import org.hamcrest.CoreMatchers.startsWith
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertThat
 import org.junit.Test
 
 class WatchableValueTest {
@@ -42,9 +40,9 @@ class WatchableValueTest {
             watch(intValue) {
                 changes.send(it)
             }
-            changes.expect(ValueChange(null, 5))
+            changes.mustBe(ValueChange(null, 5))
             intValue.set(17)
-            changes.expect(ValueChange(5, 17))
+            changes.mustBe(ValueChange(5, 17))
         }
     }
 
@@ -52,10 +50,10 @@ class WatchableValueTest {
         runBlocking {
             intValue = 5.toWatchableValue()
             watch(intValue) { changes.send(it) }
-            changes.expect(ValueChange(null, 5))
+            changes.mustBe(ValueChange(null, 5))
             intValue.set(5)
             // Both announcements because value is NOT compared for equality
-            changes.expect(ValueChange(5, 5))
+            changes.mustBe(ValueChange(5, 5))
         }
     }
 
@@ -86,13 +84,13 @@ class WatchableValueTest {
             watch(readOnly) {
                 changes.send(it)
             }
-            changes.expect(ValueChange(null, 4))
+            changes.mustBe(ValueChange(null, 4))
             intValue.set(5)
             assertEquals(5, readOnly.value)
             intValue.set(6)
             assertEquals(6, readOnly.value)
-            changes.expect(ValueChange(4, 5))
-            changes.expect(ValueChange(5, 6))
+            changes.mustBe(ValueChange(4, 5))
+            changes.mustBe(ValueChange(5, 6))
             assertEquals(6, readOnly.value)
         }
     }

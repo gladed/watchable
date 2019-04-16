@@ -136,7 +136,7 @@ class OnDemandTest {
         change(1)
         val handle = watchable.batch(this, 100) { delivered(it) }
         change(2)
-        handle.close()
+        handle.stop()
         change(3)
 
         receive(Tx(1), Tx(2), Rx("hi", 2), Tx(3))
@@ -157,13 +157,13 @@ class OnDemandTest {
     @Test(timeout = 500) fun `close is safe after cancel`() = runTest {
         val handle = watchable.batch(this, 100) { delivered(it) }
         handle.cancel()
-        handle.close()
+        handle.stop()
     }
 
     @Test(timeout = 500) fun `open and close`() = runTest {
-        val handle1 = watchable.batch(this) { delivered(it) }
+        val handle = watchable.batch(this) { delivered(it) }
         change(1)
-        handle1.close()
+        handle.stop()
         receive(Tx(1), Rx("hi"), Rx(1))
     }
 }

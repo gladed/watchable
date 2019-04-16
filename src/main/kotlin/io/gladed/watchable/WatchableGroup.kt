@@ -41,8 +41,8 @@ class WatchableGroup(
                 handles.forEach { it.cancel() }
             }
 
-            override suspend fun close() {
-                handles.forEach { it.close() }
+            override suspend fun stop() {
+                handles.forEach { it.stop() }
             }
         }
     }

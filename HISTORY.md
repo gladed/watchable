@@ -1,5 +1,9 @@
 # Version History
 
+## 0.6.9
+* `Watcher.close` -> `Watcher.stop` to prevent confusion with file close operations
+* Fixed a problem with watchers on multi-threaded scopes 
+
 ## 0.6.8
 * Renamed `WatchHandle` to `Watcher` and simplified `close()` semantics.
 * Removed `value` and added suspend operators to `WatchableList`, `WatchableSet`, and `WatchableMap` for easier modification.
