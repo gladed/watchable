@@ -17,6 +17,7 @@
 package io.gladed.watchable.watcher
 
 import io.gladed.watchable.Change
+import io.gladed.watchable.util.guarded
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
@@ -30,12 +31,20 @@ internal class Immediate<C : Change>(
     private val action: suspend (List<C>) -> Unit
 ) : WatcherBase<C>(context) {
 
-    private val inOrder = Mutex()
+    private val changes = mutableListOf<C>().guarded()
 
     override suspend fun onDispatch(changes: List<C>) {
-        // In the background, wait for order lock and run action within it to prevent overlapping calls
+        changes { addAll(changes) }
+
+        // TODO: Not working because action may turn around and cause dispatch of changes
+        // Deliver changes into the supplied context
         launch(context) {
-            inOrder.withLock { action(changes) }
+            changes {
+                if (!isEmpty()) {
+                    action(toList())
+                    clear()
+                }
+            }
         }
     }
 }

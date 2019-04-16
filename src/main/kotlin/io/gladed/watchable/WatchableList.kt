@@ -16,6 +16,9 @@
 
 package io.gladed.watchable
 
+import io.gladed.watchable.util.Guard
+import io.gladed.watchable.util.guarded
+
 /**
  * A [Watchable] wrapper for a [List] which may also be modified or bound. Use [watchableListOf] to create.
  */
@@ -40,7 +43,7 @@ class WatchableList<T> internal constructor(
     override fun hashCode() = immutable.hashCode()
     override fun toString() = "$immutable"
 
-    override val mutable = object : AbstractMutableList<T>() {
+    override val mutable : Guard<MutableList<T>> = object : AbstractMutableList<T>() {
         val real = initial.toMutableList()
 
         override val size get() = real.size
@@ -72,7 +75,7 @@ class WatchableList<T> internal constructor(
                 record(ListChange.Replace(index, remove = it, add = element))
             }
         }
-    }
+    }.guarded()
 
     /** Add a [value] to the end of this list, returning true to indicate the list was changed. */
     suspend inline fun add(value: T): Boolean =

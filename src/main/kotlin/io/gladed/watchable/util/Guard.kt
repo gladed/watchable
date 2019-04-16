@@ -27,3 +27,6 @@ class Guard<T>(private val item: T) {
     suspend operator fun <U> invoke(func: suspend T.() -> U): U =
         mutex.withLock { item.func() }
 }
+
+/** Return [T] surrounded by a [Guard]. */
+fun <T> T.guarded() = Guard(this)

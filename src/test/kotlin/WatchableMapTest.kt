@@ -28,7 +28,7 @@ import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class WatchableMapTest : ScopeTest() {
+class WatchableMapTest {
     val changes = Channel<MapChange<Int, String>>(Channel.UNLIMITED)
 
     @Test fun entries() = runBlocking {

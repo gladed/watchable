@@ -22,8 +22,10 @@ import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withTimeout
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
@@ -38,8 +40,7 @@ import org.junit.runners.Parameterized.Parameter
 import org.junit.runners.Parameterized.Parameters
 
 @RunWith(Parameterized::class)
-class MatrixTest<M, C: Change>: ScopeTest() {
-
+class MatrixTest<M, C: Change> {
     private val chooser = Chooser()
 
     @Suppress("unused")
@@ -165,39 +166,43 @@ class MatrixTest<M, C: Change>: ScopeTest() {
         watchable1.use { assertEquals(this, watchable2)}
     }
 
-    @Test fun stress() = runTest {
-        val start = System.currentTimeMillis()
-        val count = 1000
-        bind(watchable2, watchable1)
+    @Test fun stress() {
+        runBlocking(Dispatchers.Default) {
+            val start = System.currentTimeMillis()
+            val count = 10
 
-        log("Launching $count modification jobs while bound")
-        val allJobs = (0 until count).map {
-            launch {
-                watchable1.use {
-                    modify()
+            bind(watchable2, watchable1)
+
+            log("Launching $count modification jobs while bound")
+            val allJobs = (0 until count).map {
+                launch {
+                    watchable1.use {
+                        modify()
+                    }
                 }
             }
-        }
 
-        watch(watchable2) {
-            // Randomly read while modifying
-            try {
-                if (0 == chooser(10)) watchable2.toString()
-            } catch (e: Exception) {
-                log("THIS IS A PROBLEM: $e")
+            watch(watchable2) {
+                // Randomly read while modifying
+                try {
+                    if (0 == chooser(10)) watchable2.toString()
+                } catch (e: Exception) {
+                    log("THIS IS A PROBLEM: $e")
+                }
             }
+
+            // Join up
+            allJobs.joinAll()
+            watchable1.use { finalMod(this) }
+
+            // Eventually w2 will catch up to w1
+            log("Waiting for everything to match")
+            eventually(timeout = 5000) {
+                assertEquals(watchable1, watchable2)
+            }
+            val elapsed = System.currentTimeMillis() - start
+            log("$count in $elapsed ms. ${elapsed * 1000 / count} μs per iteration.")
         }
-
-        // Join up
-        allJobs.joinAll()
-        watchable1.use { finalMod(this) }
-
-        // Eventually w2 will catch up to w1
-        log("Waiting for everything to match")
-        triggerActions()
-        assertEquals(watchable1.hashCode(), watchable2.hashCode())
-        val elapsed = System.currentTimeMillis() - start
-        log("$count in $elapsed ms. ${elapsed * 1000 / count} μs per iteration.")
     }
 
     companion object {
@@ -256,20 +261,20 @@ class MatrixTest<M, C: Change>: ScopeTest() {
         @Parameters(name = "{0}") @JvmStatic fun parameters() = listOf(
             arrayOf(
                 "WatchableMap",
-                { watchableMapOf(1 to "1") },
-                { watchableMapOf(2 to "2") },
+                { watchableMapOf(111 to "111") },
+                { watchableMapOf(222 to "222") },
                 mapModificationMaker,
                 { map: MutableMap<Int, String> -> map[MAX_SIZE] = MAX_SIZE.toString() }),
             arrayOf(
                 "WatchableList",
-                { watchableListOf(1) },
-                { watchableListOf(2) },
+                { watchableListOf(111) },
+                { watchableListOf(222) },
                 listModificationMaker,
                 { list: MutableList<Int> -> list += MAX_SIZE }),
             arrayOf(
                 "WatchableSet",
-                { watchableSetOf(1) },
-                { watchableSetOf(2) },
+                { watchableSetOf(111) },
+                { watchableSetOf(222) },
                 setModificationMaker,
                 { set: MutableSet<Int> -> set += MAX_SIZE }))
     }

@@ -16,6 +16,9 @@
 
 package io.gladed.watchable
 
+import io.gladed.watchable.util.Guard
+import io.gladed.watchable.util.guarded
+
 /** A [Watchable] wrapper for a [Map] which may also be modified or bound. Use [watchableMapOf] to create.*/
 @Suppress("TooManyFunctions")
 class WatchableMap<K, V> internal constructor(
@@ -36,7 +39,7 @@ class WatchableMap<K, V> internal constructor(
     override fun toString() = "$immutable"
 
     /** A map that checks and reports all change attempts. */
-    override val mutable = object : AbstractMutableMap<K, V>() {
+    override val mutable: Guard<MutableMap<K, V>> = object : AbstractMutableMap<K, V>() {
         private val real = initial.toMutableMap()
 
         override val entries: MutableSet<MutableMap.MutableEntry<K, V>> =
@@ -89,7 +92,7 @@ class WatchableMap<K, V> internal constructor(
                 }
             }
         }
-    }
+    }.guarded()
 
     /** Associate the [value] with the [key] in this map, returning the previous value for this [key] if any. */
     suspend inline fun put(key: K, value: V): V? = use { put(key, value) }

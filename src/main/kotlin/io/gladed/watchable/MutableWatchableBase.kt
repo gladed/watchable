@@ -16,19 +16,15 @@
 
 package io.gladed.watchable
 
+import io.gladed.watchable.util.Guard
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 
 /** Base for implementing a type that is watchable, mutable, and bindable. */
 @Suppress("TooManyFunctions") // Useful
 abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(), MutableWatchable<M, C> {
 
     /** The underlying mutable form of the data this object. When changes are applied, [changes] must be updated. */
-    protected abstract val mutable: M
-
-    /** The mutex protecting [mutable]. */
-    private val mutableMutex = Mutex()
+    protected abstract val mutable: Guard<M>
 
     /** Copy a mutable [M] to an immutable [T]. */
     protected abstract fun M.toImmutable(): T
@@ -74,13 +70,13 @@ abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(
         } else func()
 
     override suspend fun <U> use(func: M.() -> U): U =
-        mutableMutex.withLock {
+        mutable {
             // Apply mutations
-            mutable.func().also {
+            func().also {
                 if (changes.isNotEmpty()) {
                     val oldImmutable = immutable
                     // Recreate the immutable form now that the change is complete.
-                    immutable = mutable.toImmutable()
+                    immutable = toImmutable()
                     // Deliver changes
                     val changeList = changes.toList()
                     changes.clear()

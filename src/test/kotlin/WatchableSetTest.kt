@@ -26,7 +26,7 @@ import org.junit.Assert.assertThat
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-class WatchableSetTest : ScopeTest() {
+class WatchableSetTest {
     val changes = Channel<SetChange<Int>>(Channel.UNLIMITED)
 
     @Test

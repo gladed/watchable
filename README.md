@@ -78,7 +78,7 @@ val list = watchableListOf(1, 2, 3)
 println(list.use { removeAt(list.size - 1) }) // Removes last element, prints 3
 ```
 
-Note: some extension functions on List are unreliable if the data is modified from separate threads, since these functions assume List cannot change during execution. For example, [List.last()](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/last.html) and [List.getOrElse()](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/get-or-else.html) access the size and then an element in separate steps.
+Note: some extension functions on List are unreliable if the data is modified from separate threads, since these functions assume List cannot change during execution. For example, [List.last](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/last.html) and [List.getOrElse](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/get-or-else.html) access the size and then an element in separate steps.
 
 ## Watching for Changes
 
@@ -128,7 +128,7 @@ println(into) // 2
 
 ## Batching
 
-It's possible to listen for lists of changes, collected and delivered in-order periodically. See the documentation for [batch](https://gladed.github.io/watchable/latest/io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/batch.html), especially the `minPeriod` parameter.
+It's possible to listen for lists of changes, collected and delivered in-order periodically. See the documentation for [`batch`](https://gladed.github.io/watchable/latest/io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/batch.html), especially the `minPeriod` parameter.
 
 ```kotlin
 val list = listOf(4, 5).toWatchableList()
@@ -141,7 +141,7 @@ list.use { add(6); add(7) }
 
 ## Read-Only Watchables
 
-You can use any [`MutableWatchable`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/)'s [`readOnly()`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/read-only.html) function to return a `Watchable` which cannot be changed externally. The copy may still be watched normally.
+You can use any [`MutableWatchable`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/)'s [`readOnly`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/read-only.html) function to return a `Watchable` which cannot be changed externally. The copy may still be watched normally.
 
 ## Grouping
 

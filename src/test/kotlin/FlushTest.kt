@@ -23,7 +23,7 @@ import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.channels.Channel
 import org.junit.Test
 
-class FlushTest : ScopeTest() {
+class FlushTest {
     val changes = Channel<Any>(Channel.UNLIMITED)
 
     @Test fun `receive events while flushing`() = runTest {

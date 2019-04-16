@@ -16,6 +16,9 @@
 
 package io.gladed.watchable
 
+import io.gladed.watchable.util.Guard
+import io.gladed.watchable.util.guarded
+
 /** A [Watchable] value of [T] which may also be replaced or bound. Use [watchableValueOf] to create. */
 class WatchableValue<T> internal constructor(
     initial: T
@@ -26,7 +29,7 @@ class WatchableValue<T> internal constructor(
 
     override var immutable: Value<T> = ValueData(initial)
 
-    override var mutable: MutableValue<T> = object : MutableValue<T> {
+    override var mutable: Guard<MutableValue<T>> = object : MutableValue<T> {
         override var value: T = initial
             set(value) {
                 doChange {
@@ -34,7 +37,7 @@ class WatchableValue<T> internal constructor(
                     field = value
                 }
             }
-    }
+    }.guarded()
 
     /** The currently contained value. */
     override val value: T get() = immutable.value
@@ -50,7 +53,7 @@ class WatchableValue<T> internal constructor(
     /** Insert a new value, replacing the old one. */
     suspend fun set(value: T) {
         use {
-            mutable.value = value
+            this.value = value
         }
     }
 

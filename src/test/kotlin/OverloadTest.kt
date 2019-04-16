@@ -28,12 +28,14 @@ class OverloadTest {
     fun manyChanges() = runBlocking {
         val list = watchableListOf(1)
         watch(list) {
+            println("At $it")
             if (it is ListChange.Insert) {
                 it.insert.forEach { inserted ->
                     if (inserted % 2 == 0) list.use { remove(inserted) }
                 }
             }
             changes.send(it)
+            println("Done with $it")
         }
         changes.expect(ListChange.Initial(listOf(1)))
 

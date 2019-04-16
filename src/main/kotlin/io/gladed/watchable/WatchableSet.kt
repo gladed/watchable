@@ -16,6 +16,9 @@
 
 package io.gladed.watchable
 
+import io.gladed.watchable.util.Guard
+import io.gladed.watchable.util.guarded
+
 /** A [Watchable] wrapper for a [Set] which may also be modified or bound. Use [watchableSetOf] to create. */
 @Suppress("TooManyFunctions")
 class WatchableSet<T> internal constructor(
@@ -32,7 +35,7 @@ class WatchableSet<T> internal constructor(
     override fun hashCode() = immutable.hashCode()
     override fun toString() = "$immutable"
 
-    override val mutable = object : AbstractMutableSet<T>() {
+    override val mutable: Guard<MutableSet<T>> = object : AbstractMutableSet<T>() {
         private val real = initial.toMutableSet()
 
         override val size get() = real.size
@@ -62,7 +65,7 @@ class WatchableSet<T> internal constructor(
                 }
             }
         }
-    }
+    }.guarded()
 
     /** Add a [value] to the end of this set, returning true if the set was changed. */
     suspend fun add(value: T): Boolean =

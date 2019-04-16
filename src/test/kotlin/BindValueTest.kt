@@ -29,7 +29,7 @@ import org.junit.Assert.fail
 import org.junit.Test
 
 @UseExperimental(ObsoleteCoroutinesApi::class)
-class BindValueTest : ScopeTest() {
+class BindValueTest {
     val changes = Channel<Any>(Channel.UNLIMITED)
 
     @Test fun `bind value`() = runTest {
