@@ -94,8 +94,7 @@ internal class WatchableMapBase<K, V>(
         }
     }.guarded()
 
-    /**  all values from this map. */
-    override suspend fun clear() = use { clear() }
+    override fun MutableMap<K, V>.erase() = clear()
 
     override fun MutableMap<K, V>.toImmutable() = toMap()
 

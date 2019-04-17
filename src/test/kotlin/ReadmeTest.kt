@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.batch
+import io.gladed.watchable.bind
 import io.gladed.watchable.group
 import io.gladed.watchable.simple
 import io.gladed.watchable.toWatchableList
@@ -25,6 +26,7 @@ import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.launch
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.URI
@@ -36,7 +38,7 @@ class ReadmeTest {
     @Test fun `Watchable section`() = runTest {
         coroutineScope {
             val set = watchableSetOf(1, 2)
-            watch(set) { println("Got $it") }
+            watch(set) { println("Got $it") }.start()
             set.add(3)
 
             outputIs("""
@@ -74,7 +76,7 @@ class ReadmeTest {
 
     @Test fun `Watching for Changes`() = runTest {
         val set = watchableSetOf(1, 2)
-        watch(set) { println(it) }
+        watch(set) { println(it) }.start()
         set += 3
         set -= listOf(3, 2)
         outputIs("""
@@ -84,49 +86,35 @@ class ReadmeTest {
     }
 
     @Test fun `Binding - simple`() = runTest {
-        val from = listOf(4, 5).toWatchableList()
-        val into = watchableListOf<Int>()
-        into.bind(this, from) // "this" is the current coroutine scope
-        triggerActions() // not in doc
-        // ...time passes...
-        println(from == into) // true
+        val origin = listOf(4, 5).toWatchableList()
+        val target = watchableListOf<Int>()
+        bind(target, origin).start()
+        println(origin == target) // true
+
         outputIs("""true""")
     }
 
     @Test fun `Binding - complex`() = runTest {
-        val from = listOf(4, 5).toWatchableList()
-        val into = watchableValueOf(0)
-        into.bind(this, from) {
-            // Ignore change (it) and read directly from source
-            value = from.size
-        }
-        triggerActions() // not in doc
-        // ...time passes...
-        println(into) // true
+        val origin = listOf(4, 5).toWatchableList()
+        val target = watchableValueOf(0)
+        bind(target, origin) {
+            // Update value with current origin size
+            value = origin.size
+        }.start()
+        println(target) // 2
+
         outputIs("""2""")
     }
 
     @Test fun `Batching readme`() = runTest {
         val list = listOf(4, 5).toWatchableList()
-        batch(list, 50) { println(it) }
+        batch(list, 50) { println(it) }.start()
         list.use { add(6); add(7) }
         advanceTimeBy(60) // Not in doc
         // After time passes, prints:
         // [Initial(list=[4, 5]), Add(index=2, added=6), Add(index=3, added=7)]
         outputIs("""
             [Initial(list=[4, 5]), Insert(index=2, insert=[6, 7])]""")
-    }
-
-    @Test fun `close watch handle`() = runTest {
-        val list = watchableListOf(1)
-        val handle = watch(list) { out += it.toString() }
-        list.add(2)
-        handle.stop()
-        list.add(3)
-        triggerActions()
-        outputIs("""
-            Initial(list=[1])
-            Insert(index=1, insert=[2])""")
     }
 
     @Test fun `Grouping readme`() = runTest {
@@ -149,7 +137,7 @@ class ReadmeTest {
 
     @Test fun `Simple Watches`() = runTest {
         val map = watchableMapOf(1 to "2")
-        simple(map) { println("at $key remove $remove add $add") }
+        simple(map) { println("at $key remove $remove add $add") }.start()
         map.put(1, "3")
 
         outputIs("""
@@ -160,6 +148,7 @@ class ReadmeTest {
     @Test fun `Object Lifetime`() = runTest {
         val list = watchableListOf(1)
         val handle = watch(list) { println(it) }
+        handle.start()
         list.add(2)
         handle.stop() // No further notifications after this point
         list.add(3)
@@ -167,6 +156,21 @@ class ReadmeTest {
         outputIs("""
             Initial(list=[1])
             Insert(index=1, insert=[2])""".trimIndent())
+    }
+
+    @Test fun `Object Lifetime Part 2`() = runTest {
+        val list = watchableListOf(1)
+        launch {
+            // Note: you must refer to the outer scope.
+            this@runTest.watch(list) { println(it) }
+        }
+        triggerActions()
+        list.add(2)
+        list.add(3)
+        outputIs("""
+        Initial(list=[1])
+        Insert(index=1, insert=[2])
+        Insert(index=2, insert=[3])""".trimIndent())
     }
 
     private fun println(obj: Any) { out += obj.toString() }

@@ -39,11 +39,13 @@ class FlushTest {
         val changes = Channel<List<ValueChange<Int>>>(Channel.UNLIMITED)
         val value = watchableValueOf(1)
         val handle = batch(value, 500) { changes.send(it) }
+        triggerActions()
         value.set(2)
         changes.mustBe()
 
         // close should cause an immediate flush of outstanding batch items regardless of its timeout.
         handle.stop()
+        triggerActions()
         changes.mustBe(listOf(ValueChange(null, 1), ValueChange(1, 2)))
     }
 
@@ -51,6 +53,7 @@ class FlushTest {
         val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
         val list = watchableListOf(1)
         val handle = watch(list) { changes.send(it) } + watch(list) { changes.send(it) }
+        triggerActions()
         handle.stop()
         changes.mustBe(ListChange.Initial(listOf(1)), ListChange.Initial(listOf(1)))
     }

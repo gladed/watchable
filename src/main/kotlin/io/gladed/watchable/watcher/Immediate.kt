@@ -36,7 +36,6 @@ internal class Immediate<C : Change>(
 
     private val channel = Channel<List<C>>(UNLIMITED)
 
-    // This is /terminal/. So that's a problem
     private val job = launch {
         channel.consumeEach { action(it) }
     }

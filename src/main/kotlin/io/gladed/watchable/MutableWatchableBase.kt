@@ -49,6 +49,11 @@ internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : Watchabl
     /** True if current processing a change from the watchable to which this object is bound. */
     private var isOnBoundChange: Boolean = false
 
+    /** Clear the contents of the mutable form of the underlying data. */
+    protected abstract fun M.erase()
+
+    final override suspend fun clear() = use { erase() }
+
     override fun getInitialChange(): C? =
         immutable.toInitialChange()
 
@@ -94,30 +99,48 @@ internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : Watchabl
         }
 
     /** Wrapper for a binding. */
-    private class Binding(val other: Watchable<*>, val watcher: Watcher)
+    private inner class Binding(val other: Watchable<*>, val watcher: Watcher) : Watcher {
+        override suspend fun start() {
+            watcher.start()
+        }
 
-    override suspend fun bind(scope: CoroutineScope, origin: Watchable<C>) {
-        bind(scope, origin) {
-            applyBoundChange(it)
+        override fun cancel() {
+            if (binding == this) unbind()
+        }
+
+        override suspend fun stop() {
+            if (binding == this) {
+                watcher.stop()
+                unbind()
+            }
         }
     }
 
-    override suspend fun <C2 : Change> bind(
+    override fun bind(scope: CoroutineScope, origin: Watchable<C>) =
+        bind(scope, origin) {
+            applyBoundChange(it)
+        }
+
+    override fun <C2 : Change> bind(
         scope: CoroutineScope,
         origin: Watchable<C2>,
         period: Long,
         apply: M.(C2) -> Unit
-    ) {
+    ): Watcher {
         if (binding != null) throw IllegalStateException("Object already bound")
 
         throwIfAlreadyBoundTo(origin)
 
-        clear()
+        var uncleared = true
 
         // Start watching
         val job = origin.batch(scope, period) {
             use {
                 isOnBoundChange = true
+                if (uncleared) {
+                    uncleared = false
+                    erase()
+                }
                 for (change in it) {
                     apply(change)
                 }
@@ -126,7 +149,7 @@ internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : Watchabl
         }
 
         // Store the binding
-        binding = Binding(origin, job)
+        return Binding(origin, job).also { binding = it }
     }
 
     private tailrec fun throwIfAlreadyBoundTo(other: Watchable<*>) {

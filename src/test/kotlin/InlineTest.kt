@@ -31,6 +31,7 @@ class InlineTest {
         watch(intValue, INLINE) {
             if (it.value % 2 == 1) throw IllegalArgumentException("odd values not permitted")
         }
+        triggerActions()
 
         try {
             intValue.set(1)
@@ -46,6 +47,7 @@ class InlineTest {
         watch(intValue, INLINE) {
             if (it.value % 2 == 1) throw IllegalArgumentException("odd values not permitted")
         }
+        triggerActions()
 
         try {
             intValue.set(1)

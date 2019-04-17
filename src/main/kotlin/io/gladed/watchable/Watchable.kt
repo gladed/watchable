@@ -35,7 +35,7 @@ interface Watchable<out C : Change> {
     /**
      * Deliver all changes from this [Watchable] to [func] as lists of [Change] objects until [scope] completes.
      */
-    suspend fun batch(
+    fun batch(
         /** Scope within which to process changes. */
         scope: CoroutineScope,
         /** When to receive changes, see [Period]. */
@@ -47,7 +47,7 @@ interface Watchable<out C : Change> {
     /**
      * Deliver all changes from this [Watchable] to [func] as individual [Change] objects until [scope] completes.
      */
-    suspend fun watch(
+    fun watch(
         scope: CoroutineScope,
         /** When to receive changes, see [Period]. */
         period: Long = IMMEDIATE,

@@ -19,6 +19,9 @@ package io.gladed.watchable
 /** An ongoing watch operation. */
 interface Watcher {
 
+    /** Return when the watcher has become effective. */
+    suspend fun start()
+
     /** Immediately stop. Repeated invocations have no effect. */
     fun cancel()
 
@@ -30,6 +33,11 @@ interface Watcher {
 
     /** Combine two [Watcher] objects, returning a single one that spans both. */
     operator fun plus(right: Watcher) = object : Watcher {
+        override suspend fun start() {
+            this@Watcher.start()
+            right.start()
+        }
+
         override fun cancel() {
             this@Watcher.cancel()
             right.cancel()

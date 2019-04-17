@@ -20,7 +20,7 @@ import io.gladed.watchable.Period.IMMEDIATE
 import kotlinx.coroutines.CoroutineScope
 
 /** Bind [dest] so that it receives values from [origin] as long as the calling coroutineContext lives. */
-suspend fun <M, C : Change> CoroutineScope.bind(
+fun <M, C : Change> CoroutineScope.bind(
     dest: MutableWatchable<M, C>,
     origin: Watchable<C>
 ) = dest.bind(this, origin)
@@ -29,7 +29,7 @@ suspend fun <M, C : Change> CoroutineScope.bind(
  * Deliver simplified changes for this [Watchable] as receiver objects to [func] until
  * the returned [Watcher] is closed or this [CoroutineScope] completes.
  */
-suspend fun <S, C : HasSimpleChange<S>> CoroutineScope.simple(
+fun <S, C : HasSimpleChange<S>> CoroutineScope.simple(
     watchable: SimpleWatchable<S, C>,
     func: suspend S.() -> Unit
 ) = watchable.simple(this@simple, func)
@@ -38,7 +38,7 @@ suspend fun <S, C : HasSimpleChange<S>> CoroutineScope.simple(
  * Deliver changes for this [Watchable] to [func] until the returned [Watcher] is closed or this
  * [CoroutineScope] completes.
  */
-suspend fun <C : Change> CoroutineScope.watch(
+fun <C : Change> CoroutineScope.watch(
     watchable: Watchable<C>,
     /** When to receive changes, see [Period]. */
     period: Long = IMMEDIATE,
@@ -49,7 +49,7 @@ suspend fun <C : Change> CoroutineScope.watch(
  * Deliver multiple changes for this [Watchable] to [func] until the returned [Watcher] is closed or this
  * [CoroutineScope] completes.
  */
-suspend fun <C : Change> CoroutineScope.batch(
+fun <C : Change> CoroutineScope.batch(
     watchable: Watchable<C>,
     /** When to receive changes, see [Period]. */
     period: Long = IMMEDIATE,
@@ -60,7 +60,7 @@ suspend fun <C : Change> CoroutineScope.batch(
  * Bind [dest] so that it receives changes from [origin] and applies them with [apply] for as long as
  * this [CoroutineScope] lives.
  */
-suspend fun <M, C : Change, C2 : Change> CoroutineScope.bind(
+fun <M, C : Change, C2 : Change> CoroutineScope.bind(
     dest: MutableWatchable<M, C>,
     origin: Watchable<C2>,
     /** When to receive changes, see [Period]. */

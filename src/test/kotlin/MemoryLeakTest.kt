@@ -45,15 +45,13 @@ class MemoryLeakTest {
     @Test(timeout = 2000) fun `watch does not get gc'ed while scope lives`() = runTest {
         val list1 = watchableListOf(1, 2, 3)
 
-
         // Watch it from the other scope
         val scope1 = newScope()
         val ref = WeakReference(scope1.watch(list1) { changes.send(it) })
+        triggerActions()
 
-        try {
-            scour { assertNull(ref.get()) }
-        } catch (e: java.lang.AssertionError) { }
-        assertNotNull(ref.get())
+        // Our reference to the watcher goes away
+        scour { assertNull(ref.get()) }
 
         // Show that it's still working despite no references kept
         list1 += 4
@@ -65,7 +63,6 @@ class MemoryLeakTest {
         list1 += 5
         assertEquals(null, changes.poll())
     }
-
 
     @Test(timeout = 2000) fun `cancel of watch scope allows gc`() = runTest {
         val scope1 = newScope()

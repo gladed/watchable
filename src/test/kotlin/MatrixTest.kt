@@ -65,13 +65,11 @@ class MatrixTest<M, C: Change> {
         watchable2 = maker2()
     }
 
-    @Test fun `bind works`() = runTest {
+    @Test(timeout = 250) fun `bind works`() = runTest {
         assertFalse(watchable2.isBound())
         bind(watchable2, watchable1)
         assertTrue(watchable2.isBound())
-        withTimeout(250) {
-            waitFor(watchable2) { println("$watchable1, $watchable2"); it == watchable1 }
-        }
+        waitFor(watchable2) { it == watchable1 }
     }
 
     @Test fun `bind then make changes`() = runTest {
@@ -85,7 +83,7 @@ class MatrixTest<M, C: Change> {
     }
 
     @Test fun `no change on bound`() = runTest {
-        bind(watchable2, watchable1)
+        bind(watchable2, watchable1).start()
         try {
             for (i in 0 until 100) watchable2.use { modify() }
             fail("Should not have worked")

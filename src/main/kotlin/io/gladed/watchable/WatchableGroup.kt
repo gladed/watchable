@@ -26,7 +26,7 @@ class WatchableGroup(
     private val watchables: List<Watchable<*>>
 ) : Watchable<GroupChange> {
 
-    override suspend fun batch(
+    override fun batch(
         scope: CoroutineScope,
         period: Long,
         func: suspend (List<GroupChange>) -> Unit
@@ -38,6 +38,10 @@ class WatchableGroup(
         }.toMutableList()
 
         return object : Watcher {
+            override suspend fun start() {
+                handles.forEach { it.start() }
+            }
+
             override fun cancel() {
                 handles.forEach { it.cancel() }
             }

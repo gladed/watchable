@@ -67,8 +67,7 @@ internal class WatchableSetBase<T>(
         }
     }.guarded()
 
-    /** Clear all values from this set. */
-    override suspend fun clear() = use { clear() }
+    override fun MutableSet<T>.erase() = clear()
 
     override fun MutableSet<T>.toImmutable() = toSet()
 

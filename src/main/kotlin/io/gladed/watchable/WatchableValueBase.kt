@@ -57,8 +57,8 @@ internal class WatchableValueBase<T>(
         }
     }
 
-    override suspend fun clear() {
-        // Clear doesn't really make sense for this data type but it is required by bind
+    override fun MutableValue<T>.erase() {
+        // Cannot erase so do nothing (bind will overwrite)
     }
 
     /** Return an unmodifiable form of this [WatchableSet]. */

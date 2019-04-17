@@ -25,6 +25,7 @@ import io.gladed.watchable.watcher.Periodic
 import io.gladed.watchable.watcher.WatcherBase
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.launch
 import java.lang.ref.WeakReference
 
 /** Base for an object that generates change events of type [C] as its underlying data changes. */
@@ -55,20 +56,24 @@ abstract class WatchableBase<C : Change> : Watchable<C> {
     /** Return the initial change that a new watcher should receive, if any */
     protected abstract fun getInitialChange(): C?
 
-    override suspend fun batch(
+    override fun batch(
         scope: CoroutineScope,
         period: Long,
         func: suspend (List<C>) -> Unit
-    ): Watcher =
-        when {
+    ): Watcher {
+        val changeWatcher = when {
             period == INLINE -> Inline(scope.coroutineContext, func)
             period == IMMEDIATE -> Immediate(scope.coroutineContext, func)
             period < 0 -> throw IllegalArgumentException("Invalid period")
             else -> Periodic(scope.coroutineContext, period, func)
-        }.also { watcher ->
-            val droppable = Droppable(watcher)
+        }
+
+        // This function is not suspending (to prevent users from having to launch, which
+        // creates a scope that immediately dies). So we must do setup in background.
+        val setupWatcher = scope.launch {
+            val toDrop = Droppable(changeWatcher)
             watchers {
-                add(droppable)
+                add(toDrop)
                 sortBy {
                     when (it) {
                         is Inline<*> -> 1 // INLINE always comes first
@@ -77,12 +82,21 @@ abstract class WatchableBase<C : Change> : Watchable<C> {
                 }
 
                 getInitialChange()?.also { change ->
-                    watcher.dispatch(listOf(change))
+                    changeWatcher.dispatch(listOf(change))
                 }
             }
 
             scope.coroutineContext[Job]?.invokeOnCompletion {
-                droppable.drop()
+                toDrop.drop()
             }
-        }
+        }.toWatcher()
+
+        return setupWatcher + changeWatcher
+    }
+
+    private fun Job.toWatcher() = object : Watcher {
+        override suspend fun start() { join() }
+        override fun cancel() { this@toWatcher.cancel() }
+        override suspend fun stop() { join() }
+    }
 }

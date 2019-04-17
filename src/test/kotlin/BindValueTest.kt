@@ -52,9 +52,11 @@ class BindValueTest {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         watch(dest) { changes.send(it) }
+        triggerActions()
         changes.mustBe(ValueChange(null, 6))
 
         bind(dest, origin)
+        triggerActions()
         origin.set(7)
 
         changes.mustBe(ValueChange(6, 5), ValueChange(5, 7))

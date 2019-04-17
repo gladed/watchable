@@ -74,8 +74,7 @@ internal class WatchableListBase<T>(
         }
     }.guarded()
 
-    /** Clear all values from this list. */
-    override suspend fun clear() = use { clear() }
+    override fun MutableList<T>.erase() = clear()
 
     override fun MutableList<T>.toImmutable() = toList()
 

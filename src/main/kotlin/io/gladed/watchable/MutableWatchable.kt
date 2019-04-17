@@ -23,9 +23,7 @@ import kotlinx.coroutines.CoroutineScope
  * A [Watchable] containing a mutable object of type [M], which can both generate and accept changes of type [C].
  */
 interface MutableWatchable<M, C : Change> : Watchable<C> {
-    /**
-     * Remove all items.
-     */
+    /** Remove all items. */
     suspend fun clear()
 
     /**
@@ -45,19 +43,19 @@ interface MutableWatchable<M, C : Change> : Watchable<C> {
      * [origin] exactly, until [scope] completes. While bound, this object may not be externally modified or
      * rebound.
      */
-    suspend fun bind(scope: CoroutineScope, origin: Watchable<C>)
+    fun bind(scope: CoroutineScope, origin: Watchable<C>): Watcher
 
     /**
      * Binds this unbound object to [origin], such that for every change to [origin], the change is applied
      * to this object with [apply], until [scope] completes. While bound, this object may not be externally
      * modified or rebound.
      */
-    suspend fun <C2 : Change> bind(
+    fun <C2 : Change> bind(
         scope: CoroutineScope,
         origin: Watchable<C2>,
         period: Long = IMMEDIATE,
         apply: M.(C2) -> Unit
-    )
+    ): Watcher
 
     /** Remove any existing binding for this object. */
     fun unbind()

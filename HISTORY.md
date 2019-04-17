@@ -1,5 +1,8 @@
 # Version History
 
+## 0.6.10
+* Adding `Watcher.start()` and removing `suspend` from all operation signatures.
+
 ## 0.6.9
 * `Watcher.close` -> `Watcher.stop` to prevent confusion with file close operations
 * Fixed a problem with watchers on multi-threaded scopes 
