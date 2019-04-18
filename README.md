@@ -78,7 +78,7 @@ val list = watchableListOf(1, 2, 3)
 println(list.use { removeAt(list.size - 1) }) // Removes last element, prints 3
 ```
 
-Note: some extension functions on List are unreliable if the data is modified from separate threads, since these functions assume List cannot change during execution. For example, [List.last](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/last.html) and [List.getOrElse](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/get-or-else.html) access the size and then an element in separate steps.
+Some Kotlin extension functions on List are unreliable if the data is modified from separate threads, since these functions assume List cannot change during execution. For example, [List.last](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/last.html) and [List.getOrElse](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/get-or-else.html) access the size and then an element in separate steps.
 
 ## Watching for Changes
 

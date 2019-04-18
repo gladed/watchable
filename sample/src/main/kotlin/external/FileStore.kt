@@ -26,7 +26,7 @@ import kotlinx.serialization.DeserializationStrategy
 import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.json.Json
 import model.Bird
-import store.Store
+import store.BirdStore
 import java.io.File
 import kotlin.coroutines.CoroutineContext
 import kotlin.coroutines.coroutineContext
@@ -36,7 +36,7 @@ class FileStore(
     override val coroutineContext: CoroutineContext = newSingleThreadContext("FileStore") + Job(),
     dir: File,
     private val fileDelayMillis: Long = DEFAULT_FILE_DELAY_MILLIS
-) : Store, CoroutineScope {
+) : BirdStore, CoroutineScope {
     private val birdsDir = File(dir, BIRDS_DIR)
     private val birds = mutableMapOf<String, Handle<Bird>>()
 

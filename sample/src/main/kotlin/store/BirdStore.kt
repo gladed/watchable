@@ -2,7 +2,7 @@ package store
 
 import model.Bird
 
-interface Store {
+interface BirdStore {
     /** Create and return a new Bird object for use by the specified scope until it completes. */
     suspend fun makeBird(name: String): Bird
 
