@@ -16,8 +16,6 @@
 
 package external
 
-import io.gladed.watchable.group
-import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
@@ -41,7 +39,7 @@ class FileStore(
     private val birds = mutableMapOf<String, Handle<Bird>>()
 
     override suspend fun makeBird(name: String): Bird {
-        val bird = Bird(name = watchableValueOf(name))
+        val bird = Bird(name = name)
         birds[bird.id] = newHandle(bird)
         watch(bird)
         return bird
@@ -60,10 +58,10 @@ class FileStore(
     }
 
     private suspend fun watch(bird: Bird) {
-        // Only save this maximum once per fileDelayMillis
-        group(bird.name, bird.following).batch(this, fileDelayMillis) {
-            save(bird)
-        }
+//        // Only save this maximum once per fileDelayMillis
+//        group(bird.name, bird.following).batch(this, fileDelayMillis) {
+//            save(bird)
+//        }
     }
 
     private fun save(bird: Bird) {

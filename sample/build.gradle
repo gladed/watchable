@@ -24,7 +24,7 @@ dependencies {
     compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.10.0"
 
     testCompile 'junit:junit:4.12'
-
+    testCompile "io.mockk:mockk:1.9.3"
     detektPlugins "io.gitlab.arturbosch.detekt:detekt-formatting:$detekt_version"
 }
 
