@@ -28,7 +28,7 @@ interface TestCoroutineScope : CoroutineScope {
         testContext.advanceTimeBy(amount.toLong())
     }
 
-    fun triggerActions() {
+    fun trigger() {
         testContext.triggerActions()
     }
 
@@ -38,6 +38,6 @@ interface TestCoroutineScope : CoroutineScope {
     suspend fun <U> inScope(func: suspend CoroutineScope.() -> U): U =
         coroutineScope {
             func()
-        }.also { triggerActions() }
+        }.also { trigger() }
 }
 

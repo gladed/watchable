@@ -1,18 +1,22 @@
-import external.FileStore
+import external.Adapter
+import io.gladed.watchable.toWatchableValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
+import model.Bird
 import java.io.File
 
 fun main() = Main().go()
 
 class Main : CoroutineScope {
     override val coroutineContext = Dispatchers.Default
-    private val store = FileStore(coroutineContext, File("store"))
+    private val adapter = Adapter(coroutineContext, File("store"))
     fun go() {
         runBlocking {
-            store.makeBird("robin")
             println("Hello world")
+            val store = adapter.birds.create(this)
+            val robin = Bird.Mutable(name = "robin".toWatchableValue())
+            store.put(robin.id, robin)
         }
     }
 }

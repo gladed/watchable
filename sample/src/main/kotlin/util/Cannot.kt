@@ -1,5 +1,7 @@
 package util
 
-class Cannot(doSomething: String) : Exception()
+import java.lang.Exception
 
-fun cannot(doSomething: String): Nothing = throw Cannot(doSomething)
+class Cannot(private val doSomething: String) : Exception("Cannot $doSomething") {
+    override fun toString(): String = "Cannot $doSomething"
+}
