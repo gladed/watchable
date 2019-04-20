@@ -16,7 +16,7 @@ interface Store<T : Any> {
     suspend fun delete(key: String)
 
     /** Convert this [Store] of deflated items into a [Store] of inflated items [U]. */
-    fun <U : Any> inflate(inflater: Inflater<T, U>) : Store<U> = object : Store<U> {
+    fun <U : Any> inflate(inflater: Inflater<T, U>): Store<U> = object : Store<U> {
         override suspend fun get(key: String): U =
             inflater.inflate(this@Store.get(key))
 
