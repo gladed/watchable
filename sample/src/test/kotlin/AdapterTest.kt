@@ -1,5 +1,6 @@
 import external.Adapter
 import model.Bird
+import model.MutableBird
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -12,20 +13,20 @@ class AdapterTest {
     @Test fun `read and write`() = runTest {
         val adapter = Adapter(coroutineContext, folder.root)
         val birds = adapter.birds.create(this)
-        birds.put(robin.id, with(Bird) { robin.inflate() })
+        birds.put(robin.id, MutableBird.inflate(robin))
     }
 
     @Test fun `read and write between adapter instances`() {
         runTest {
             val adapter = Adapter(coroutineContext, folder.root)
             val birds = adapter.birds.create(this)
-            birds.put(robin.id, with(Bird) { robin.inflate() })
+            birds.put(robin.id, MutableBird.inflate(robin))
         }
 
         runTest {
             val adapter = Adapter(coroutineContext, folder.root)
             val birds = adapter.birds.create(this)
-            assertEquals(robin, with(Bird) { birds.get(robin.id).deflate() })
+            assertEquals(robin, MutableBird.deflate(birds.get(robin.id)))
         }
     }
 
@@ -35,7 +36,7 @@ class AdapterTest {
             inScope {
                 val birds = adapter.birds.create(this)
 
-                val liveRobin = with(Bird) { robin.inflate() }
+                val liveRobin = MutableBird.inflate(robin)
                 birds.put(robin.id, liveRobin)
                 liveRobin.following { add("123") }
             }

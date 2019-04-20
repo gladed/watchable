@@ -4,6 +4,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
 import model.Bird
+import model.MutableBird
 import java.io.File
 
 fun main() = Main().go()
@@ -15,7 +16,7 @@ class Main : CoroutineScope {
         runBlocking {
             println("Hello world")
             val store = adapter.birds.create(this)
-            val robin = Bird.Mutable(name = "robin".toWatchableValue())
+            val robin = MutableBird(name = "robin".toWatchableValue())
             store.put(robin.id, robin)
         }
     }

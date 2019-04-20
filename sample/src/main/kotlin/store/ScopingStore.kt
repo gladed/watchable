@@ -1,4 +1,4 @@
-package util
+package store
 
 import io.gladed.watchable.Stoppable
 import io.gladed.watchable.util.guarded
@@ -56,7 +56,7 @@ class ScopingStore<T : Any>(
             back.put(key, value)
             hold(key) { value }.apply {
                 if (first !== value) {
-                    cannot("put a different object for a key while key is held elsewhere")
+                    cannot("replace while different object with same key is in use")
                 }
             }
         }

@@ -13,9 +13,9 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
-import util.Cannot
-import util.ScopingStore
-import util.Store
+import store.Cannot
+import store.ScopingStore
+import store.Store
 
 @UseExperimental(ObsoleteCoroutinesApi::class)
 class ScopingStoreTest {
