@@ -18,4 +18,8 @@ class FileStore(
     override suspend fun put(key: String, value: String) {
         key.keyFile().writeText(value)
     }
+
+    override suspend fun delete(key: String) {
+        key.keyFile().delete()
+    }
 }
