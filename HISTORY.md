@@ -1,13 +1,15 @@
 # Version History
 
 ## 0.6.10
-* Adding `Watcher.start()` and removing `suspend` from all operation signatures.
+* Add `Watcher.start()` and remove `suspend` from all operation signatures.
+* Remove `use` in favor of operator `invoke`.
+* Add `Stoppable`
 
 ## 0.6.9
 * `Watcher.close` -> `Watcher.stop` to prevent confusion with file close operations
-* Fixed a problem with watchers on multi-threaded scopes 
-* Renamed `WatchHandle` to `Watcher` and simplified `close()` semantics.
-* Removed `value` and added suspend operators to `WatchableList`, `WatchableSet`, and `WatchableMap` for easier modification.
+* Fix a problem with watchers on multi-threaded scopes.
+* Rename `WatchHandle` to `Watcher` and simplified `close()` semantics.
+* Remove `value` and add suspend operators to `WatchableList`, `WatchableSet`, and `WatchableMap` for easier modification.
 * Support for `INLINE` vs `IMMEDIATE` watch periods.
 * Restored access to removed values in change notifications
 * Simplified generic types
@@ -20,10 +22,10 @@
 * `MutableWatchable` objects support suspending modifiers for one-shot operations like add/remove/clear.
 * Support `null` in list, value, and set.
 * Support equality tests for value as much as possible.
-* Removed `subscribe` APIs (too dangerous)
-* Handles coming back from `watch` etc support `close` which flushes current contents.
-* Replaced suspending `get()` with `value` for direct immutable access without suspension.
-* Replaced read-only collection implementations for Map, List, and Set.
+* Remove `subscribe` APIs (too dangerous)
+* Handle coming back from `watch` etc support `close` which flushes current contents.
+* Replace suspending `get()` with `value` for direct immutable access without suspension.
+* Replace read-only collection implementations for Map, List, and Set.
 * Fix a problem with `batch` failing to consume, slowing down `use`.
 * Remove requirement for each `Watchable` object to have their own `CoroutineScope`.
 * Add `group()` API.
@@ -34,12 +36,12 @@
 * Add `subscribe` API.
 * Allow for a `minPeriod` when batching changes.
 * `runBlocking { ... }` no longer hangs forever when containing a watch or bind (#10).
-* Improved scope management.
-* Removed java synchronization and added suspending `get()` for performance and portability (#16).
+* Improve scope management.
+* Remove java synchronization and add suspending `get()` for performance and portability (#16).
 * Allow more complex `bind` cases (#17).
 * Test and improve concurrent behaviors.
 * Package transitioned to `io.gladed.watchable`.
-* Revamped rules for safe modification (`use`).
+* Ravamp rules for safe modification (`use`).
 * Initial release
 * `WatchableSet`, `WatchableList`, `WatchableMap`, and `WatchableValue`.
 * `watch()` and `bind()` methods for all of the above.

@@ -31,7 +31,7 @@ class WatchableMapTest {
 
     @Test fun entries() = runBlocking {
         val map = watchableMapOf(1 to "1")
-        map.use {
+        map {
             val first = entries.first()
             assertEquals(first, first)
             log("Entry: $entries has hash ${entries.hashCode()}") // Coverage

@@ -70,7 +70,7 @@ class ReadmeTest {
     @Test fun `Reading and Writing Data Part 2`() = runTest {
         val list = watchableListOf(1, 2, 3)
         // Remove last element safely
-        println(list.use { removeAt(list.size - 1) }) // Prints 3
+        println(list { removeAt(list.size - 1) }) // Prints 3
         outputIs("3")
     }
 
@@ -109,7 +109,7 @@ class ReadmeTest {
     @Test fun `Batching readme`() = runTest {
         val list = listOf(4, 5).toWatchableList()
         batch(list, 50) { println(it) }.start()
-        list.use { add(6); add(7) }
+        list { add(6); add(7) }
         advanceTimeBy(60) // Not in doc
         // After time passes, prints:
         // [Initial(list=[4, 5]), Add(index=2, added=6), Add(index=3, added=7)]

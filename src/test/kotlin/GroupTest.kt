@@ -58,7 +58,7 @@ class GroupTest {
             GroupChange(setValue, SetChange.Initial(setOf("1"))))
         handle.stop()
         changes.mustBe()
-        setValue.use { add("2") }
+        setValue { add("2") }
         changes.mustBe()
     }
 
@@ -68,7 +68,7 @@ class GroupTest {
         val handle = watch(group(intValue, setValue)) { changes.send(it) }
         handle.cancel()
         changes.mustBe()
-        setValue.use { add("2") }
+        setValue { add("2") }
         changes.mustBe()
     }
 }

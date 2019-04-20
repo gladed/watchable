@@ -75,7 +75,7 @@ class MatrixTest<M, C: Change> {
     @Test fun `bind then make changes`() = runTest {
         bind(watchable2, watchable1)
         for (i in 0 until 200) {
-            watchable1.use { modify() }
+            watchable1 { modify() }
         }
         assertNotEquals(watchable1, watchable2)
         waitFor(watchable2) { it == watchable1 }
@@ -85,7 +85,7 @@ class MatrixTest<M, C: Change> {
     @Test fun `no change on bound`() = runTest {
         bind(watchable2, watchable1).start()
         try {
-            for (i in 0 until 100) watchable2.use { modify() }
+            for (i in 0 until 100) watchable2 { modify() }
             fail("Should not have worked")
         } catch (e: IllegalStateException) {
             log("Correct failure: $e")
@@ -109,7 +109,7 @@ class MatrixTest<M, C: Change> {
         mustThrow(IllegalStateException::class.java) {
             bind(watchable2, watchable1)
             for (i in 0 until 20) {
-                watchable2.use { modify() }
+                watchable2 { modify() }
             }
         }
     }
@@ -117,9 +117,9 @@ class MatrixTest<M, C: Change> {
     @Test fun `unbound changes not applied`() = runTest {
         bind(watchable2, watchable1)
         for (i in 0 until 100) {
-            watchable1.use { modify() }
+            watchable1 { modify() }
         }
-        watchable1.use(finalMod)
+        watchable1(finalMod)
 
         waitFor(watchable2) { it == watchable2 }
 
@@ -127,7 +127,7 @@ class MatrixTest<M, C: Change> {
         watchable2.unbind() // Safe
 
         for (i in 0 until 100) {
-            watchable1.use { modify() }
+            watchable1 { modify() }
         }
         triggerActions()
         assertNotEquals(watchable1, watchable2)
@@ -140,7 +140,7 @@ class MatrixTest<M, C: Change> {
         watchable1.batch(this, 50) { batches += it }
 
         // Throw many modifications at watchable1
-        for (i in 0 until 100) watchable1.use { modify() }
+        for (i in 0 until 100) watchable1 { modify() }
 
         triggerActions()
         assertEquals(listOf<List<C>>(), batches)
@@ -161,7 +161,7 @@ class MatrixTest<M, C: Change> {
         assertEquals(watchable1, watchable1)
         assertEquals(watchable1, watchable2)
         assertEquals(watchable2, watchable1)
-        watchable1.use { assertEquals(this, watchable2)}
+        watchable1 { assertEquals(this, watchable2)}
     }
 
     @Test fun stress() = runBlocking(Dispatchers.Default) {
@@ -173,7 +173,7 @@ class MatrixTest<M, C: Change> {
         log("Launching $count modification jobs while bound")
         val allJobs = (0 until count).map {
             launch {
-                watchable1.use {
+                watchable1 {
                     modify()
                 }
             }
@@ -190,7 +190,7 @@ class MatrixTest<M, C: Change> {
 
         // Wait for all modifications to be complete
         allJobs.joinAll()
-        watchable1.use { finalMod(this) }
+        watchable1 { finalMod(this) }
 
         // Eventually w2 will catch up to w1
         log("Waiting for everything to match")

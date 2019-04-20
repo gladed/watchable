@@ -52,7 +52,7 @@ internal class WatchableValueBase<T>(
 
     /** Insert a new value, replacing the old one. */
     override suspend fun set(value: T) {
-        use {
+        invoke {
             this.value = value
         }
     }

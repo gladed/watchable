@@ -38,7 +38,7 @@ class SubscriptionTest {
             val handle = watch(set) { changes.send(it) }
             changes.mustBe(SetChange.Initial(setOf(1)))
             handle.cancel() // Instantly cancel, no more changes!
-            set.use { add(2) }
+            set { add(2) }
             changes.mustBe()
         }
     }
@@ -47,10 +47,10 @@ class SubscriptionTest {
         runThenCancel {
             val handle = watch(set) { changes.send(it) }
             changes.mustBe(SetChange.Initial(setOf(1)))
-            set.use { add(2) }
+            set { add(2) }
             handle.stop()
             yield() // Allow other coroutines to process
-            set.use { add(3) }
+            set { add(3) }
             changes.mustBe(SetChange.Add(listOf(2)))
             changes.mustBe()
         }

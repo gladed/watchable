@@ -23,31 +23,31 @@ package io.gladed.watchable
 interface WatchableList<T> : MutableWatchable<MutableList<T>, ListChange<T>>, ReadOnlyWatchableList<T> {
 
     /** Add [element] to the end of this list, returning true if the list changed. */
-    suspend fun add(element: T): Boolean = use { add(element) }
+    suspend fun add(element: T): Boolean = invoke { add(element) }
 
     /** Add [elements] to the end of this list, returning true if the list changed. */
-    suspend fun addAll(elements: Iterable<T>): Boolean = use { addAll(elements) }
+    suspend fun addAll(elements: Iterable<T>): Boolean = invoke { addAll(elements) }
 
     /** Add [elements] to the end of this list, returning true if the list changed. */
-    suspend fun addAll(elements: Array<T>): Boolean = use { addAll(elements) }
+    suspend fun addAll(elements: Array<T>): Boolean = invoke { addAll(elements) }
 
     /** Add [elements] to the end of this list, returning true if the list changed. */
-    suspend fun addAll(elements: Sequence<T>): Boolean = use { addAll(elements) }
+    suspend fun addAll(elements: Sequence<T>): Boolean = invoke { addAll(elements) }
 
     /** Remove [element] from this list, returning true if the list changed. */
-    suspend fun remove(element: T) = use { remove(element) }
+    suspend fun remove(element: T) = invoke { remove(element) }
 
     /** Remove [elements] from this list, returning true if the list changed. */
-    suspend fun removeAll(elements: Iterable<T>): Boolean = use { removeAll(elements) }
+    suspend fun removeAll(elements: Iterable<T>): Boolean = invoke { removeAll(elements) }
 
     /** Remove [elements] from this list, returning true if the list changed. */
-    suspend fun removeAll(elements: Array<T>): Boolean = use { removeAll(elements) }
+    suspend fun removeAll(elements: Array<T>): Boolean = invoke { removeAll(elements) }
 
     /** Remove [elements] from this list, returning true if the list changed. */
-    suspend fun removeAll(elements: Sequence<T>): Boolean = use { removeAll(elements) }
+    suspend fun removeAll(elements: Sequence<T>): Boolean = invoke { removeAll(elements) }
 
     /** Retain only the elements in this list that are found in [elements], returning true if the list changed. */
-    suspend fun retainAll(elements: Iterable<T>): Boolean = use { retainAll(elements) }
+    suspend fun retainAll(elements: Iterable<T>): Boolean = invoke { retainAll(elements) }
 
     /** Add [element] to the end of this list. */
     suspend operator fun plusAssign(element: T) { add(element) }

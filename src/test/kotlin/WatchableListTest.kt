@@ -31,7 +31,7 @@ class WatchableListTest {
         val list = watchableListOf(3, 4)
         batch(list) { changes.send(it) }
         changes.mustBe(listOf(ListChange.Initial(listOf(3, 4))))
-        list.use { clear() }
+        list { clear() }
         changes.mustBe(listOf(ListChange.Remove(0, 3), ListChange.Remove(0, 4)))
         changes.mustBe()
     }
@@ -48,7 +48,7 @@ class WatchableListTest {
         val channel = Channel<ListChange<Int?>>(20)
         watch(list) { channel.send(it) }
         channel.mustBe(ListChange.Initial(listOf(1, null)))
-        list.use { remove(null) }
+        list { remove(null) }
         channel.mustBe(ListChange.Remove(1, null))
     }
 

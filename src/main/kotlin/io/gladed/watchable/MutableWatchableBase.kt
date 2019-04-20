@@ -52,7 +52,7 @@ internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : Watchabl
     /** Clear the contents of the mutable form of the underlying data. */
     protected abstract fun M.erase()
 
-    final override suspend fun clear() = use { erase() }
+    final override suspend fun clear() = invoke { erase() }
 
     override fun getInitialChange(): C? =
         immutable.toInitialChange()
@@ -74,7 +74,7 @@ internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : Watchabl
             throw IllegalStateException("A bound object may not be modified.")
         } else func()
 
-    override suspend fun <U> use(func: M.() -> U): U =
+    override suspend operator fun <U> invoke(func: M.() -> U): U =
         mutable {
             // Apply mutations
             func().also {
@@ -135,7 +135,7 @@ internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : Watchabl
 
         // Start watching
         val job = origin.batch(scope, period) {
-            use {
+            invoke {
                 isOnBoundChange = true
                 if (uncleared) {
                     uncleared = false

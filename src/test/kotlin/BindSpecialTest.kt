@@ -36,7 +36,7 @@ class BindSpecialTest {
             }
         }
 
-        origin.use {
+        origin {
             add(4)
             set(1, 6)
             remove(4)

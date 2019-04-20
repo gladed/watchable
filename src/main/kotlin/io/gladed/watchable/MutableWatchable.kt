@@ -30,13 +30,7 @@ interface MutableWatchable<M, C : Change> : Watchable<C> {
      * Suspend until [func] can safely execute on the mutable form [M] of this watchable, returning [func]'s result.
      * [func] must not block or return the mutable form outside of this routine.
      */
-    suspend operator fun <U> invoke(func: M.() -> U) = use(func)
-
-    /**
-     * Suspend until [func] can safely execute on the mutable form [M] of this watchable, returning [func]'s result.
-     * [func] must not block or return the mutable form outside of this routine.
-     */
-    suspend fun <U> use(func: M.() -> U): U
+    suspend operator fun <U> invoke(func: M.() -> U): U
 
     /**
      * Binds this unbound object to [origin], such that when [origin] changes, this object is updated to match

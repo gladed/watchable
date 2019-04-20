@@ -21,24 +21,24 @@ package io.gladed.watchable
 interface WatchableMap<K, V> : MutableWatchable<MutableMap<K, V>, MapChange<K, V>>, ReadOnlyWatchableMap<K, V> {
 
     /** Associate the [value] with the [key] in this map, returning the previous value for this [key] if any. */
-    suspend fun put(key: K, value: V): V? = use { put(key, value) }
+    suspend fun put(key: K, value: V): V? = invoke { put(key, value) }
 
     // Note: suspend operator for set would be more natural but is not yet supported by Kotlin.
 
     /** Put the key and value in [from] into this map. */
-    suspend fun putAll(from: Map<K, V>) { use { putAll(from) } }
+    suspend fun putAll(from: Map<K, V>) { invoke { putAll(from) } }
 
     /** Put all keys and values in [pairs] into this map. */
-    suspend fun putAll(pairs: Array<out Pair<K, V>>) { use { putAll(pairs) } }
+    suspend fun putAll(pairs: Array<out Pair<K, V>>) { invoke { putAll(pairs) } }
 
     /** Put all keys and values in [pairs] into this map. */
-    suspend fun putAll(pairs: Iterable<Pair<K, V>>) { use { putAll(pairs) } }
+    suspend fun putAll(pairs: Iterable<Pair<K, V>>) { invoke { putAll(pairs) } }
 
     /** Put all keys and values in [pairs] into this map. */
-    suspend fun putAll(pairs: Sequence<Pair<K, V>>) { use { putAll(pairs) } }
+    suspend fun putAll(pairs: Sequence<Pair<K, V>>) { invoke { putAll(pairs) } }
 
     /** Remove [key] and its value from this map, returning the former value if present. */
-    suspend fun remove(key: K): V? = use { remove(key) }
+    suspend fun remove(key: K): V? = invoke { remove(key) }
 
     /** Put the key and value in [from] into this map. */
     suspend operator fun plusAssign(from: Pair<K, V>) { put(from.first, from.second) }
@@ -59,11 +59,11 @@ interface WatchableMap<K, V> : MutableWatchable<MutableMap<K, V>, MapChange<K, V
     suspend operator fun minusAssign(key: K) { remove(key) }
 
     /** Remove [keys] from this map, along with any associated values. */
-    suspend operator fun minusAssign(removeKeys: Array<K>) { use { keys.removeAll(removeKeys) } }
+    suspend operator fun minusAssign(removeKeys: Array<K>) { invoke { keys.removeAll(removeKeys) } }
 
-    suspend operator fun minusAssign(removeKeys: Iterable<K>) { use { keys.removeAll(removeKeys) } }
+    suspend operator fun minusAssign(removeKeys: Iterable<K>) { invoke { keys.removeAll(removeKeys) } }
 
-    suspend operator fun minusAssign(removeKeys: Sequence<K>) { use { keys.removeAll(removeKeys) } }
+    suspend operator fun minusAssign(removeKeys: Sequence<K>) { invoke { keys.removeAll(removeKeys) } }
 
     /** Return an unmodifiable form of this [WatchableMap]. */
     override fun readOnly(): ReadOnlyWatchableMap<K, V>
