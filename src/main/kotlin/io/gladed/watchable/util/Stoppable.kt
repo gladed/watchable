@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package io.gladed.watchable
+package io.gladed.watchable.util
 
 /** An ongoing operation that can be cancelled or stopped. */
 interface Stoppable {

@@ -1,14 +1,13 @@
 package store
 
-import io.gladed.watchable.Watcher
+import io.gladed.watchable.util.Stoppable
 import kotlin.coroutines.CoroutineContext
 
 /**
- * Return a [ScopingStore] around this [Store], so that objects within it can be watched as long as necessary from
- * other CoroutineScopes.
+ * Return a [ScopingStore] around this [Store].
  */
-fun <T : Any> Store<T>.scope(context: CoroutineContext, watchFunc: suspend T.() -> Watcher) =
-    ScopingStore(context, this, watchFunc)
+fun <T : Any> Store<T>.scope(context: CoroutineContext, start: suspend T.() -> Stoppable) =
+    ScopingStore(context, this, start)
 
 /** Throw an exception to complain that something cannot be done. */
-fun cannot(doSomething: String): Nothing = throw Cannot("Cannot $doSomething")
+fun cannot(doSomething: String): Nothing = throw Cannot(doSomething)

@@ -16,6 +16,8 @@
 
 package io.gladed.watchable
 
+import io.gladed.watchable.util.Stoppable
+
 /** An ongoing watch operation. */
 interface Watcher : Stoppable {
 

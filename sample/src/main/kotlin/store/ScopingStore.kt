@@ -1,6 +1,6 @@
 package store
 
-import io.gladed.watchable.Stoppable
+import io.gladed.watchable.util.Stoppable
 import io.gladed.watchable.util.guarded
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
@@ -11,9 +11,16 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
-/** A [Store] factory producing stores that hold items on behalf of other scopes. */
+/**
+ * A [Store] factory producing stores that trigger operations on its items.
+ *
+ * For any new object retrieved, [start] is called. This operation is stopped only when the item
+ * is deleted, or all scopes using it have completed.
+ */
 class ScopingStore<T : Any>(
+    /** The parent context for starting and stopping operations. */
     context: CoroutineContext,
+    /** The store being wrapped. */
     val back: Store<T>,
     private val start: suspend T.() -> Stoppable
 ) : CoroutineScope {
@@ -86,23 +93,19 @@ class ScopingStore<T : Any>(
     }
 
     /**
-     * Return a new [Store] for which all items put or retrieved from this store are held for at least
-     * as long as [scope] survives.
+     * Return a new [Store]; items accessed by this store will have a corresponding operation (see [start]) in effect
+     * until the completion of all scopes using the item.
      */
     fun create(scope: CoroutineScope): Store<T> {
         val newStore = SingleStore()
         scope.coroutineContext[Job]?.invokeOnCompletion {
             launch {
-                releaseAll(newStore)
+                map {
+                    keys.removeAll(filterValues { it.remove(newStore) }.keys)
+                }
             }
         }
         return newStore
-    }
-
-    private suspend fun releaseAll(store: Store<T>) {
-        map {
-            keys.removeAll(filterValues { it.remove(store) }.keys)
-        }
     }
 
     /** Release everything regardless of the state of scopes. */
