@@ -8,7 +8,7 @@
 
 # Watchable
 
-This library uses [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html) to provide data structures that are mutable, concurrent, lock-free, thread-safe, and listenable.
+This library uses [Kotlin coroutines](https://kotlinlang.org/docs/reference/coroutines-overview.html) to provide data structures that are mutable, lock-free, thread-safe, and observable.
 
 ```kotlin
 coroutineScope {
@@ -22,13 +22,18 @@ coroutineScope {
 }
 ```
 
-## Why?
+## Why Use This?
 
-Sometimes, you want a data structure that can be shared between objects and listen for changes to that data. But it's hard to remember and unregister all of those listeners. If you don't, you'll leak memory. This is known as the [Lapsed Listener Problem](https://en.wikipedia.org/wiki/Lapsed_listener_problem)
+Listening for changes to objects is hard:
 
-`Watchable` solves this by allowing operations (like `watch` and`bind`) which are limited to the lifetime of the initiating `CoroutineScope`. When the scope completes, its watchable operations are cleaned up automatically.
+* Define listeners to match your data.
+* Store and maintain the list of listeners in your object.
+* Understand and be sensitive the listener's threading model.
+* Remember to remove them when you are done listening (the [Lapsed Listener Problem](https://en.wikipedia.org/wiki/Lapsed_listener_problem)).
 
-This can be useful in [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) designs, in which the data model lives at the center, and everyone depends on it. If the data model is defined in terms of `Watchable` objects, then other components (having their own lifecycles) can simply watch for changes and react accordingly, without coupling directly to each other.
+`Watchable` solves these problems by defining a standard interface for monitoring changes to ordinary data objects.
+
+This can help [Clean Architecture](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html) designs, in which the data model lives at the center, and everyone depends on it. When the data changes, higher level components can handle those changes without depending on each other.
 
 # Usage
 
@@ -70,12 +75,12 @@ map.put(2, "2") // Suspends if concurrent modification attempted
 println(map) // Prints {1=1, 2=2}
 ```
 
-To do multiple operations while protecting from concurrent access, [`use`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/use.html) the object:
+To perform multiple operations while protecting from concurrent access, [`invoke`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/use.html) the object:
 
 ```kotlin
 val list = watchableListOf(1, 2, 3)
 // Remove last element safely
-println(list.use { removeAt(list.size - 1) }) // Removes last element, prints 3
+println(list { removeAt(list.size - 1) }) // Removes last element, prints 3
 ```
 
 Some Kotlin extension functions on List are unreliable if the data is modified from separate threads, since these functions assume List cannot change during execution. For example, [List.last](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/last.html) and [List.getOrElse](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.collections/get-or-else.html) access the size and then an element in separate steps.
@@ -107,7 +112,7 @@ It's possible to listen for lists of changes, collected and delivered in-order p
 ```kotlin
 val list = listOf(4, 5).toWatchableList()
 batch(list, 50) { println(it) }.start()
-list.use { add(6); add(7) }
+list { add(6); add(7) }
 
 // After time passes, prints:
 // [Initial(list=[4, 5]), Add(index=2, added=6), Add(index=3, added=7)]
@@ -186,7 +191,7 @@ val list = watchableListOf(1)
 val handle = watch(list) { println(it) }
 handle.start()
 list.add(2)
-handle.stop() // No further notifications after this point
+handle.stop() // deliver prior changes, but don't watch for new changes
 list.add(3)
 
 // Prints:

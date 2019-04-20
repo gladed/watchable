@@ -150,7 +150,7 @@ class ReadmeTest {
         val handle = watch(list) { println(it) }
         handle.start()
         list.add(2)
-        handle.stop() // No further notifications after this point
+        handle.stop() // deliver prior changes, but don't watch for new changes
         list.add(3)
 
         outputIs("""
