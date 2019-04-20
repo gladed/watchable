@@ -18,9 +18,11 @@ package io.gladed.watchable
 
 /** Describes a change to a [List]. */
 sealed class ListChange<T> : HasSimpleChange<ListChange.Simple<T>> {
+    override val isInitial = false
 
     /** The initial state of the list, delivered upon first watch. */
     data class Initial<T>(val list: List<T>) : ListChange<T>() {
+        override val isInitial = true
         override val simple by lazy {
             list.mapIndexed { index, item -> Simple(index, add = item) }
         }

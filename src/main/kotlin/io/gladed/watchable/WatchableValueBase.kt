@@ -44,7 +44,7 @@ internal class WatchableValueBase<T>(
 
     override fun MutableValue<T>.toImmutable(): Value<T> = ValueData(value)
 
-    override fun Value<T>.toInitialChange(): ValueChange<T> = ValueChange(null, value)
+    override fun Value<T>.toInitialChange(): ValueChange<T> = ValueChange(null, value, true)
 
     override fun MutableValue<T>.applyBoundChange(change: ValueChange<T>) {
         value = change.value

@@ -53,7 +53,7 @@ class BindValueTest {
         val dest = watchableValueOf(6)
         watch(dest) { changes.send(it) }
         triggerActions()
-        changes.mustBe(ValueChange(null, 6))
+        changes.mustBe(ValueChange(null, 6, true))
 
         bind(dest, origin)
         triggerActions()
@@ -134,7 +134,7 @@ class BindValueTest {
             changes.send(it)
         }
         log("Asserting after $scope1 launch")
-        changes.mustBe(ValueChange(null, 5))
+        changes.mustBe(ValueChange(null, 5, true))
         origin.set(6)
         changes.mustBe(ValueChange(5, 6))
     }

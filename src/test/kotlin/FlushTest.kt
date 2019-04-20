@@ -29,7 +29,7 @@ class FlushTest {
     @Test fun `receive events while flushing`() = runTest {
         val value = watchableValueOf(1)
         val handle = watch(value) { changes.send(it) }
-        changes.mustBe(ValueChange(null, 1))
+        changes.mustBe(ValueChange(null, 1, true))
         value.set(2)
         handle.stop()
         changes.mustBe(ValueChange(1, 2))
@@ -46,7 +46,7 @@ class FlushTest {
         // close should cause an immediate flush of outstanding batch items regardless of its timeout.
         handle.stop()
         triggerActions()
-        changes.mustBe(listOf(ValueChange(null, 1), ValueChange(1, 2)))
+        changes.mustBe(listOf(ValueChange(null, 1, true), ValueChange(1, 2)))
     }
 
     @Test fun `flush two`() = runTest {

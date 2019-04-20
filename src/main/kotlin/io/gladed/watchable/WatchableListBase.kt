@@ -78,7 +78,7 @@ internal class WatchableListBase<T>(
 
     override fun MutableList<T>.toImmutable() = toList()
 
-    override fun List<T>.toInitialChange() = ListChange.Initial(this)
+    override fun List<T>.toInitialChange() = ListChange.Initial(toList())
 
     override fun MutableList<T>.applyBoundChange(change: ListChange<T>) {
         when (change) {

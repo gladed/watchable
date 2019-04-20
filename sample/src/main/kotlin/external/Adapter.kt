@@ -24,6 +24,8 @@ class Adapter(context: CoroutineContext, root: File) : CoroutineScope {
 
     private fun Bird.Mutable.birdWatcher(): Watcher =
         watch(watchables) {
-            birds.back.put(id, this@birdWatcher)
+            if (!it.isInitial) {
+                birds.back.put(id, this@birdWatcher)
+            }
         }
 }

@@ -18,9 +18,11 @@ package io.gladed.watchable
 
 /** Describes a change to a [Set]. */
 sealed class SetChange<T> : HasSimpleChange<SetChange.Simple<T>> {
+    override val isInitial = false
 
     /** The initial state of the set. */
     data class Initial<T>(val set: Set<T>) : SetChange<T>() {
+        override val isInitial = true
         override val simple by lazy { set.map { Simple(add = it) } }
     }
 

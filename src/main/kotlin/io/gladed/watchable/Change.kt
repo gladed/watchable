@@ -17,4 +17,7 @@
 package io.gladed.watchable
 
 /** An object that describes a change. */
-interface Change
+interface Change {
+    /** True when this change represents the initial state of a watched object. */
+    val isInitial: Boolean
+}

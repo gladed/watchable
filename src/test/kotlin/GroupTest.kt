@@ -29,14 +29,14 @@ class GroupTest {
 
     @Test fun coverage() {
         val intValue = watchableValueOf(1)
-        cover(GroupChange(intValue, ValueChange(null, 1)))
+        cover(GroupChange(intValue, ValueChange(null, 1, true)))
     }
 
     @Test fun `subscribe to a group of watchables`() = runTest {
         val intValue = watchableValueOf(1)
         val setValue = watchableSetOf("1")
         group(intValue, setValue).watch(this) { changes.send(it) }
-        changes.mustBe(GroupChange(intValue, ValueChange(null, 1)))
+        changes.mustBe(GroupChange(intValue, ValueChange(null, 1, true)))
         changes.mustBe(GroupChange(setValue, SetChange.Initial(setOf("1"))))
     }
 
@@ -45,7 +45,7 @@ class GroupTest {
         val setValue = watchableSetOf("1")
         watch(group(intValue, setValue)) { changes.send(it) }
         changes.mustBe(
-            GroupChange(intValue, ValueChange(null, 1)),
+            GroupChange(intValue, ValueChange(null, 1, true)),
             GroupChange(setValue, SetChange.Initial(setOf("1"))))
     }
 
@@ -54,7 +54,7 @@ class GroupTest {
         val setValue = watchableSetOf("1")
         val handle = watch(group(intValue, setValue)) { changes.send(it) }
         changes.mustBe(
-            GroupChange(intValue, ValueChange(null, 1)),
+            GroupChange(intValue, ValueChange(null, 1, true)),
             GroupChange(setValue, SetChange.Initial(setOf("1"))))
         handle.stop()
         changes.mustBe()

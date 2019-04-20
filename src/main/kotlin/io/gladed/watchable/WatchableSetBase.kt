@@ -71,9 +71,7 @@ internal class WatchableSetBase<T>(
 
     override fun MutableSet<T>.toImmutable() = toSet()
 
-    override fun Set<T>.toInitialChange() = takeIf { isNotEmpty() }?.let {
-        SetChange.Initial(toSet())
-    }
+    override fun Set<T>.toInitialChange() = SetChange.Initial(toSet())
 
     override fun MutableSet<T>.applyBoundChange(change: SetChange<T>) {
         when (change) {

@@ -98,7 +98,7 @@ internal class WatchableMapBase<K, V>(
 
     override fun MutableMap<K, V>.toImmutable() = toMap()
 
-    override fun Map<K, V>.toInitialChange() = MapChange.Initial(this)
+    override fun Map<K, V>.toInitialChange() = MapChange.Initial(toMap())
 
     override fun MutableMap<K, V>.applyBoundChange(change: MapChange<K, V>) {
         when (change) {

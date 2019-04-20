@@ -21,5 +21,6 @@ data class ValueChange<T>(
     /** The old value, if any. */
     val oldValue: T? = null,
     /** The new value. */
-    val value: T
+    val value: T,
+    override val isInitial: Boolean = false
 ) : Change

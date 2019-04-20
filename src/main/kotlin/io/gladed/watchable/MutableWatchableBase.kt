@@ -29,8 +29,8 @@ internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : Watchabl
     /** Copy a mutable [M] to an immutable [T]. */
     protected abstract fun M.toImmutable(): T
 
-    /** Given the current state [T] return [C] representing the initial state, if any. */
-    protected abstract fun T.toInitialChange(): C?
+    /** Given the current state [T] return [C] representing the initial state. */
+    protected abstract fun T.toInitialChange(): C
 
     /** Apply [change] to [M]. */
     protected abstract fun M.applyBoundChange(change: C)
@@ -54,8 +54,7 @@ internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : Watchabl
 
     final override suspend fun clear() = invoke { erase() }
 
-    override fun getInitialChange(): C? =
-        immutable.toInitialChange()
+    override fun getInitialChange(): C? = immutable.toInitialChange()
 
     /** Record the latest change. */
     protected fun record(change: C) {

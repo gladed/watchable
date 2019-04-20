@@ -20,4 +20,6 @@ package io.gladed.watchable
 data class GroupChange(
     val watchable: Watchable<Change>,
     val change: Change
-) : Change
+) : Change {
+    override val isInitial get() = change.isInitial
+}

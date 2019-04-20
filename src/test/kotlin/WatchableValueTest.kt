@@ -40,7 +40,7 @@ class WatchableValueTest {
             watch(intValue) {
                 changes.send(it)
             }
-            changes.mustBe(ValueChange(null, 5))
+            changes.mustBe(ValueChange(null, 5, true))
             intValue.set(17)
             changes.mustBe(ValueChange(5, 17))
         }
@@ -50,7 +50,7 @@ class WatchableValueTest {
         runBlocking {
             intValue = 5.toWatchableValue()
             watch(intValue) { changes.send(it) }
-            changes.mustBe(ValueChange(null, 5))
+            changes.mustBe(ValueChange(null, 5, true))
             intValue.set(5)
             // Both announcements because value is NOT compared for equality
             changes.mustBe(ValueChange(5, 5))
@@ -84,7 +84,7 @@ class WatchableValueTest {
             watch(readOnly) {
                 changes.send(it)
             }
-            changes.mustBe(ValueChange(null, 4))
+            changes.mustBe(ValueChange(null, 4, true))
             intValue.set(5)
             assertEquals(5, readOnly.value)
             intValue.set(6)

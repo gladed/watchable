@@ -33,7 +33,7 @@ class CancelTest {
         runTest {
             intValue = watchableValueOf(5)
             watch(intValue) { changes.send(it) }
-            changes.mustBe(ValueChange(null, 5))
+            changes.mustBe(ValueChange(null, 5, true))
         }
 
         runTest {
@@ -49,7 +49,7 @@ class CancelTest {
         intValue = watchableValueOf(5)
         val scope1 = newScope()
         scope1.watch(intValue) { changes.send(it) }
-        changes.mustBe(ValueChange(null, 5))
+        changes.mustBe(ValueChange(null, 5, true))
         intValue.set(17)
         changes.mustBe(ValueChange(5, 17))
 
@@ -64,7 +64,7 @@ class CancelTest {
         val scope1 = newScope()
         val job = scope1.watch(intValue) { changes.send(it) }
 
-        changes.mustBe(ValueChange(null, 5))
+        changes.mustBe(ValueChange(null, 5, true))
         intValue.set(17)
         changes.mustBe(ValueChange(5, 17))
 
@@ -77,7 +77,7 @@ class CancelTest {
     @Test fun `watch allows parent scope to join`() = runTest {
         intValue = watchableValueOf(5)
         watch(intValue) { changes.send(it) }
-        changes.mustBe(ValueChange(null, 5))
+        changes.mustBe(ValueChange(null, 5, true))
     }
 
     @Test fun `throw during watch destroys everything`(){

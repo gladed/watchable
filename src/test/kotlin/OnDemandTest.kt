@@ -43,6 +43,7 @@ class OnDemandTest {
     private val tape = Channel<Exchange>(UNLIMITED)
 
     data class MyChange(val value: String) : Change {
+        override val isInitial = false
         override fun toString() = value
     }
 
