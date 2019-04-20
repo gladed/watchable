@@ -13,7 +13,7 @@ class FileStore(
 
     override suspend fun get(key: String) =
         key.keyFile().takeIf { it.exists() }?.readText()
-            ?: cannot("no file for key")
+            ?: cannot("find file for key")
 
     override suspend fun put(key: String, value: String) {
         key.keyFile().writeText(value)

@@ -3,7 +3,6 @@ import io.gladed.watchable.toWatchableValue
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.runBlocking
-import model.Bird
 import model.MutableBird
 import java.io.File
 
