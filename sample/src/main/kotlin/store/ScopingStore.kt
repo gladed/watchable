@@ -70,6 +70,11 @@ class ScopingStore<T : Any>(
             throw t
         }
 
+        override suspend fun delete(key: String) {
+            map { get(key) }?.stop()
+            back.delete(key)
+        }
+
         private suspend fun hold(key: String, getValueFunc: suspend () -> T): Pair<T, Stoppable> =
             map {
                 get(key)?.also { it.add(this@SingleStore) }

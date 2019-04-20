@@ -34,6 +34,11 @@ class LogicTest {
             val bird = MutableBird.inflate(robin)
             logic.birds.create(this).put(robin.id, bird)
             assertEquals(robin, birdStore.get(robin.id))
+            birdStore.delete(robin.id) // Delete from backing store to see if it gets re-written
+
+            bird.following.add(wren.id)
+            trigger() // Let stuff happen
+            assertEquals(wren.id, birdStore.get(robin.id).following[0])
         }
     }
 }

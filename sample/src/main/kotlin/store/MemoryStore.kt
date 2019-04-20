@@ -12,4 +12,8 @@ class MemoryStore<T : Any> : Store<T> {
     override suspend fun put(key: String, value: T) {
         map { put(key, value) }
     }
+
+    override suspend fun delete(key: String) {
+        map { remove(key) }
+    }
 }
