@@ -106,7 +106,7 @@ class LogicTest {
         }
     }
 
-    @Test fun `delete bird deletes chirp`() = test {
+    @Test fun `delete bird causes chirp delete`() = test {
         inScope {
             val birds = logic.birds.create(this)
             val chirps = logic.chirps.create(this)

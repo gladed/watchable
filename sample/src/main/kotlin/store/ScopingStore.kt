@@ -26,7 +26,7 @@ class ScopingStore<T : Any>(
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
-    private val map = mutableMapOf<String, Holding>().guarded()
+    private val map = mutableMapOf<String, Holding<T>>().guarded()
 
     /**
      * Return a new [Store]; items accessed by this store will have a corresponding operation (see [start]) in effect
@@ -54,7 +54,7 @@ class ScopingStore<T : Any>(
     }
 
     /** Attempt to hold an instance of [T] on behalf of one or more [Store]s. */
-    private inner class Holding(first: Store<T>, val watching: Deferred<Pair<T, Stoppable>>) {
+    private class Holding<T : Any>(first: Store<T>, val watching: Deferred<Pair<T, Stoppable>>) {
         private val stores = mutableSetOf(first).guarded()
 
         suspend fun add(store: Store<T>) {
@@ -69,6 +69,13 @@ class ScopingStore<T : Any>(
             } else {
                 false
             }
+
+        /** Stop holding as we delete this item. */
+        suspend fun delete() {
+            val toStop = watching.await().second
+            if (toStop is Removable) toStop.remove()
+            toStop.stop()
+        }
 
         /** Stop holding. */
         suspend fun stop() {
@@ -107,7 +114,8 @@ class ScopingStore<T : Any>(
         }
 
         override suspend fun delete(key: String) {
-            map { get(key) }?.stop()
+            map { get(key) }?.delete()
+            map { remove(key) }
             back.delete(key)
         }
 
