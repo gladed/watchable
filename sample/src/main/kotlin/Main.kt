@@ -10,11 +10,11 @@ fun main() = Main().go()
 
 class Main : CoroutineScope {
     override val coroutineContext = Dispatchers.Default
-    private val adapter = Adapter(coroutineContext, File("store"))
+    private val logic = Adapter.createLogic(coroutineContext, File("store"))
     fun go() {
         runBlocking {
             println("Hello world")
-            val store = adapter.birds.create(this)
+            val store = logic.birds.create(this)
             val robin = MutableBird(name = "robin".toWatchableValue())
             store.put(robin.id, robin)
         }

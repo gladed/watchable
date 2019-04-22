@@ -182,4 +182,7 @@ class ScopingStoreTest {
             coVerify { release.stop() }
         }
     }
+
+    // TODO: Throw during watch itself
+    // TODO: Throw during start() of watch
 }

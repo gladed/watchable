@@ -4,13 +4,13 @@ import kotlinx.serialization.Serializable
 import java.util.UUID
 
 @Serializable
-data class Bird(
+data class Chirp(
     /** A unique identifier for this person. */
     val id: String = UUID.randomUUID().toString(),
 
-    /** The name of this person. */
-    val name: String,
+    /** ID of originating [Bird]. */
+    val from: String,
 
-    /** [Bird.id]s that this bird is following. */
-    val following: List<String> = listOf()
+    /** Text sent. */
+    val text: String
 )

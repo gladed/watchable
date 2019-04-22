@@ -1,22 +1,35 @@
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.Flow
 import logic.Logic
 import model.Bird
+import model.Chirp
+import model.Operations
 import model.MutableBird
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Test
 import store.Cannot
 import store.MemoryStore
+import java.util.regex.Pattern
 
+@UseExperimental(FlowPreview::class)
 class LogicTest {
     private val robin = Bird(name = "robin")
+    private val chirp = Chirp(from = robin.id, text = "hi")
     private val wren = Bird(name = "wren")
-    private val birdStore = MemoryStore<Bird>()
+    private val birdStore = MemoryStore<Bird>("bird")
+    private val chirpStore = MemoryStore<Chirp>("chirp")
+    private val ops = object : Operations {
+        override fun chirpsForBird(birdId: String): Flow<String> {
+            TODO()
+        }
+    }
 
     /** Run a test with a `logic` object backed by RAM. */
     private fun test(func: suspend Context.() -> Unit) {
         runTest {
             (object : Context, TestCoroutineScope by this {
-                override val logic = Logic(coroutineContext, birdStore)
+                override val logic = Logic(coroutineContext, birdStore, chirpStore, ops)
             }).func()
         }
     }
@@ -63,6 +76,26 @@ class LogicTest {
 
             impossible {
                 bird.following.add(wren.id)
+            }
+        }
+    }
+
+    @Test fun `bird sends a chirp`() = test {
+        inScope {
+            val bird = MutableBird.inflate(robin)
+            logic.birds.create(this).put(robin.id, bird)
+            logic.chirps.create(this).put(chirp.id, chirp)
+        }
+
+        inScope {
+            assertEquals(chirp, logic.chirps.create(this).get(chirp.id))
+        }
+    }
+
+    @Test fun `unknown bird cannot chirp`() = test {
+        inScope {
+            impossible {
+                logic.chirps.create(this).put(chirp.id, chirp)
             }
         }
     }

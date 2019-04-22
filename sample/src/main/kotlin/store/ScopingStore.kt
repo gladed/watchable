@@ -12,7 +12,7 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A [Store] factory producing stores that trigger operations on its items.
+ * A [Store] factory producing stores that trigger operations on its items while in use.
  *
  * For any new object retrieved, [start] is called. This operation is stopped only when the item
  * is deleted, or all scopes using it have completed.
@@ -26,7 +26,34 @@ class ScopingStore<T : Any>(
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
-    /** Watch what is going on for one or more users of a [T] object. */
+    private val map = mutableMapOf<String, Holding>().guarded()
+
+    /**
+     * Return a new [Store]; items accessed by this store will have a corresponding operation (see [start]) in effect
+     * until the completion of all scopes using the item.
+     */
+    fun create(scope: CoroutineScope): Store<T> {
+        val newStore = SingleStore()
+        scope.coroutineContext[Job]?.invokeOnCompletion {
+            launch {
+                map {
+                    // Yank this store from all holds
+                    val dead = filterValues { it.remove(newStore) }
+                    // Yank all newly stopped holds
+                    keys.removeAll(dead.keys)
+                }
+            }
+        }
+        return newStore
+    }
+
+    /** Release everything regardless of the state of scopes. */
+    suspend fun stop() {
+        map { toMap().also { clear() } }.values
+            .forEach { it.stop() }
+    }
+
+    /** Attempt to hold an instance of [T] on behalf of one or more [Store]s. */
     private inner class Holding(first: Store<T>, val watching: Deferred<Pair<T, Stoppable>>) {
         private val stores = mutableSetOf(first).guarded()
 
@@ -43,29 +70,31 @@ class ScopingStore<T : Any>(
                 false
             }
 
-        /** Stop the hold wherever it is. */
+        /** Stop holding. */
         suspend fun stop() {
             // If the request isn't done then cancel it
             watching.cancel()
             @Suppress("EmptyCatchBlock") // Ignore cancellations
             try {
-                // Wait for the holder to arrive (if possible) then release it
-                watching.await().second.stop()
+                // Stop watching if not already cancelled
+                if (!watching.isCancelled) {
+                    watching.await().second.stop()
+                }
             } catch (c: CancellationException) { }
         }
     }
 
-    private val map = mutableMapOf<String, Holding>().guarded()
-
+    /** A [Store] whose objects are held when accessing them. */
     private inner class SingleStore : Store<T> {
         override suspend fun put(key: String, value: T) {
-            // Push the value back
-            back.put(key, value)
+            // Put a hold on the value
             hold(key) { value }.apply {
                 if (first !== value) {
                     cannot("replace while different object with same key is in use")
                 }
             }
+            // Put it in the backing store
+            back.put(key, value)
         }
 
         @Suppress("TooGenericExceptionCaught") // Rollback in case of any failure
@@ -88,29 +117,9 @@ class ScopingStore<T : Any>(
                     ?: Holding(this@SingleStore, async(SupervisorJob()) {
                         val value = getValueFunc()
                         value to value.start()
-                    }).also { put(key, it) }
+                    }).also {
+                        put(key, it)
+                    }
             }.watching.await()
-    }
-
-    /**
-     * Return a new [Store]; items accessed by this store will have a corresponding operation (see [start]) in effect
-     * until the completion of all scopes using the item.
-     */
-    fun create(scope: CoroutineScope): Store<T> {
-        val newStore = SingleStore()
-        scope.coroutineContext[Job]?.invokeOnCompletion {
-            launch {
-                map {
-                    keys.removeAll(filterValues { it.remove(newStore) }.keys)
-                }
-            }
-        }
-        return newStore
-    }
-
-    /** Release everything regardless of the state of scopes. */
-    suspend fun stop() {
-        map { toMap().also { clear() } }.values
-            .forEach { it.stop() }
     }
 }

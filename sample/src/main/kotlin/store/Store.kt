@@ -5,14 +5,10 @@ interface Store<T : Any> {
     /** Return the corresponding element, or throw if not present. */
     suspend fun get(key: String): T
 
-    /**
-     * Write something to the store at the given key, overwriting what was there, if anything.
-     */
+    /** Write something to the store at the given key, overwriting what was there, if anything. */
     suspend fun put(key: String, value: T)
 
-    /**
-     * Delete any data found at [key].
-     */
+    /** Delete any data found at [key]. */
     suspend fun delete(key: String)
 
     /** Convert this [Store] of deflated items into a [Store] of inflated items [U]. */
