@@ -1,16 +1,15 @@
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flow
 import logic.Logic
 import model.Bird
 import model.Chirp
-import model.Operations
 import model.MutableBird
+import model.Operations
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Test
 import store.Cannot
 import store.MemoryStore
-import java.util.regex.Pattern
 
 @UseExperimental(FlowPreview::class)
 class LogicTest {
@@ -19,11 +18,18 @@ class LogicTest {
     private val wren = Bird(name = "wren")
     private val birdStore = MemoryStore<Bird>("bird")
     private val chirpStore = MemoryStore<Chirp>("chirp")
+
     private val ops = object : Operations {
-        override fun chirpsForBird(birdId: String): Flow<String> {
-            TODO()
+        override fun chirpsForBird(birdId: String) =
+            flow {
+                chirpStore.keys().forEach { chirpId ->
+                    if (chirpStore.get(chirpId).from == birdId) {
+                        emit(chirpId)
+                    }
+                }
+            }
         }
-    }
+
 
     /** Run a test with a `logic` object backed by RAM. */
     private fun test(func: suspend Context.() -> Unit) {
@@ -96,6 +102,21 @@ class LogicTest {
         inScope {
             impossible {
                 logic.chirps.create(this).put(chirp.id, chirp)
+            }
+        }
+    }
+
+    @Test fun `delete bird deletes chirp`() = test {
+        inScope {
+            val birds = logic.birds.create(this)
+            val chirps = logic.chirps.create(this)
+
+            birds.put(robin.id, MutableBird.inflate(robin))
+            chirps.put(chirp.id, chirp)
+            birds.delete(robin.id)
+
+            impossible {
+                chirps.get(chirp.id)
             }
         }
     }

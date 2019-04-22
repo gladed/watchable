@@ -17,4 +17,7 @@ class MemoryStore<T : Any>(private val name: String) : Store<T> {
     override suspend fun delete(key: String) {
         map { remove(key) }
     }
+
+    /** Return the keys available in memory at this moment. */
+    suspend fun keys() = map { keys.toSet() }
 }

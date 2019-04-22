@@ -7,8 +7,8 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import model.Bird
 import model.Chirp
-import model.Operations
 import model.MutableBird
+import model.Operations
 import store.Store
 import store.scope
 import kotlin.coroutines.CoroutineContext
@@ -18,33 +18,28 @@ class Logic(
     context: CoroutineContext,
     private val birdStore: Store<Bird>,
     private val chirpStore: Store<Chirp>,
-    val birdOps: Operations
+    val ops: Operations
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
     val birds = birdStore
         .inflate(MutableBird)
-        .scope(coroutineContext) {
-            birdWatcher().apply { start() }
+        .scope(coroutineContext) { bird ->
+            bird.birdWatcher().apply { start() }
         }
 
     val chirps = chirpStore
-        .scope(coroutineContext) {
-            chirpWatcher().apply { start() }
+        .scope(coroutineContext) { chirp ->
+            chirp.chirpWatcher().apply { start() }
         }
 
     private suspend fun Chirp.chirpWatcher(): Watcher {
         return object : Watcher {
             override suspend fun start() {
-                println("${Thread.currentThread().name}: checking bird $from")
                 birdStore.get(from) // Make sure it's there
             }
-
-            override fun cancel() {
-            }
-
-            override suspend fun stop() {
-            }
+            override fun cancel() { }
+            override suspend fun stop() { }
         }
     }
 
