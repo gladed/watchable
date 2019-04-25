@@ -29,7 +29,7 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A [Store] factory producing stores that trigger operations on its items while in use.
+ * A [Store] factory producing stores that trigger operations on its items while those objects are in use.
  *
  * For any new object retrieved, [createHold] is called to construct a [Hold] on the object.
  */

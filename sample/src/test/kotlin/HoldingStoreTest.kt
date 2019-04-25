@@ -1,4 +1,3 @@
-import io.gladed.watchable.Watcher
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -32,12 +31,12 @@ class HoldingStoreTest {
 
     private val hold = mockk<Hold>(relaxUnitFun = true)
 
-    interface ScopedStoreTest : TestCoroutineScope {
+    interface HoldingStoreScope : TestCoroutineScope {
         val scopeStore: HoldingStore<Bird>
     }
 
-    private fun test(func: suspend ScopedStoreTest.() -> Unit) = runTest {
-        (object : ScopedStoreTest, TestCoroutineScope by this {
+    private fun test(func: suspend HoldingStoreScope.() -> Unit) = runTest {
+        (object : HoldingStoreScope, TestCoroutineScope by this {
             override val scopeStore = HoldingStore(coroutineContext, rootStore) { creator.create(this) }
         }).func()
     }
@@ -183,7 +182,4 @@ class HoldingStoreTest {
             coVerify { hold.stop() }
         }
     }
-
-    // TODO: Throw during watch itself
-    // TODO: Throw during start() of watch
 }

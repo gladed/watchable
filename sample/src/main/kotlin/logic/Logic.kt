@@ -7,7 +7,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collect
-import model.Bird
 import model.Chirp
 import model.MutableBird
 import store.Hold
@@ -19,15 +18,15 @@ import kotlin.coroutines.CoroutineContext
 @UseExperimental(FlowPreview::class)
 class Logic(
     context: CoroutineContext,
-    birdStore: Store<Bird>,
+    birdStore: Store<MutableBird>,
     chirpStore: Store<Chirp>,
     private val ops: Operations
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
-    val birds = birdStore.inflate(MutableBird).holding(coroutineContext) { bird ->
+    val birds = birdStore.holding(coroutineContext) { bird ->
             Hold(onRemove = {
-                // Delete any chirps from this bird.
+                // Delete any chirps from this bird using a throwaway scope
                 coroutineScope {
                     val chirps = chirps.create(this)
                     ops.chirpsForBird(bird.id).collect { chirpId ->
@@ -37,7 +36,7 @@ class Logic(
             }) + watch(bird.watchables) {
                 if (!it.isInitial) {
                     // For any non-initial change, store the current version
-                    birdStore.put(bird.id, MutableBird.deflate(bird))
+                    birdStore.put(bird.id, bird)
                 }
             } + watch(bird.following, INLINE) {
                 if (!it.isInitial) it.simple.forEach { simple ->

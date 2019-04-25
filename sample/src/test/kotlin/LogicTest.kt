@@ -22,7 +22,10 @@ class LogicTest {
     private fun test(func: suspend Context.() -> Unit) {
         runTest {
             (object : Context, TestCoroutineScope by this {
-                override val logic = Logic(coroutineContext, birdStore, chirpStore, Operations(chirpStore))
+                override val logic = Logic(coroutineContext,
+                    birdStore.inflate(MutableBird),
+                    chirpStore,
+                    Operations(chirpStore))
             }).func()
         }
     }
