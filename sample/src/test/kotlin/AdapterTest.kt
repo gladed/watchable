@@ -5,7 +5,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
-import util.runTest
+import test.runTest
 
 class AdapterTest {
     @Rule @JvmField val folder = TemporaryFolder()

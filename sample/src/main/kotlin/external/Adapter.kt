@@ -1,9 +1,9 @@
 package external
 
 import logic.Logic
+import logic.Operations
 import model.Bird
 import model.Chirp
-import logic.Operations
 import model.MutableBird
 import store.FileStore
 import store.cached
