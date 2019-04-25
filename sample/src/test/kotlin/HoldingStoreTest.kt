@@ -16,6 +16,8 @@ import store.Cannot
 import store.Hold
 import store.HoldingStore
 import store.Store
+import util.TestCoroutineScope
+import util.runTest
 
 @UseExperimental(ObsoleteCoroutinesApi::class)
 class HoldingStoreTest {

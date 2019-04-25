@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.flatMapConcat
 @UseExperimental(FlowPreview::class)
 class MemoryStore<T : Any>(private val name: String) : Store<T> {
 
-    val map = mutableMapOf<String, T>().guarded()
+    private val map = mutableMapOf<String, T>().guarded()
 
     override suspend fun get(key: String): T =
         map { get(key) ?: cannot("get $name by key") }

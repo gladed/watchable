@@ -5,10 +5,11 @@ import model.Bird
 import model.Chirp
 import model.MutableBird
 import org.junit.Assert.assertEquals
-import org.junit.Assert.fail
 import org.junit.Test
-import store.Cannot
 import store.MemoryStore
+import util.TestCoroutineScope
+import util.impossible
+import util.runTest
 
 @UseExperimental(FlowPreview::class)
 class LogicTest {
@@ -114,14 +115,6 @@ class LogicTest {
     companion object {
         private interface Context : TestCoroutineScope {
             val logic: Logic
-            suspend fun impossible(func: suspend () -> Unit) {
-                try {
-                    func()
-                    fail("should have failed")
-                } catch (c: Cannot) {
-                    println("As expected: $c")
-                }
-            }
         }
     }
 }
