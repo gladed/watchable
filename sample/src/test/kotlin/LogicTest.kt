@@ -7,9 +7,9 @@ import model.MutableBird
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import store.MemoryStore
-import util.TestCoroutineScope
-import util.impossible
-import util.runTest
+import test.TestCoroutineScope
+import test.impossible
+import test.runTest
 
 @UseExperimental(FlowPreview::class)
 class LogicTest {

@@ -1,11 +1,11 @@
 package store
 
-import util.impossible
+import test.impossible
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.toList
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import util.runTest
+import test.runTest
 
 @UseExperimental(FlowPreview::class)
 class MemoryStoreTest {

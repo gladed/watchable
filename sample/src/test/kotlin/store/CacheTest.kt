@@ -11,8 +11,8 @@ import kotlinx.coroutines.sync.withLock
 import org.junit.Assert.assertEquals
 import org.junit.Ignore
 import org.junit.Test
-import util.TestCoroutineScope
-import util.runTest
+import test.TestCoroutineScope
+import test.runTest
 
 @UseExperimental(FlowPreview::class)
 class CacheTest {
