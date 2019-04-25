@@ -9,6 +9,7 @@ import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import org.junit.Assert.assertEquals
+import org.junit.Ignore
 import org.junit.Test
 import util.TestCoroutineScope
 import util.runTest
@@ -54,6 +55,10 @@ class CacheTest {
         coVerify(exactly = 0) { store.get(thing.id) }
     }
 
+    // Note: a smart cache would connect two requests and return them together
+    // BUT such a cache would also cancel get requests which are outstanding while delete happens, accommodate
+    // put during get, etc. Semantics are unclear.
+    @Ignore
     @Test fun `get slowly twice`() = test {
         val mutex = Mutex(locked = true)
         coEvery { store.get(thing.id) } coAnswers { mutex.withLock { thing } }
