@@ -1,3 +1,5 @@
+package util
+
 import io.gladed.watchable.TestContextWrapper
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
@@ -6,6 +8,8 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.test.TestCoroutineContext
 import kotlinx.coroutines.test.withTestContext
+import org.junit.Assert
+import store.Cannot
 
 /** Run a test within a [TestCoroutineScope]. */
 @UseExperimental(ObsoleteCoroutinesApi::class)
@@ -16,6 +20,15 @@ fun runTest(func: suspend TestCoroutineScope.() -> Unit) {
                 override val testContext = this@withTestContext
                 override val coroutineContext = this@runBlocking.coroutineContext + TestContextWrapper(testContext)
             }.func()}
+    }
+}
+
+suspend fun impossible(func: suspend () -> Unit) {
+    try {
+        func()
+        Assert.fail("should have failed")
+    } catch (c: Cannot) {
+        println("As expected: $c")
     }
 }
 
