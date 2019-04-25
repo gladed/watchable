@@ -11,6 +11,6 @@ data class Bird(
     /** The name of this person. */
     val name: String,
 
-    /** [Bird.id]s that this bird is following. */
+    /** [Bird.id]s of [Bird]s this [Bird] is following. */
     val following: List<String> = listOf()
 )

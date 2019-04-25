@@ -1,12 +1,11 @@
 package external
 
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.Flow
 import logic.Logic
 import model.Bird
 import model.Chirp
-import model.Operations
+import logic.Operations
 import store.FileStore
+import store.Store
 import util.inflate
 import java.io.File
 import kotlin.coroutines.CoroutineContext
@@ -14,18 +13,13 @@ import kotlin.coroutines.CoroutineContext
 /** Implement a Logic object backed by real adapters. */
 object Adapter {
 
-    @UseExperimental(FlowPreview::class)
-    @Suppress("UNUSED_PARAMETER")
-    class Ops(root: File) : Operations {
-        override fun chirpsForBird(birdId: String): Flow<String> {
-            TODO()
-        }
-    }
+    class FileOperations(chirps: Store<Chirp>) : Operations(chirps)
 
     fun createLogic(context: CoroutineContext, root: File): Logic {
-        return Logic(context,
-            FileStore(root, "bird", ".json").inflate(Bird.serializer()),
-            FileStore(root, "chirp", ".json").inflate(Chirp.serializer()),
-            Ops(root))
+        val birds = FileStore(root, "bird", JSON_SUFFIX).inflate(Bird.serializer())
+        val chirps = FileStore(root, "chirp", JSON_SUFFIX).inflate(Chirp.serializer())
+        return Logic(context, birds, chirps, FileOperations(chirps))
     }
+
+    private const val JSON_SUFFIX = "json"
 }

@@ -25,20 +25,20 @@ interface Watcher : Stoppable {
     suspend fun start()
 
     /** Combine two [Watcher] objects, returning a single one that spans both. */
-    operator fun plus(right: Watcher) = object : Watcher {
+    operator fun plus(other: Watcher) = object : Watcher {
         override suspend fun start() {
             this@Watcher.start()
-            right.start()
+            other.start()
         }
 
         override fun cancel() {
             this@Watcher.cancel()
-            right.cancel()
+            other.cancel()
         }
 
         override suspend fun stop() {
             this@Watcher.stop()
-            right.stop()
+            other.stop()
         }
     }
 }

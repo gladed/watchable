@@ -1,36 +1,52 @@
+/*
+ * (c) Copyright 2019 Glade Diviney.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package store
 
-import io.gladed.watchable.util.Stoppable
 import io.gladed.watchable.util.guarded
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
+import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
  * A [Store] factory producing stores that trigger operations on its items while in use.
  *
- * For any new object retrieved, [start] is called. This operation is stopped only when the item
- * is deleted, or all scopes using it have completed.
+ * For any new object retrieved, [createHold] is called to construct a [Hold] on the object.
  */
-class ScopingStore<T : Any>(
+class HoldingStore<T : Any>(
     /** The parent context for starting and stopping operations. */
     context: CoroutineContext,
     /** The store being wrapped. */
     val back: Store<T>,
-    private val start: suspend T.() -> Stoppable
+    private val createHold: suspend T.() -> Hold
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
     private val map = mutableMapOf<String, Holding<T>>().guarded()
 
     /**
-     * Return a new [Store]; items accessed by this store will have a corresponding operation (see [start]) in effect
-     * until the completion of all scopes using the item.
+     * Return a new [Store]; items accessed by this store will have a corresponding hold (see [createHold]) in
+     * effect until the completion of all scopes using the item.
      */
     fun create(scope: CoroutineScope): Store<T> {
         val newStore = SingleStore()
@@ -54,7 +70,7 @@ class ScopingStore<T : Any>(
     }
 
     /** Attempt to hold an instance of [T] on behalf of one or more [Store]s. */
-    private class Holding<T : Any>(first: Store<T>, val watching: Deferred<Pair<T, Stoppable>>) {
+    private class Holding<T : Any>(first: Store<T>, val hold: Deferred<Pair<T, Hold>>) {
         private val stores = mutableSetOf(first).guarded()
 
         suspend fun add(store: Store<T>) {
@@ -72,26 +88,27 @@ class ScopingStore<T : Any>(
 
         /** Stop holding as we delete this item. */
         suspend fun delete() {
-            val toStop = watching.await().second
-            if (toStop is Removable) toStop.remove()
+            val toStop = hold.await().second
+            toStop.remove()
             toStop.stop()
         }
 
         /** Stop holding. */
         suspend fun stop() {
             // If the request isn't done then cancel it
-            watching.cancel()
+            hold.cancel()
             @Suppress("EmptyCatchBlock") // Ignore cancellations
             try {
                 // Stop watching if not already cancelled
-                if (!watching.isCancelled) {
-                    watching.await().second.stop()
+                if (!hold.isCancelled) {
+                    hold.await().second.stop()
                 }
             } catch (c: CancellationException) { }
         }
     }
 
     /** A [Store] whose objects are held when accessing them. */
+    @UseExperimental(FlowPreview::class)
     private inner class SingleStore : Store<T> {
         override suspend fun put(key: String, value: T) {
             // Put a hold on the value
@@ -119,15 +136,19 @@ class ScopingStore<T : Any>(
             back.delete(key)
         }
 
-        private suspend fun hold(key: String, getValueFunc: suspend () -> T): Pair<T, Stoppable> =
+        override fun keys(): Flow<String> = back.keys()
+
+        private suspend fun hold(key: String, getValue: suspend () -> T): Pair<T, Hold> =
             map {
                 get(key)?.also { it.add(this@SingleStore) }
                     ?: Holding(this@SingleStore, async(SupervisorJob()) {
-                        val value = getValueFunc()
-                        value to value.start()
+                        val value = getValue()
+                        val hold = value.createHold()
+                        hold.start()
+                        value to hold
                     }).also {
                         put(key, it)
                     }
-            }.watching.await()
+            }.hold.await()
     }
 }

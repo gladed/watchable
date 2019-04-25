@@ -14,36 +14,37 @@ import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
 import store.Cannot
-import store.ScopingStore
+import store.Hold
+import store.HoldingStore
 import store.Store
 
 @UseExperimental(ObsoleteCoroutinesApi::class)
-class ScopingStoreTest {
+class HoldingStoreTest {
     private val robin = Bird(name = "robin")
 
     private val rootStore = mockk<Store<Bird>>(relaxUnitFun = true)
 
     interface WatchCreator {
-        suspend fun create(bird: Bird): Watcher
+        suspend fun create(bird: Bird): Hold
     }
 
     private val creator = mockk<WatchCreator>()
 
-    private val release = mockk<Watcher>(relaxUnitFun = true)
+    private val hold = mockk<Hold>(relaxUnitFun = true)
 
     interface ScopedStoreTest : TestCoroutineScope {
-        val scopeStore: ScopingStore<Bird>
+        val scopeStore: HoldingStore<Bird>
     }
 
     private fun test(func: suspend ScopedStoreTest.() -> Unit) = runTest {
         (object : ScopedStoreTest, TestCoroutineScope by this {
-            override val scopeStore = ScopingStore(coroutineContext, rootStore) { creator.create(this) }
+            override val scopeStore = HoldingStore(coroutineContext, rootStore) { creator.create(this) }
         }).func()
     }
 
     @Before
     fun setup() {
-        coEvery { creator.create(robin) } returns release
+        coEvery { creator.create(robin) } returns hold
         coEvery { rootStore.get(robin.id) } returns robin
     }
 
@@ -61,7 +62,7 @@ class ScopingStoreTest {
         }
 
         coVerify { creator.create(robin) }
-        coVerify { release.stop() }
+        coVerify { hold.stop() }
     }
 
     @Test fun `hold only once when two scopes get`() = test {
@@ -81,9 +82,9 @@ class ScopingStoreTest {
             inScope {
                 scopeStore.create(this).get(robin.id)
             }
-            coVerify(exactly = 0) { release.stop() }
+            coVerify(exactly = 0) { hold.stop() }
         }
-        coVerify(exactly = 1) { release.stop() }
+        coVerify(exactly = 1) { hold.stop() }
     }
 
     @Test fun `hold+release only once when get twice from same scope`() = test {
@@ -93,7 +94,7 @@ class ScopingStoreTest {
             store.get(robin.id)
             coVerify(exactly = 1) { creator.create(robin) }
         }
-        coVerify(exactly = 1) { release.stop() }
+        coVerify(exactly = 1) { hold.stop() }
     }
 
     @Test fun `second user must reallocate`() = test {
@@ -101,7 +102,7 @@ class ScopingStoreTest {
         inScope { scopeStore.create(this).get(robin.id) }
 
         coVerify(exactly = 2) { creator.create(robin) }
-        coVerify(exactly = 2) { release.stop() }
+        coVerify(exactly = 2) { hold.stop() }
     }
 
     @Test fun `failure to get causes throw`() = test {
@@ -150,10 +151,10 @@ class ScopingStoreTest {
 
         scope1.cancel()
         trigger()
-        coVerify(exactly = 0) { release.stop() }
+        coVerify(exactly = 0) { hold.stop() }
         scope2.cancel()
         trigger()
-        coVerify(exactly = 1) { release.stop() }
+        coVerify(exactly = 1) { hold.stop() }
     }
 
     @Test fun `attempt to get is cancelled when scope dies`() = test {
@@ -179,7 +180,7 @@ class ScopingStoreTest {
             scopeStore.create(this).get(robin.id)
             scopeStore.stop()
             // Released even though scope still active
-            coVerify { release.stop() }
+            coVerify { hold.stop() }
         }
     }
 

@@ -1,10 +1,9 @@
 import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.flow
 import logic.Logic
+import logic.Operations
 import model.Bird
 import model.Chirp
 import model.MutableBird
-import model.Operations
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Test
@@ -19,23 +18,11 @@ class LogicTest {
     private val birdStore = MemoryStore<Bird>("bird")
     private val chirpStore = MemoryStore<Chirp>("chirp")
 
-    private val ops = object : Operations {
-        override fun chirpsForBird(birdId: String) =
-            flow {
-                chirpStore.keys().forEach { chirpId ->
-                    if (chirpStore.get(chirpId).from == birdId) {
-                        emit(chirpId)
-                    }
-                }
-            }
-        }
-
-
     /** Run a test with a `logic` object backed by RAM. */
     private fun test(func: suspend Context.() -> Unit) {
         runTest {
             (object : Context, TestCoroutineScope by this {
-                override val logic = Logic(coroutineContext, birdStore, chirpStore, ops)
+                override val logic = Logic(coroutineContext, birdStore, chirpStore, Operations(chirpStore))
             }).func()
         }
     }
