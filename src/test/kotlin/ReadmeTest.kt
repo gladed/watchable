@@ -26,6 +26,7 @@ import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.TestCoroutineScope
@@ -108,13 +109,15 @@ class ReadmeTest {
         outputIs("""2""")
     }
 
+    @UseExperimental(ExperimentalCoroutinesApi::class)
     @Test fun `Batching readme`() = runTest {
-        val list = listOf(4, 5).toWatchableList()
-        batch(list, 50) { println(it) }.start()
-        list { add(6); add(7) }
-        advanceTimeBy(60) // Not in doc
-        // After time passes, prints:
-        // [Initial(list=[4, 5]), Add(index=2, added=6), Add(index=3, added=7)]
+        pauseDispatcher {
+            val list = listOf(4, 5).toWatchableList()
+            batch(list, 50) { println(it) }.start()
+            list { add(6); add(7) }
+            // After time passes, prints:
+            // [Initial(list=[4, 5]), Add(index=2, added=6), Add(index=3, added=7)]
+        }
         outputIs("""
             [Initial(list=[4, 5]), Insert(index=2, insert=[6, 7])]""")
     }

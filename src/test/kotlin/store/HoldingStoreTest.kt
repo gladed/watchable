@@ -16,6 +16,7 @@
 
 package store
 
+import impossible
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -38,6 +39,7 @@ import io.gladed.watchable.store.Cannot
 import io.gladed.watchable.store.Hold
 import io.gladed.watchable.store.HoldingStore
 import io.gladed.watchable.store.Store
+import io.gladed.watchable.store.holding
 import runTest
 import java.util.UUID
 
@@ -63,7 +65,7 @@ class HoldingStoreTest {
 
     private fun test(func: suspend HoldingStoreScope.() -> Unit) = runTest {
         (object : HoldingStoreScope, TestCoroutineScope by this {
-            override val scopeStore = HoldingStore(coroutineContext, rootStore) { creator.create(this) }
+            override val scopeStore = rootStore.holding(coroutineContext) { creator.create(it) }
         }).func()
     }
 
@@ -137,7 +139,6 @@ class HoldingStoreTest {
                 println("Threw $c (as expected)")
             }
         }
-//        testContext.assertAllUnhandledExceptions { true }
     }
 
     @Test fun `second attempt succeeds`() = test {
@@ -152,7 +153,6 @@ class HoldingStoreTest {
             coEvery { rootStore.get(robin.id) } returns robin
             assertEquals(robin, store.get(robin.id))
         }
-//        testContext.assertAllUnhandledExceptions { true }
     }
 
     @Test fun `two attempts collude`() = test {
@@ -189,6 +189,26 @@ class HoldingStoreTest {
         // Return to normal function
         coEvery { rootStore.get(eq(robin.id)) } returns robin
         assertEquals(robin, store.get(robin.id))
+    }
+
+    @Test fun `delete stops hold`() = test {
+        coroutineScope {
+            val store = scopeStore.create(this)
+            store.get(robin.id)
+            store.delete(robin.id)
+            coVerify { hold.stop() }
+            coVerify { rootStore.delete(robin.id) }
+        }
+    }
+
+    @Test fun `cannot re-put`() = test {
+        coroutineScope {
+            val store = scopeStore.create(this)
+            store.get(robin.id)
+            impossible {
+                store.put(robin.id, robin.copy())
+            }
+        }
     }
 
     @Test fun `stop everybody`() = test {
