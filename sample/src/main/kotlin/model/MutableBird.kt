@@ -6,7 +6,7 @@ import io.gladed.watchable.group
 import io.gladed.watchable.toWatchableList
 import io.gladed.watchable.toWatchableValue
 import io.gladed.watchable.watchableListOf
-import store.Inflater
+import io.gladed.watchable.store.Inflater
 import java.util.UUID
 
 /** Mutable form of [Bird]. */

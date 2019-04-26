@@ -16,18 +16,10 @@
 
 package store
 
+import io.gladed.watchable.store.Store
 import kotlin.coroutines.CoroutineContext
-
-/**
- * Return a [HoldingStore] around this [Store].
- */
-fun <T : Any> Store<T>.holding(context: CoroutineContext, start: suspend (T) -> Hold) =
-    HoldingStore(context, this, start)
 
 /**
  * Return a memory cached version of this [Store].
  */
 fun <T : Any> Store<T>.cached(context: CoroutineContext) = Cache(context, this)
-
-/** Throw an exception to complain that something cannot be done. */
-fun cannot(doSomething: String): Nothing = throw Cannot(doSomething)

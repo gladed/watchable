@@ -1,5 +1,6 @@
 package store
 
+import io.gladed.watchable.store.Store
 import io.gladed.watchable.util.guarded
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred

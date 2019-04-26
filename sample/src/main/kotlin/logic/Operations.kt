@@ -4,7 +4,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.filter
 import kotlinx.coroutines.flow.map
 import model.Chirp
-import store.Store
+import io.gladed.watchable.store.Store
 
 /** Perform search operations based on available stores. */
 @UseExperimental(FlowPreview::class)

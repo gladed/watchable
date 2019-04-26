@@ -16,10 +16,16 @@
 
 package io.gladed.watchable
 
-import io.gladed.watchable.util.Stoppable
-
 /** An ongoing watch operation. */
-interface Watcher : Stoppable {
+interface Watcher {
+    /** Immediately stop. Repeated invocations have no effect. */
+    fun cancel()
+
+    /**
+     * Gracefully stop, suspending if necessary to allow outstanding operations to complete.
+     * Repeated invocations have no effect.
+     */
+    suspend fun stop()
 
     /** Return when the watcher has become effective. */
     suspend fun start()

@@ -2,8 +2,8 @@ package util
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
-import store.Inflater
-import store.Store
+import io.gladed.watchable.store.Inflater
+import io.gladed.watchable.store.Store
 
 /** Convert this [KSerializer] to an [Inflater] of [String] and [T] */
 fun <T : Any> KSerializer<T>.toInflater() = object : Inflater<String, T> {

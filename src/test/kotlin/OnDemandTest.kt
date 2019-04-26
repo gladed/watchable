@@ -17,6 +17,7 @@
 import io.gladed.watchable.Change
 import io.gladed.watchable.Period.INLINE
 import io.gladed.watchable.WatchableBase
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
@@ -120,17 +121,20 @@ class OnDemandTest {
         tx(3)
     }
 
+    @UseExperimental(ExperimentalCoroutinesApi::class)
     @Test(timeout = 500) fun `receive items delayed`() = runTest {
         watchable.batch(this, 100) { rx(it) }.start()
-        tx(1)
-        tx(2)
+        pauseDispatcher {
+            tx(1)
+            tx(2)
 
-        receive(Tx(1))
-        receive(Tx(2))
-        advanceTimeBy(50)
-        receive()
-        advanceTimeBy(50)
-        receive(Rx("hi", 1, 2))
+            receive(Tx(1))
+            receive(Tx(2))
+            advanceTimeBy(50)
+            receive()
+            advanceTimeBy(50)
+            receive(Rx("hi", 1, 2))
+        }
     }
 
     @Test(timeout = 500) fun `close batch handle allows old events to arrive`() = runTest {

@@ -1,4 +1,5 @@
 import external.Adapter
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import model.Bird
 import model.MutableBird
 import org.junit.Assert.assertEquals
@@ -7,6 +8,7 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import test.runTest
 
+@UseExperimental(ExperimentalCoroutinesApi::class)
 class AdapterTest {
     @Rule @JvmField val folder = TemporaryFolder()
     private val robin = Bird(name = "robin")

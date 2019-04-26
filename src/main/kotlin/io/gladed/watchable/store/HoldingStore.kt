@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package store
+package io.gladed.watchable.store
 
 import io.gladed.watchable.util.guarded
 import kotlinx.coroutines.CancellationException
