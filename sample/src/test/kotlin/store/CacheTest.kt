@@ -12,6 +12,7 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.TestCoroutineScope
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import test.impossible
 import test.runTest
 
 @UseExperimental(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -55,9 +56,6 @@ class CacheTest {
         coVerify(exactly = 0) { store.get(thing.id) }
     }
 
-    // Note: a smart cache would connect two requests and return them together
-    // BUT such a cache would also cancel get requests which are outstanding while delete happens, accommodate
-    // put during get, etc. Semantics are unclear.
     @Test fun `get slowly twice`() = test {
         val mutex = Mutex(locked = true)
         coEvery { store.get(thing.id) } coAnswers { mutex.withLock { thing } }
@@ -68,4 +66,43 @@ class CacheTest {
         // Only one call to prove we are caching attempts in the background
         coVerify(exactly = 1) { store.get(thing.id) }
     }
+
+    @Test fun `put while get slowly`() = test {
+        // Slowly return thing1
+        val mutex = Mutex(locked = true)
+        coEvery { store.get(thing.id) } coAnswers { mutex.withLock { thing } }
+        val get1 = async { cache.get(thing.id) }
+
+        // Store thing2 over thing1
+        val thing2 = thing.copy(value = 2)
+        cache.put(thing.id, thing2)
+
+        // Allow thing1 get to complete
+        mutex.unlock()
+        assertEquals(thing, get1.await())
+
+        // Make sure that new attempt gets thing2 (not the stale thing1)
+        coEvery { store.get(thing.id) } returns thing2
+        assertEquals(thing2, cache.get(thing.id))
+    }
+
+    @Test fun `delete while get slowly`() = test {
+        // Slowly return thing
+        val mutex = Mutex(locked = true)
+        coEvery { store.get(thing.id) } coAnswers { mutex.withLock { thing } }
+        val get1 = async { cache.get(thing.id) }
+
+        //  Kill thing
+        cache.delete(thing.id)
+
+        // Allow thing1 get to complete
+        mutex.unlock()
+        assertEquals(thing, get1.await())
+
+        coEvery { store.get(thing.id) } throws Cannot("get missing thing")
+        impossible {
+            cache.get(thing.id)
+        }
+    }
+
 }

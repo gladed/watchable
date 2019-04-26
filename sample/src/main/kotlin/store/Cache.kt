@@ -15,8 +15,8 @@ class Cache<T : Any>(
 ) : Store<T>, CoroutineScope {
     override val coroutineContext = context + Job()
 
-    private val found = mutableMapOf<String, WeakReference<T>>().guarded()
     private val finding = mutableMapOf<String, Deferred<T>>().guarded()
+    private val found = mutableMapOf<String, WeakReference<T>>().guarded()
 
     override suspend fun get(key: String): T =
         found {
@@ -28,14 +28,16 @@ class Cache<T : Any>(
         getOrPut(key) {
             async {
                 val result = back.get(key)
-                @Suppress("DeferredResultUnused")
-                finding { remove(key) }
-                found { put(key, WeakReference(result)) }
+                if (quashFind(key)) {
+                    // Only record the result if we quashed the find
+                    found { put(key, WeakReference(result)) }
+                }
                 result
             }
         }
 
     override suspend fun put(key: String, value: T) {
+        quashFind(key) // Outstanding gets should not update cache
         found {
             clearDead()
             put(key, WeakReference(value))
@@ -49,9 +51,13 @@ class Cache<T : Any>(
     }
 
     override suspend fun delete(key: String) {
+        quashFind(key) // Outstanding gets should not update cache
         found { remove(key) }
         back.delete(key)
     }
+
+    private suspend fun quashFind(key: String): Boolean =
+        finding { remove(key) } != null
 
     override fun keys() = back.keys()
 }
