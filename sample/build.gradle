@@ -20,11 +20,13 @@ repositories {
 }
 
 dependencies {
-    compile rootProject  // Local version, otherwise use: compile "io.gladed:watchable:x.x.x"
-    compile "org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.10.0"
+    implementation rootProject  // Local version, otherwise use: compile "io.gladed:watchable:x.x.x"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.10.0"
 
-    testCompile 'junit:junit:4.12'
-    testCompile "io.mockk:mockk:1.9.3"
+    testImplementation 'junit:junit:4.12'
+    testImplementation "io.mockk:mockk:1.9.3"
+    testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlin_coroutines_version"
+
     detektPlugins "io.gitlab.arturbosch.detekt:detekt-formatting:$detekt_version"
 }
 

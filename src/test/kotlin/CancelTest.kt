@@ -18,25 +18,34 @@ import io.gladed.watchable.ValueChange
 import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.yield
 import org.junit.Assert
 import org.junit.Assert.assertNotEquals
 import org.junit.Assert.fail
 import org.junit.Test
 
+@UseExperimental(ExperimentalCoroutinesApi::class)
 class CancelTest {
     private lateinit var intValue: WatchableValue<Int>
     val changes = Channel<ValueChange<Int>>(Channel.UNLIMITED)
 
-    @Test fun `callbacks stop when scope joined`() {
-        runTest {
+    @Test fun `callbacks stop when scope joined`() = runTest {
+        coroutineScope {
+            println("In test: ${coroutineContext[Job]}")
+
             intValue = watchableValueOf(5)
             watch(intValue) { changes.send(it) }
             changes.mustBe(ValueChange(null, 5, true))
         }
 
-        runTest {
+        coroutineScope {
             // intValue can still be set
             intValue.set(88)
             Assert.assertEquals(88, intValue.value)
@@ -47,7 +56,7 @@ class CancelTest {
 
     @Test fun `callbacks stop when scope cancelled`() = runTest {
         intValue = watchableValueOf(5)
-        val scope1 = newScope()
+        val scope1 = CoroutineScope(coroutineContext + SupervisorJob())
         scope1.watch(intValue) { changes.send(it) }
         changes.mustBe(ValueChange(null, 5, true))
         intValue.set(17)
@@ -61,7 +70,7 @@ class CancelTest {
 
     @Test fun `callbacks stop when job cancelled`() = runTest {
         intValue = watchableValueOf(5)
-        val scope1 = newScope()
+        val scope1 = CoroutineScope(coroutineContext)
         val job = scope1.watch(intValue) { changes.send(it) }
 
         changes.mustBe(ValueChange(null, 5, true))
@@ -80,7 +89,7 @@ class CancelTest {
         changes.mustBe(ValueChange(null, 5, true))
     }
 
-    @Test fun `throw during watch destroys everything`(){
+    @Test fun `throw during watch destroys everything`() {
         try {
             runTest {
                 intValue = watchableValueOf(5)
@@ -88,11 +97,8 @@ class CancelTest {
                     changes.send(it)
                     throw IllegalStateException("Whoops!")
                 }
-                triggerActions()
             }
             fail("must not reach")
-        } catch (e: AssertionError) {
-            assertNotEquals("must not reach", e.message)
-        }
+        } catch (e: IllegalStateException) { }
     }
 }

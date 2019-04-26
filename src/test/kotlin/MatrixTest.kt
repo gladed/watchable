@@ -23,6 +23,7 @@ import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.joinAll
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -40,6 +41,7 @@ import org.junit.runners.Parameterized.Parameter
 import org.junit.runners.Parameterized.Parameters
 
 @RunWith(Parameterized::class)
+@UseExperimental(ExperimentalCoroutinesApi::class)
 class MatrixTest<M, C: Change> {
     private val chooser = Chooser()
 
@@ -77,7 +79,6 @@ class MatrixTest<M, C: Change> {
         for (i in 0 until 200) {
             watchable1 { modify() }
         }
-        assertNotEquals(watchable1, watchable2)
         waitFor(watchable2) { it == watchable1 }
         log(watchable1)
     }
@@ -129,7 +130,6 @@ class MatrixTest<M, C: Change> {
         for (i in 0 until 100) {
             watchable1 { modify() }
         }
-        triggerActions()
         assertNotEquals(watchable1, watchable2)
     }
 
@@ -139,18 +139,19 @@ class MatrixTest<M, C: Change> {
         // Provide a non-0 batch amount
         watchable1.batch(this, 50) { batches += it }
 
-        // Throw many modifications at watchable1
-        for (i in 0 until 100) watchable1 { modify() }
+        pauseDispatcher {
+            // Throw many modifications at watchable1
+            for (i in 0 until 100) watchable1 { modify() }
 
-        triggerActions()
-        assertEquals(listOf<List<C>>(), batches)
+            assertEquals(listOf<List<C>>(), batches)
 
-        advanceTimeBy(50)
-        val size = batches.size
-        assertNotEquals(0, size)
+            advanceTimeBy(50)
+            val size = batches.size
+            assertNotEquals(0, size)
 
-        advanceTimeBy(50)
-        assertEquals(size, batches.size)
+            advanceTimeBy(50)
+            assertEquals(size, batches.size)
+        }
     }
 
     @Test fun equality() = runTest {

@@ -21,9 +21,11 @@ import io.gladed.watchable.group
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableSetOf
 import io.gladed.watchable.watchableValueOf
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import org.junit.Test
 
+@UseExperimental(ExperimentalCoroutinesApi::class)
 class GroupTest {
     val changes = Channel<GroupChange>(Channel.UNLIMITED)
 
@@ -65,8 +67,10 @@ class GroupTest {
     @Test fun `cancel watching of a group`() = runTest {
         val intValue = watchableValueOf(1)
         val setValue = watchableSetOf("1")
-        val handle = watch(group(intValue, setValue)) { changes.send(it) }
-        handle.cancel()
+        pauseDispatcher {
+            val handle = watch(group(intValue, setValue)) { changes.send(it) }
+            handle.cancel()
+        }
         changes.mustBe()
         setValue { add("2") }
         changes.mustBe()
