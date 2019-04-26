@@ -38,7 +38,7 @@ class HoldingStore<T : Any>(
     context: CoroutineContext,
     /** The store being wrapped. */
     val back: Store<T>,
-    private val createHold: suspend T.() -> Hold
+    private val createHold: suspend (T) -> Hold
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
@@ -143,7 +143,7 @@ class HoldingStore<T : Any>(
                 get(key)?.also { it.add(this@SingleStore) }
                     ?: Holding(this@SingleStore, async(SupervisorJob()) {
                         val value = getValue()
-                        val hold = value.createHold()
+                        val hold = createHold(value)
                         hold.start()
                         value to hold
                     }).also {
