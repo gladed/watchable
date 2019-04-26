@@ -1,12 +1,17 @@
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.test.TestCoroutineScope
 import model.Bird
 import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
@@ -16,10 +21,9 @@ import store.Cannot
 import store.Hold
 import store.HoldingStore
 import store.Store
-import test.TestCoroutineScope
 import test.runTest
 
-@UseExperimental(ObsoleteCoroutinesApi::class)
+@UseExperimental(ObsoleteCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 class HoldingStoreTest {
     private val robin = Bird(name = "robin")
 
@@ -50,37 +54,32 @@ class HoldingStoreTest {
     }
 
     @Test fun `put an item`() = test {
-        inScope {
-            scopeStore.create(this).put(robin.id, robin)
-            coVerify { rootStore.put(robin.id, robin) }
-            coVerify { creator.create(robin) }
-        }
+        scopeStore.create(this).put(robin.id, robin)
+        coVerify { rootStore.put(robin.id, robin) }
+        coVerify { creator.create(robin) }
     }
 
     @Test fun `release when scope completes`() = test {
-        inScope {
+        coroutineScope {
             assertEquals(robin, scopeStore.create(this).get(robin.id))
+            coVerify { creator.create(robin) }
         }
-
-        coVerify { creator.create(robin) }
         coVerify { hold.stop() }
     }
 
     @Test fun `hold only once when two scopes get`() = test {
-        inScope {
+        assertEquals(robin, scopeStore.create(this).get(robin.id))
+        coVerify(exactly = 1) { creator.create(robin) }
+        coroutineScope {
             assertEquals(robin, scopeStore.create(this).get(robin.id))
             coVerify(exactly = 1) { creator.create(robin) }
-            inScope {
-                assertEquals(robin, scopeStore.create(this).get(robin.id))
-                coVerify(exactly = 1) { creator.create(robin) }
-            }
         }
     }
 
     @Test fun `release only when both scopes close`() = test {
-        inScope {
+        coroutineScope {
             scopeStore.create(this).get(robin.id)
-            inScope {
+            coroutineScope {
                 scopeStore.create(this).get(robin.id)
             }
             coVerify(exactly = 0) { hold.stop() }
@@ -89,7 +88,7 @@ class HoldingStoreTest {
     }
 
     @Test fun `hold+release only once when get twice from same scope`() = test {
-        inScope {
+        coroutineScope {
             val store = scopeStore.create(this)
             store.get(robin.id)
             store.get(robin.id)
@@ -99,8 +98,8 @@ class HoldingStoreTest {
     }
 
     @Test fun `second user must reallocate`() = test {
-        inScope { scopeStore.create(this).get(robin.id) }
-        inScope { scopeStore.create(this).get(robin.id) }
+        coroutineScope { scopeStore.create(this).get(robin.id) }
+        coroutineScope { scopeStore.create(this).get(robin.id) }
 
         coVerify(exactly = 2) { creator.create(robin) }
         coVerify(exactly = 2) { hold.stop() }
@@ -109,7 +108,7 @@ class HoldingStoreTest {
     @Test fun `failure to get causes throw`() = test {
         coEvery { rootStore.get(eq(robin.id)) } throws Cannot("find value for that key")
 
-        inScope {
+        coroutineScope {
             val store = scopeStore.create(this)
             try {
                 store.get(robin.id)
@@ -118,13 +117,13 @@ class HoldingStoreTest {
                 println("Threw $c (as expected)")
             }
         }
-        testContext.assertAllUnhandledExceptions { true }
+//        testContext.assertAllUnhandledExceptions { true }
     }
 
     @Test fun `second attempt succeeds`() = test {
         coEvery { rootStore.get(robin.id) } throws Cannot("find value for that key")
 
-        inScope {
+        coroutineScope {
             val store = scopeStore.create(this)
             try {
                 store.get(robin.id)
@@ -133,12 +132,12 @@ class HoldingStoreTest {
             coEvery { rootStore.get(robin.id) } returns robin
             assertEquals(robin, store.get(robin.id))
         }
-        testContext.assertAllUnhandledExceptions { true }
+//        testContext.assertAllUnhandledExceptions { true }
     }
 
     @Test fun `two attempts collude`() = test {
-        val scope1 = newScope()
-        val scope2 = newScope()
+        val scope1 = CoroutineScope(coroutineContext + SupervisorJob())
+        val scope2 = CoroutineScope(coroutineContext + SupervisorJob())
 
         val birds = listOf(async {
             scopeStore.create(scope1).get(robin.id)
@@ -151,10 +150,8 @@ class HoldingStoreTest {
         coVerify(exactly = 1) { creator.create(robin) }
 
         scope1.cancel()
-        trigger()
         coVerify(exactly = 0) { hold.stop() }
         scope2.cancel()
-        trigger()
         coVerify(exactly = 1) { hold.stop() }
     }
 
@@ -163,25 +160,21 @@ class HoldingStoreTest {
         coEvery { rootStore.get(robin.id) } coAnswers {
             mutex.withLock { robin }
         }
-        inScope {
-            val store = scopeStore.create(this)
-            val deferred = async {
-                store.get(robin.id)
-            }
-            deferred.cancel()
-
-            // Return to normal function
-            coEvery { rootStore.get(eq(robin.id)) } returns robin
-            assertEquals(robin, store.get(robin.id))
+        val store = scopeStore.create(this)
+        val deferred = async {
+            store.get(robin.id)
         }
+        deferred.cancel()
+
+        // Return to normal function
+        coEvery { rootStore.get(eq(robin.id)) } returns robin
+        assertEquals(robin, store.get(robin.id))
     }
 
     @Test fun `stop everybody`() = test {
-        inScope {
-            scopeStore.create(this).get(robin.id)
-            scopeStore.stop()
-            // Released even though scope still active
-            coVerify { hold.stop() }
-        }
+        scopeStore.create(this).get(robin.id)
+        scopeStore.stop()
+        // Released even though scope still active
+        coVerify { hold.stop() }
     }
 }

@@ -79,11 +79,10 @@ class OnDemandTest {
     @Test(timeout = 500) fun `receive only new items`() = runTest {
         tx(1)
         watchable.batch(this, 0) { rx(it) }.start()
-        triggerActions()
         tx(2)
         tx(3)
 
-        receive(Tx(1), Rx("hi"), Tx(2), Tx(3), Rx(2), Rx(3))
+        receive(Tx(1), Rx("hi"), Tx(2), Rx(2), Tx(3), Rx(3))
     }
 
     @Test(timeout = 500) fun `receive items inline`() = runTest {
@@ -137,7 +136,6 @@ class OnDemandTest {
     @Test(timeout = 500) fun `close batch handle allows old events to arrive`() = runTest {
         tx(1)
         val handle = watchable.batch(this, 100) { rx(it) }
-        triggerActions()
         tx(2)
         handle.stop()
         tx(3)
@@ -149,7 +147,6 @@ class OnDemandTest {
     @Test(timeout = 500) fun `cancel batch handle kills old events`() = runTest {
         tx(1)
         val handle = watchable.batch(this, 100) { rx(it) }
-        triggerActions()
         tx(2)
         handle.cancel()
         tx(3)
@@ -160,7 +157,6 @@ class OnDemandTest {
 
     @Test(timeout = 500) fun `close is safe after cancel`() = runTest {
         val handle = watchable.batch(this, 100) { rx(it) }
-        triggerActions()
         handle.cancel()
         handle.stop()
     }

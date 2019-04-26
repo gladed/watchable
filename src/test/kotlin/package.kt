@@ -14,16 +14,17 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.TestContextWrapper
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.ReceiveChannel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.test.TestCoroutineContext
-import kotlinx.coroutines.test.withTestContext
+import kotlinx.coroutines.test.TestCoroutineDispatcher
+import kotlinx.coroutines.test.TestCoroutineScope
+import kotlinx.coroutines.test.runBlockingTest
 import kotlinx.coroutines.withTimeout
 import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.assertEquals
@@ -109,31 +110,10 @@ fun <T : Any> cover(obj: T) {
     }
 }
 
-/** A scope in which tests may run. */
-@UseExperimental(ObsoleteCoroutinesApi::class)
-interface TestCoroutineScope : CoroutineScope {
-    val testContext: TestCoroutineContext
-
-    fun advanceTimeBy(amount: Int) {
-        testContext.advanceTimeBy(amount.toLong())
-    }
-
-    fun triggerActions() {
-        testContext.triggerActions()
-    }
-
-    fun newScope() = CoroutineScope(coroutineContext + Job())
-}
-
-/** Run a test within a [TestCoroutineScope]. */
-@UseExperimental(ObsoleteCoroutinesApi::class)
+@UseExperimental(ExperimentalCoroutinesApi::class)
 fun runTest(func: suspend TestCoroutineScope.() -> Unit) {
-    withTestContext {
-        runBlocking(this) {
-            object : TestCoroutineScope {
-                override val testContext = this@withTestContext
-                override val coroutineContext = this@runBlocking.coroutineContext + TestContextWrapper(testContext)
-            }.func()}
+    TestCoroutineScope(TestCoroutineDispatcher() + Job()).runBlockingTest {
+        func()
     }
 }
 

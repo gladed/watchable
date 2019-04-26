@@ -43,7 +43,6 @@ class BindSpecialTest {
         }
 
         // The size ends up 2
-        triggerActions()
         assertEquals(2, dest.value)
     }
 }

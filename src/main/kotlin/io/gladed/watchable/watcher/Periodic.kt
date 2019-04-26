@@ -17,7 +17,6 @@
 package io.gladed.watchable.watcher
 
 import io.gladed.watchable.Change
-import io.gladed.watchable.TestContextWrapper
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.Channel
@@ -50,9 +49,8 @@ internal class Periodic<C : Change>(
         }
     }
 
-    /** Return the current system time (or test time if in unit test). */
-    private fun now() =
-        context[TestContextWrapper]?.testContext?.now() ?: System.currentTimeMillis()
+    /** Return the current system time. */
+    private fun now() = System.currentTimeMillis()
 
     private suspend fun handleChanges(): Boolean = select {
         changeChannel.onReceiveOrNull { received ->

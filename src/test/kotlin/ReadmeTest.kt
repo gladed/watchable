@@ -25,8 +25,10 @@ import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
 import io.gladed.watchable.watchableValueOf
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.test.TestCoroutineScope
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.URI
@@ -121,7 +123,6 @@ class ReadmeTest {
         val set = setOf("a").toWatchableSet()
         val list = listOf(4).toWatchableList()
         watch(group(set, list)) { println(it) }
-        triggerActions()
         outputIs("""
             GroupChange(watchable=[a], change=Initial(set=[a]))
             GroupChange(watchable=[4], change=Initial(list=[4]))""")
@@ -129,7 +130,6 @@ class ReadmeTest {
         out.clear()
         list += 6
         set += "b"
-        triggerActions()
         outputIs("""
             GroupChange(watchable=[4, 6], change=Insert(index=1, insert=[6]))
             GroupChange(watchable=[a, b], change=Add(add=[b]))""")
@@ -164,7 +164,6 @@ class ReadmeTest {
             // Note: you must refer to the outer scope.
             this@runTest.watch(list) { println(it) }
         }
-        triggerActions()
         list.add(2)
         list.add(3)
         outputIs("""
@@ -175,8 +174,7 @@ class ReadmeTest {
 
     private fun println(obj: Any) { out += obj.toString() }
 
-    private fun TestCoroutineScope.outputIs(untrimmed: String) {
-        triggerActions()
+    private fun outputIs(untrimmed: String) {
         assertEquals(untrimmed.trimIndent(), out.joinToString("\n"))
     }
 }

@@ -2,7 +2,9 @@ package store
 
 import io.gladed.watchable.util.guarded
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.async
 import java.lang.ref.WeakReference
 import kotlin.coroutines.CoroutineContext
 
@@ -13,18 +15,28 @@ class Cache<T : Any>(
 ) : Store<T>, CoroutineScope {
     override val coroutineContext = context + Job()
 
-    private val map = mutableMapOf<String, WeakReference<T>>().guarded()
+    private val found = mutableMapOf<String, WeakReference<T>>().guarded()
+    private val finding = mutableMapOf<String, Deferred<T>>().guarded()
 
     override suspend fun get(key: String): T =
-        map {
+        found {
             clearDead()
-            get(key)
-        }?.get() ?: back.get(key).also {
-            map { put(key, WeakReference(it)) }
+            get(key)?.get()
+        } ?: finding { startGetting(key) }.await()
+
+    private fun MutableMap<String, Deferred<T>>.startGetting(key: String): Deferred<T> =
+        getOrPut(key) {
+            async {
+                val result = back.get(key)
+                @Suppress("DeferredResultUnused")
+                finding { remove(key) }
+                found { put(key, WeakReference(result)) }
+                result
+            }
         }
 
     override suspend fun put(key: String, value: T) {
-        map {
+        found {
             clearDead()
             put(key, WeakReference(value))
         }
@@ -37,7 +49,7 @@ class Cache<T : Any>(
     }
 
     override suspend fun delete(key: String) {
-        map { remove(key) }
+        found { remove(key) }
         back.delete(key)
     }
 

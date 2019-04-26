@@ -3,18 +3,18 @@ package store
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.test.TestCoroutineScope
 import org.junit.Assert.assertEquals
-import org.junit.Ignore
 import org.junit.Test
-import test.TestCoroutineScope
 import test.runTest
 
-@UseExperimental(FlowPreview::class)
+@UseExperimental(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class CacheTest {
     private val store = mockk<Store<Thing>>(relaxUnitFun = true)
 
@@ -58,12 +58,10 @@ class CacheTest {
     // Note: a smart cache would connect two requests and return them together
     // BUT such a cache would also cancel get requests which are outstanding while delete happens, accommodate
     // put during get, etc. Semantics are unclear.
-    @Ignore
     @Test fun `get slowly twice`() = test {
         val mutex = Mutex(locked = true)
         coEvery { store.get(thing.id) } coAnswers { mutex.withLock { thing } }
         val getOperations = listOf(async { cache.get(thing.id) }, async { cache.get(thing.id) })
-        trigger()
         mutex.unlock()
 
         assertEquals(listOf(thing, thing), getOperations.awaitAll())

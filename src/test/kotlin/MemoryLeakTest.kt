@@ -19,8 +19,11 @@ import io.gladed.watchable.WatchableList
 import io.gladed.watchable.bind
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.launch
@@ -31,6 +34,7 @@ import org.junit.Test
 import java.lang.ref.WeakReference
 
 @Suppress("UNUSED_VALUE") // We mean to release items when we are done with them.
+@UseExperimental(ObsoleteCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 class MemoryLeakTest {
     val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
 
@@ -41,14 +45,12 @@ class MemoryLeakTest {
         scour { assertNull(ref.get()) }
     }
 
-    @UseExperimental(ObsoleteCoroutinesApi::class)
     @Test(timeout = 2000) fun `watch does not get gc'ed while scope lives`() = runTest {
         val list1 = watchableListOf(1, 2, 3)
 
         // Watch it from the other scope
-        val scope1 = newScope()
+        val scope1 = CoroutineScope(coroutineContext + SupervisorJob())
         val ref = WeakReference(scope1.watch(list1) { changes.send(it) })
-        triggerActions()
 
         // Our reference to the watcher goes away
         scour { assertNull(ref.get()) }
@@ -65,7 +67,7 @@ class MemoryLeakTest {
     }
 
     @Test(timeout = 2000) fun `cancel of watch scope allows gc`() = runTest {
-        val scope1 = newScope()
+        val scope1 = CoroutineScope(coroutineContext + SupervisorJob())
 
         // Create a var in scope1
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)
@@ -94,7 +96,7 @@ class MemoryLeakTest {
     }
 
     @Test(timeout = 2000) fun `join on scope used to bind allows gc`() = runTest {
-        val scope1 = newScope()
+        val scope1 = CoroutineScope(coroutineContext)
 
         // Create a var in scope1
         var list1: WatchableList<Int>? = watchableListOf(1, 2, 3)

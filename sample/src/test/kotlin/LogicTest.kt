@@ -1,4 +1,7 @@
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.test.TestCoroutineScope
 import logic.Logic
 import logic.Operations
 import model.Bird
@@ -7,11 +10,10 @@ import model.MutableBird
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import store.MemoryStore
-import test.TestCoroutineScope
 import test.impossible
 import test.runTest
 
-@UseExperimental(FlowPreview::class)
+@UseExperimental(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class LogicTest {
     private val robin = Bird(name = "robin")
     private val chirp = Chirp(from = robin.id, text = "hi")
@@ -32,83 +34,68 @@ class LogicTest {
     }
 
     @Test fun `write bird to store`() = test {
-        inScope {
-            val bird = MutableBird.inflate(robin)
-            logic.birds.create(this).put(robin.id, bird)
-            assertEquals(robin, birdStore.get(robin.id))
-        }
+        val bird = MutableBird.inflate(robin)
+        logic.birds.create(this).put(robin.id, bird)
+        assertEquals(robin, birdStore.get(robin.id))
     }
 
     @Test fun `update bird in store`() = test {
-        inScope {
-            val bird = MutableBird.inflate(robin)
-            logic.birds.create(this).put(robin.id, bird)
-            bird.name.set("robin2")
-            trigger() // Let stuff happen
-            assertEquals("robin2", birdStore.get(robin.id).name)
-        }
+        val bird = MutableBird.inflate(robin)
+        logic.birds.create(this).put(robin.id, bird)
+        bird.name.set("robin2")
+        assertEquals("robin2", birdStore.get(robin.id).name)
     }
 
     @Test fun `cannot update deleted bird`() = test {
-        inScope {
-            val bird = MutableBird.inflate(robin)
-            val birds = logic.birds.create(this)
-            birds.put(robin.id, bird)
-            birds.delete(robin.id)
-            // We can change it but it makes no difference
-            bird.name.set("robin2")
+        val bird = MutableBird.inflate(robin)
+        val birds = logic.birds.create(this)
+        birds.put(robin.id, bird)
+        birds.delete(robin.id)
+        // We can change it but it makes no difference
+        bird.name.set("robin2")
 
-            trigger() // Let stuff happen
-
-            impossible {
-                birdStore.get(robin.id)
-            }
+        impossible {
+            birdStore.get(robin.id)
         }
     }
 
     @Test fun `cannot follow bird that does not exist`() = test {
-        inScope {
-            val bird = MutableBird.inflate(robin)
-            logic.birds.create(this).put(robin.id, bird)
+        val bird = MutableBird.inflate(robin)
+        logic.birds.create(this).put(robin.id, bird)
 
-            impossible {
-                bird.following.add(wren.id)
-            }
+        impossible {
+            bird.following.add(wren.id)
         }
     }
 
     @Test fun `bird sends a chirp`() = test {
-        inScope {
+        coroutineScope {
             val bird = MutableBird.inflate(robin)
             logic.birds.create(this).put(robin.id, bird)
             logic.chirps.create(this).put(chirp.id, chirp)
         }
 
-        inScope {
+        coroutineScope {
             assertEquals(chirp, logic.chirps.create(this).get(chirp.id))
         }
     }
 
     @Test fun `unknown bird cannot chirp`() = test {
-        inScope {
-            impossible {
-                logic.chirps.create(this).put(chirp.id, chirp)
-            }
+        impossible {
+            logic.chirps.create(this).put(chirp.id, chirp)
         }
     }
 
     @Test fun `delete bird causes chirp delete`() = test {
-        inScope {
-            val birds = logic.birds.create(this)
-            val chirps = logic.chirps.create(this)
+        val birds = logic.birds.create(this)
+        val chirps = logic.chirps.create(this)
 
-            birds.put(robin.id, MutableBird.inflate(robin))
-            chirps.put(chirp.id, chirp)
-            birds.delete(robin.id)
+        birds.put(robin.id, MutableBird.inflate(robin))
+        chirps.put(chirp.id, chirp)
+        birds.delete(robin.id)
 
-            impossible {
-                chirps.get(chirp.id)
-            }
+        impossible {
+            chirps.get(chirp.id)
         }
     }
 

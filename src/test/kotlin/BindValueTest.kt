@@ -21,7 +21,10 @@ import io.gladed.watchable.waitFor
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableValueOf
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.ObsoleteCoroutinesApi
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import org.junit.Assert.assertEquals
@@ -29,7 +32,7 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
-@UseExperimental(ObsoleteCoroutinesApi::class)
+@UseExperimental(ObsoleteCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 class BindValueTest {
     val changes = Channel<Any>(Channel.UNLIMITED)
 
@@ -44,7 +47,6 @@ class BindValueTest {
         val from = listOf(4, 5).toWatchableList()
         val into = watchableListOf<Int>()
         bind(into, from)
-        triggerActions()
         assertEquals(from, into)
     }
 
@@ -52,11 +54,9 @@ class BindValueTest {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         watch(dest) { changes.send(it) }
-        triggerActions()
         changes.mustBe(ValueChange(null, 6, true))
 
         bind(dest, origin)
-        triggerActions()
         origin.set(7)
 
         changes.mustBe(ValueChange(6, 5), ValueChange(5, 7))
@@ -123,13 +123,12 @@ class BindValueTest {
         waitFor(dest) { 5 == dest.value }
         dest.unbind()
         origin.set(7)
-        triggerActions()
         assertEquals(5, dest.value)
     }
 
     @Test fun `watch from different scope`() = runTest {
         val origin = watchableValueOf(5)
-        val scope1 = newScope()
+        val scope1 = CoroutineScope(coroutineContext)
         scope1.watch(origin) {
             changes.send(it)
         }
@@ -143,10 +142,9 @@ class BindValueTest {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)
         watch(dest) { changes.send(it) }
-        val scope1 = newScope()
+        val scope1 = CoroutineScope(coroutineContext + SupervisorJob())
         scope1.bind(dest, origin)
         origin.set(7)
-        triggerActions()
         assertEquals(7, dest.value)
 
         // Kill the destination value's scope, which should also kill the binding
@@ -154,7 +152,6 @@ class BindValueTest {
 
         // Changing origin has no effect on bound thing, though it is still bound
         origin.set(8)
-        triggerActions()
         assertEquals(7, dest.value)
         assertTrue(dest.isBound())
     }
