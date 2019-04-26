@@ -6,7 +6,7 @@ import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.TestCoroutineScope
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Assert.fail
-import store.Cannot
+import io.gladed.watchable.store.Cannot
 
 suspend fun impossible(func: suspend () -> Unit) {
     try {

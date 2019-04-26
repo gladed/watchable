@@ -14,9 +14,7 @@
  * limitations under the License.
  */
 
-package store
-
-import java.lang.Exception
+package io.gladed.watchable.store
 
 /** Something cannot be done. */
 open class Cannot(doThis: String) : Exception(doThis)

@@ -1,5 +1,7 @@
 package store
 
+import io.gladed.watchable.store.Cannot
+import io.gladed.watchable.store.Store
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk

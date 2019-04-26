@@ -14,16 +14,15 @@
  * limitations under the License.
  */
 
-package io.gladed.watchable.util
+package io.gladed.watchable.store
 
-/** An ongoing operation that can be cancelled or stopped. */
-interface Stoppable {
-    /** Immediately stop. Repeated invocations have no effect. */
-    fun cancel()
+import kotlin.coroutines.CoroutineContext
 
-    /**
-     * Gracefully stop, suspending if necessary to allow outstanding operations to complete.
-     * Repeated invocations have no effect.
-     */
-    suspend fun stop()
-}
+/**
+ * Return a [HoldingStore] around this [Store].
+ */
+fun <T : Any> Store<T>.holding(context: CoroutineContext, start: suspend (T) -> Hold) =
+    HoldingStore(context, this, start)
+
+/** Throw an exception to complain that something cannot be done. */
+fun cannot(doSomething: String): Nothing = throw Cannot(doSomething)

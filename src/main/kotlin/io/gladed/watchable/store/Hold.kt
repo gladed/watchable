@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-package store
+package io.gladed.watchable.store
 
 import io.gladed.watchable.Watcher
-import io.gladed.watchable.util.Stoppable
 
 /** Represents an object being held for use. */
 interface Hold {
@@ -42,11 +41,6 @@ interface Hold {
 
     operator fun plus(other: Watcher) = this + Hold(
         onStart = { other.start() },
-        onStop = { other.stop() },
-        onCancel = { other.cancel() }
-    )
-
-    operator fun plus(other: Stoppable) = this + Hold(
         onStop = { other.stop() },
         onCancel = { other.cancel() }
     )

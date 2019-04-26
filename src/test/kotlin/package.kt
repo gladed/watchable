@@ -14,13 +14,12 @@
  * limitations under the License.
  */
 
-import kotlinx.coroutines.CoroutineScope
+import io.gladed.watchable.store.Cannot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.channels.ReceiveChannel
-import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.test.TestCoroutineDispatcher
 import kotlinx.coroutines.test.TestCoroutineScope
@@ -127,5 +126,14 @@ suspend fun <C> ReceiveChannel<C>.mustBe(vararg items: C) {
             log("Rx: ${rx ?: "timeout"}")
             assertEquals(item, rx)
         }
+    }
+}
+
+suspend fun impossible(func: suspend () -> Unit) {
+    try {
+        func()
+        fail("should have failed")
+    } catch (c: Cannot) {
+        println("As expected: $c")
     }
 }

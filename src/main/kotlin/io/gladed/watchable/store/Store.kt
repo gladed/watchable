@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package store
+package io.gladed.watchable.store
 
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow

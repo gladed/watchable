@@ -1,6 +1,9 @@
 package logic
 
 import io.gladed.watchable.Period.INLINE
+import io.gladed.watchable.store.Hold
+import io.gladed.watchable.store.Store
+import io.gladed.watchable.store.holding
 import io.gladed.watchable.watch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -9,9 +12,6 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collect
 import model.Chirp
 import model.MutableBird
-import store.Hold
-import store.Store
-import store.holding
 import kotlin.coroutines.CoroutineContext
 
 /** Implement business logic required by components of the application. */

@@ -9,7 +9,7 @@ import model.Chirp
 import model.MutableBird
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import store.MemoryStore
+import io.gladed.watchable.store.MemoryStore
 import test.impossible
 import test.runTest
 

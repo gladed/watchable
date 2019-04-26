@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package store
+package io.gladed.watchable.store
 
 /** Convert between "deflated" ([A]) and "inflated" ([B]) forms of an object. */
 interface Inflater<A : Any, B : Any> {

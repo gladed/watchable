@@ -1,10 +1,11 @@
 # Version History
 
 ## 0.6.10
-* Add `Watcher.start()` and remove `suspend` from all operation signatures.
+* Add `Watcher.start()`.
+* Remove `suspend` from all operation signatures.
 * Remove `use` in favor of operator `invoke`.
-* Add `Stoppable`
-* Add `isInitial` to all changes (#49)
+* Add `isInitial` to all changes (#49).
+* Add `Store`, `HoldingStore`, `MemoryStore`, and `Inflater` for convenient integration with external data sources.
 
 ## 0.6.9
 * `Watcher.close` -> `Watcher.stop` to prevent confusion with file close operations
