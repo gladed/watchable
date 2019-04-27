@@ -124,7 +124,11 @@ You may not really care about the details of a change, or just want to respond t
 
 ```kotlin
 val map = watchableMapOf(1 to "2")
-simple(map) { println("at $key remove $remove add $add") }.start()
+simple(map) {
+    with(it) {
+        println("at $key remove $remove add $add")
+    }
+}.start()
 map.put(1, "3")
 
 // Prints:

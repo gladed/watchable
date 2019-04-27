@@ -31,7 +31,7 @@ fun <M, C : Change> CoroutineScope.bind(
  */
 fun <S, C : HasSimpleChange<S>> CoroutineScope.simple(
     watchable: SimpleWatchable<S, C>,
-    func: suspend S.() -> Unit
+    func: suspend (S) -> Unit
 ) = watchable.simple(this@simple, func)
 
 /**

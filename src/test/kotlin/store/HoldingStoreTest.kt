@@ -40,6 +40,9 @@ import io.gladed.watchable.store.Hold
 import io.gladed.watchable.store.HoldingStore
 import io.gladed.watchable.store.Store
 import io.gladed.watchable.store.holding
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.toList
 import runTest
 import java.util.UUID
 
@@ -216,5 +219,11 @@ class HoldingStoreTest {
         scopeStore.stop()
         // Released even though scope still active
         coVerify { hold.stop() }
+    }
+
+    @UseExperimental(FlowPreview::class)
+    @Test fun `keys goes to back`() = test {
+        coEvery { rootStore.keys() } returns listOf(robin.id).asFlow()
+        assertEquals(listOf(robin.id), scopeStore.create(this).keys().toList())
     }
 }
