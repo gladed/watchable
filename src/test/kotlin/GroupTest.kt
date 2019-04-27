@@ -23,6 +23,7 @@ import io.gladed.watchable.watchableSetOf
 import io.gladed.watchable.watchableValueOf
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
+import org.junit.Assert.assertEquals
 import org.junit.Test
 
 @UseExperimental(ExperimentalCoroutinesApi::class)
@@ -38,8 +39,11 @@ class GroupTest {
         val intValue = watchableValueOf(1)
         val setValue = watchableSetOf("1")
         group(intValue, setValue).watch(this) { changes.send(it) }
-        changes.mustBe(GroupChange(intValue, ValueChange(null, 1, true)))
-        changes.mustBe(GroupChange(setValue, SetChange.Initial(setOf("1"))))
+        val initialList = listOf(changes.receive(), changes.receive())
+        assertEquals(listOf(
+            GroupChange(intValue, ValueChange(null, 1, true)),
+            GroupChange(setValue, SetChange.Initial(setOf("1")))), initialList)
+        assertEquals(listOf(true, true), initialList.map { it.isInitial })
     }
 
     @Test fun `watch a group of watchables`() = runTest {
