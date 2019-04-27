@@ -68,8 +68,8 @@ abstract class WatchableBase<C : Change> : Watchable<C> {
             else -> Periodic(scope.coroutineContext, period, func)
         }
 
-        // This function is not suspending (to prevent users from having to launch, which
-        // creates a scope that immediately dies). So we must do setup in background.
+        // This function does not suspend (to prevent users from having to launch { }, which
+        // creates a scope that immediately completes). So we must setup in background.
         val setupWatcher = scope.launch {
             val toDrop = Droppable(changeWatcher)
             watchers {

@@ -79,4 +79,14 @@ class GroupTest {
         setValue { add("2") }
         changes.mustBe()
     }
+
+    @Test fun `start a group of watchables`() = runTest {
+        val intValue = watchableValueOf(1)
+        pauseDispatcher {
+            val watcher = watch(group(intValue)) { changes.send(it) }
+            changes.mustBe()
+            watcher.start()
+            changes.mustBe(GroupChange(intValue, ValueChange(null, 1, isInitial = true)))
+        }
+    }
 }

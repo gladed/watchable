@@ -81,14 +81,6 @@ class WatchableValueTest {
         assertEquals(watchable.hashCode(), 5.hashCode())
     }
 
-    @Test fun `wait for something`() = runTest {
-        val watchable = 5.toWatchableValue()
-        val result = async { waitFor(watchable) { watchable.value == 6 } }
-        assertFalse(result.isCompleted)
-        watchable { value = 6 }
-        assertTrue(result.isCompleted)
-    }
-
     @Test fun watchUnmodifiable() {
         runBlocking {
             intValue = watchableValueOf(4)

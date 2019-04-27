@@ -2,6 +2,7 @@
 
 ## 0.6.10
 * Add `Watcher.start()`.
+* Add `Watchable.waitFor { }`
 * Remove `suspend` from all operation signatures.
 * Remove `use` in favor of operator `invoke`.
 * Add `isInitial` to all changes (#49).

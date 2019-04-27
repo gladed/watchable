@@ -16,10 +16,16 @@
 
 package store
 
+import impossible
 import io.gladed.watchable.store.Inflater
+import io.gladed.watchable.store.MemoryStore
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.toList
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import runTest
 
+@UseExperimental(FlowPreview::class)
 class InflaterTest {
     private val stringToInt = object : Inflater<String, Int> {
         override fun inflate(value: String): Int = value.toInt()
@@ -34,5 +40,17 @@ class InflaterTest {
     @Test fun cycle() {
         assertEquals(5, (intToString + stringToInt).inflate(5))
         assertEquals(5, (intToString + stringToInt).deflate(5))
+    }
+
+    @Test fun inflateStore() = runTest {
+        val memory = MemoryStore<Int>("int")
+        val inflated = memory.inflate(intToString)
+        inflated.put(":1", "1")
+        assertEquals("1", inflated.get(":1"))
+        assertEquals(listOf(":1"), inflated.keys().toList())
+        inflated.delete(":1")
+        impossible {
+            memory.get(":1")
+        }
     }
 }
