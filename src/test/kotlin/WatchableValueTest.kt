@@ -17,12 +17,16 @@
 import io.gladed.watchable.ValueChange
 import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.toWatchableValue
+import io.gladed.watchable.waitFor
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
+import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WatchableValueTest {
@@ -75,6 +79,14 @@ class WatchableValueTest {
         assertEquals(watchable, 5)
         assertNotEquals(5, watchable) // Unfortunately value tests cannot be symmetric
         assertEquals(watchable.hashCode(), 5.hashCode())
+    }
+
+    @Test fun `wait for something`() = runTest {
+        val watchable = 5.toWatchableValue()
+        val result = async { waitFor(watchable) { watchable.value == 6 } }
+        assertFalse(result.isCompleted)
+        watchable { value = 6 }
+        assertTrue(result.isCompleted)
     }
 
     @Test fun watchUnmodifiable() {

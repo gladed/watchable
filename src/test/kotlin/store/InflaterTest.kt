@@ -33,5 +33,6 @@ class InflaterTest {
 
     @Test fun cycle() {
         assertEquals(5, (intToString + stringToInt).inflate(5))
+        assertEquals(5, (intToString + stringToInt).deflate(5))
     }
 }
