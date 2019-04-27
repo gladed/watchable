@@ -29,7 +29,7 @@ class SimpleTest {
     @Test fun `watch list simply`() = runBlocking {
         val list = watchableListOf(1, 2)
         val channel = Channel<ListChange.Simple<Int>>(Channel.UNLIMITED)
-        simple(list) { channel.send(this) }
+        simple(list) { channel.send(it) }
 
         channel.mustBe(
             ListChange.Simple(index = 0, add = 1),
@@ -45,7 +45,7 @@ class SimpleTest {
     @Test fun `watch map simply`() = runBlocking {
         val map = watchableMapOf(1 to "1")
         val channel = Channel<MapChange.Simple<Int, String>>(Channel.UNLIMITED)
-        simple(map) { channel.send(this) }
+        simple(map) { channel.send(it) }
         channel.mustBe(MapChange.Simple(key = 1, add = "1"))
         map { put(2, "2"); remove(1); put(2, "22") }
         channel.mustBe(
@@ -57,7 +57,7 @@ class SimpleTest {
     @Test fun `watch set simply`() = runBlocking {
         val set = watchableSetOf(1, 2)
         val channel = Channel<SetChange.Simple<Int>>(Channel.UNLIMITED)
-        simple(set) { channel.send(this) }
+        simple(set) { channel.send(it) }
         channel.mustBe(SetChange.Simple(add = 1), SetChange.Simple(add = 2))
         set { remove(1); add(3) }
         channel.mustBe(

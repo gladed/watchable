@@ -25,11 +25,9 @@ import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
 import io.gladed.watchable.watchableValueOf
-import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.test.TestCoroutineScope
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import java.net.URI
@@ -140,7 +138,7 @@ class ReadmeTest {
 
     @Test fun `Simple Watches`() = runTest {
         val map = watchableMapOf(1 to "2")
-        simple(map) { println("at $key remove $remove add $add") }.start()
+        simple(map) { with(it) { println("at $key remove $remove add $add") } }.start()
         map.put(1, "3")
 
         outputIs("""
