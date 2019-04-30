@@ -26,3 +26,8 @@ fun <T : Any> Store<T>.holding(context: CoroutineContext, start: suspend (T) -> 
 
 /** Throw an exception to complain that something cannot be done. */
 fun cannot(doSomething: String): Nothing = throw Cannot(doSomething)
+
+/**
+ * Return a memory cached version of this [Store].
+ */
+fun <T : Any> Store<T>.cached(context: CoroutineContext) = Cache(context, this)

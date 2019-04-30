@@ -1,7 +1,25 @@
+/*
+ * (c) Copyright 2019 Glade Diviney.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package store
 
+import impossible
 import io.gladed.watchable.store.Cannot
 import io.gladed.watchable.store.Store
+import io.gladed.watchable.store.cached
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -14,11 +32,13 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.TestCoroutineScope
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import test.impossible
-import test.runTest
+import runTest
+import java.util.UUID
 
 @UseExperimental(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class CacheTest {
+    data class Thing(val id: String = UUID.randomUUID().toString(), val value: Int)
+
     private val store = mockk<Store<Thing>>(relaxUnitFun = true)
 
     interface CacheTestScope : TestCoroutineScope {
