@@ -30,7 +30,7 @@ class MemoryStoreTest {
     data class Thing(val id: String = UUID.randomUUID().toString(), val value: Int)
 
     private val store = MemoryStore<Thing>("thing")
-    val thing = Thing(value = 1)
+    private val thing = Thing(value = 1)
 
     @Test fun `put and get`() = runTest {
         store.put(thing.id, thing)

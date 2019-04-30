@@ -44,7 +44,7 @@
 * Allow more complex `bind` cases (#17).
 * Test and improve concurrent behaviors.
 * Package transitioned to `io.gladed.watchable`.
-* Ravamp rules for safe modification (`use`).
+* Revamp rules for safe modification (`use`).
 * Initial release
 * `WatchableSet`, `WatchableList`, `WatchableMap`, and `WatchableValue`.
 * `watch()` and `bind()` methods for all of the above.

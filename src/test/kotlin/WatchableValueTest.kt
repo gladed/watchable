@@ -17,16 +17,12 @@
 import io.gladed.watchable.ValueChange
 import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.toWatchableValue
-import io.gladed.watchable.waitFor
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableValueOf
-import kotlinx.coroutines.async
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
-import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNotEquals
-import org.junit.Assert.assertTrue
 import org.junit.Test
 
 class WatchableValueTest {

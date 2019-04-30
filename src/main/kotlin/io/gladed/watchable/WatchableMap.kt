@@ -58,11 +58,13 @@ interface WatchableMap<K, V> : MutableWatchable<MutableMap<K, V>, MapChange<K, V
     /** Remove any value corresponding to [key] from this map. */
     suspend operator fun minusAssign(key: K) { remove(key) }
 
-    /** Remove [keys] from this map, along with any associated values. */
+    /** Remove [removeKeys] from this map, along with any associated values. */
     suspend operator fun minusAssign(removeKeys: Array<K>) { invoke { keys.removeAll(removeKeys) } }
 
+    /** Remove [removeKeys] from this map, along with any associated values. */
     suspend operator fun minusAssign(removeKeys: Iterable<K>) { invoke { keys.removeAll(removeKeys) } }
 
+    /** Remove [removeKeys] from this map, along with any associated values. */
     suspend operator fun minusAssign(removeKeys: Sequence<K>) { invoke { keys.removeAll(removeKeys) } }
 
     /** Return an unmodifiable form of this [WatchableMap]. */

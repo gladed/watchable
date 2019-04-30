@@ -25,9 +25,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.coroutineScope
-import kotlinx.coroutines.yield
 import org.junit.Assert
-import org.junit.Assert.assertNotEquals
 import org.junit.Assert.fail
 import org.junit.Test
 
