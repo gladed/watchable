@@ -3,6 +3,10 @@ buildscript {
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
     }
+    ext {
+        ktor_version = '1.1.4'
+        kotlin_serialization_version = '0.11.0'
+    }
 }
 
 apply plugin: 'io.gitlab.arturbosch.detekt'
@@ -21,7 +25,9 @@ repositories {
 
 dependencies {
     implementation rootProject  // Local version, otherwise use: compile "io.gladed:watchable:x.x.x"
-    implementation "org.jetbrains.kotlinx:kotlinx-serialization-runtime:0.10.0"
+    implementation "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kotlin_serialization_version"
+    implementation "io.ktor:ktor-server-netty:$ktor_version"
+    implementation "ch.qos.logback:logback-classic:1.2.3"
 
     testImplementation 'junit:junit:4.12'
     testImplementation "io.mockk:mockk:$mockk_version"

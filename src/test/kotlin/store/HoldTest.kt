@@ -18,6 +18,7 @@ package store
 
 import io.gladed.watchable.Watcher
 import io.gladed.watchable.store.Hold
+import io.gladed.watchable.store.plus
 import io.mockk.coVerify
 import io.mockk.mockk
 import io.mockk.verify
@@ -27,52 +28,59 @@ import runTest
 class HoldTest {
     private val watcher = mockk<Watcher>(relaxUnitFun = true)
     private val mockHold = mockk<Hold>(relaxUnitFun = true)
-    private val hold = Hold(onCancel = { mockHold.cancel() },
-        onRemove = { mockHold.remove() },
-        onStart = { mockHold.start() },
-        onStop = { mockHold.stop() })
+    private val hold = Hold(onCancel = { mockHold.onCancel() },
+        onRemove = { mockHold.onRemove() },
+        onStart = { mockHold.onStart() },
+        onStop = { mockHold.onStop() },
+        onCreate = { mockHold.onCreate() })
 
     @Test fun `plus combines cancel`() = runTest {
-        (hold + hold).cancel()
-        verify(exactly = 2) { mockHold.cancel() }
+        (hold + hold).onCancel()
+        verify(exactly = 2) { mockHold.onCancel() }
     }
 
     @Test fun `plus combines remove`() = runTest {
-        (hold + hold).remove()
-        coVerify(exactly = 2) { mockHold.remove() }
+        (hold + hold).onRemove()
+        coVerify(exactly = 2) { mockHold.onRemove() }
     }
 
     @Test fun `plus combines start`() = runTest {
-        (hold + hold).start()
-        coVerify(exactly = 2) { mockHold.start() }
+        (hold + hold).onStart()
+        coVerify(exactly = 2) { mockHold.onStart() }
     }
 
     @Test fun `plus combines stop`() = runTest {
-        (hold + hold).stop()
-        coVerify(exactly = 2) { mockHold.stop() }
+        (hold + hold).onStop()
+        coVerify(exactly = 2) { mockHold.onStop() }
     }
 
+    @Test fun `plus combines create`() = runTest {
+        (hold + hold).onCreate()
+        coVerify(exactly = 2) { mockHold.onCreate() }
+    }
+
+
     @Test fun `plus watcher combines cancel`() = runTest {
-        (hold + watcher).cancel()
-        verify(exactly = 1) { mockHold.cancel() }
+        (hold + watcher).onCancel()
+        verify(exactly = 1) { mockHold.onCancel() }
         verify(exactly = 1) { watcher.cancel() }
     }
 
     @Test fun `plus watcher allows remove`() = runTest {
-        (hold + watcher).remove()
-        coVerify(exactly = 1) { mockHold.remove() }
+        (hold + watcher).onRemove()
+        coVerify(exactly = 1) { mockHold.onRemove() }
         // Watcher has no remove
     }
 
     @Test fun `plus watcher combines start`() = runTest {
-        (hold + watcher).start()
-        coVerify(exactly = 1) { mockHold.start() }
+        (hold + watcher).onStart()
+        coVerify(exactly = 1) { mockHold.onStart() }
         coVerify(exactly = 1) { watcher.start() }
     }
 
     @Test fun `plus watcher combines stop`() = runTest {
-        (hold + watcher).stop()
-        coVerify(exactly = 1) { mockHold.stop() }
+        (hold + watcher).onStop()
+        coVerify(exactly = 1) { mockHold.onStop() }
         coVerify(exactly = 1) { watcher.stop() }
     }
 }

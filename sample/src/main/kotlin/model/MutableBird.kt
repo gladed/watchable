@@ -25,4 +25,8 @@ data class MutableBird(
             Bird(id, name.value, following.toList())
         }
     }
+
+    fun toImmutable() = deflate(this)
 }
+
+fun Bird.toMutable() = MutableBird.inflate(this)

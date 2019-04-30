@@ -17,17 +17,25 @@
 package store
 
 import impossible
+import io.gladed.watchable.store.Cannot
+import io.gladed.watchable.store.Hold
+import io.gladed.watchable.store.HoldingStore
+import io.gladed.watchable.store.Store
+import io.gladed.watchable.store.holding
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.asFlow
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.TestCoroutineScope
@@ -35,14 +43,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.fail
 import org.junit.Before
 import org.junit.Test
-import io.gladed.watchable.store.Cannot
-import io.gladed.watchable.store.Hold
-import io.gladed.watchable.store.HoldingStore
-import io.gladed.watchable.store.Store
-import io.gladed.watchable.store.holding
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.asFlow
-import kotlinx.coroutines.flow.toList
 import runTest
 import java.util.UUID
 
@@ -79,9 +79,10 @@ class HoldingStoreTest {
     }
 
     @Test fun `put an item`() = test {
+        coEvery { rootStore.get(robin.id) } throws Cannot("find bird for key")
         scopeStore.create(this).put(robin.id, robin)
-        coVerify { rootStore.put(robin.id, robin) }
         coVerify { creator.create(robin) }
+        coVerify { rootStore.put(robin.id, robin) }
     }
 
     @Test fun `release when scope completes`() = test {
@@ -89,7 +90,7 @@ class HoldingStoreTest {
             assertEquals(robin, scopeStore.create(this).get(robin.id))
             coVerify { creator.create(robin) }
         }
-        coVerify { hold.stop() }
+        coVerify { hold.onStop() }
     }
 
     @Test fun `hold only once when two scopes get`() = test {
@@ -107,9 +108,9 @@ class HoldingStoreTest {
             coroutineScope {
                 scopeStore.create(this).get(robin.id)
             }
-            coVerify(exactly = 0) { hold.stop() }
+            coVerify(exactly = 0) { hold.onStop() }
         }
-        coVerify(exactly = 1) { hold.stop() }
+        coVerify(exactly = 1) { hold.onStop() }
     }
 
     @Test fun `hold+release only once when get twice from same scope`() = test {
@@ -119,7 +120,7 @@ class HoldingStoreTest {
             store.get(robin.id)
             coVerify(exactly = 1) { creator.create(robin) }
         }
-        coVerify(exactly = 1) { hold.stop() }
+        coVerify(exactly = 1) { hold.onStop() }
     }
 
     @Test fun `second user must reallocate`() = test {
@@ -127,7 +128,7 @@ class HoldingStoreTest {
         coroutineScope { scopeStore.create(this).get(robin.id) }
 
         coVerify(exactly = 2) { creator.create(robin) }
-        coVerify(exactly = 2) { hold.stop() }
+        coVerify(exactly = 2) { hold.onStop() }
     }
 
     @Test fun `failure to get causes throw`() = test {
@@ -173,9 +174,9 @@ class HoldingStoreTest {
         coVerify(exactly = 1) { creator.create(robin) }
 
         scope1.cancel()
-        coVerify(exactly = 0) { hold.stop() }
+        coVerify(exactly = 0) { hold.onStop() }
         scope2.cancel()
-        coVerify(exactly = 1) { hold.stop() }
+        coVerify(exactly = 1) { hold.onStop() }
     }
 
     @Test fun `attempt to get is cancelled when scope dies`() = test {
@@ -199,7 +200,7 @@ class HoldingStoreTest {
             val store = scopeStore.create(this)
             store.get(robin.id)
             store.delete(robin.id)
-            coVerify { hold.stop() }
+            coVerify { hold.onStop() }
             coVerify { rootStore.delete(robin.id) }
         }
     }
@@ -218,7 +219,7 @@ class HoldingStoreTest {
         scopeStore.create(this).get(robin.id)
         scopeStore.stop()
         // Released even though scope still active
-        coVerify { hold.stop() }
+        coVerify { hold.onStop() }
     }
 
     @UseExperimental(FlowPreview::class)

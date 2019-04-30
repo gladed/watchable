@@ -42,7 +42,7 @@ class HoldingStore<T : Any>(
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
-    private val map = mutableMapOf<String, Holding<T>>().guarded()
+    private val map = mutableMapOf<String, MultiHold<T>>().guarded()
 
     /**
      * Return a new [Store]; items accessed by this store will have a corresponding hold (see [createHold]) in
@@ -70,7 +70,7 @@ class HoldingStore<T : Any>(
     }
 
     /** Attempt to hold an instance of [T] on behalf of one or more [Store]s. */
-    private class Holding<T : Any>(first: Store<T>, val hold: Deferred<Pair<T, Hold>>) {
+    private class MultiHold<T : Any>(first: Store<T>, val hold: Deferred<Pair<T, Hold>>) {
         private val stores = mutableSetOf(first).guarded()
 
         suspend fun add(store: Store<T>) {
@@ -89,8 +89,8 @@ class HoldingStore<T : Any>(
         /** Stop holding as we delete this item. */
         suspend fun delete() {
             val toStop = hold.await().second
-            toStop.remove()
-            toStop.stop()
+            toStop.onRemove()
+            toStop.onStop()
         }
 
         /** Stop holding. */
@@ -101,7 +101,7 @@ class HoldingStore<T : Any>(
             try {
                 // Stop watching if not already cancelled
                 if (!hold.isCancelled) {
-                    hold.await().second.stop()
+                    hold.await().second.onStop()
                 }
             } catch (c: CancellationException) { }
         }
@@ -111,14 +111,29 @@ class HoldingStore<T : Any>(
     @UseExperimental(FlowPreview::class)
     private inner class SingleStore : Store<T> {
         override suspend fun put(key: String, value: T) {
-            // Put a hold on the value
-            hold(key) { value }.apply {
-                if (first !== value) {
-                    cannot("replace while different object with same key is in use")
+            // First, test to see if there's a value present.
+            try {
+                back.get(key)
+            } catch (c: Cannot) {
+                // Kill the old hold if there was one, it's being replaced.
+                map { remove(key) }?.stop()
+
+                println("Creating hold")
+                val newHold = createHold(value)
+                // Handle create attempt
+                println("Calling onCreate on $newHold")
+                newHold.onCreate()
+                println("Put($key, $value)")
+                back.put(key, value)
+                println("Calling onStart on $newHold")
+                newHold.onStart()
+
+                map {
+                    put(key, MultiHold(this@SingleStore, async { value to newHold }))
                 }
+                return
             }
-            // Put it in the backing store
-            back.put(key, value)
+            cannot("overwrite existing value")
         }
 
         @Suppress("TooGenericExceptionCaught") // Rollback in case of any failure
@@ -141,10 +156,10 @@ class HoldingStore<T : Any>(
         private suspend fun hold(key: String, getValue: suspend () -> T): Pair<T, Hold> =
             map {
                 get(key)?.also { it.add(this@SingleStore) }
-                    ?: Holding(this@SingleStore, async(SupervisorJob()) {
+                    ?: MultiHold(this@SingleStore, async(SupervisorJob()) {
                         val value = getValue()
                         val hold = createHold(value)
-                        hold.start()
+                        hold.onStart()
                         value to hold
                     }).also {
                         put(key, it)

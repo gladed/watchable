@@ -24,8 +24,8 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flattenConcat
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapNotNull
-import kotlinx.coroutines.withContext
 import java.io.File
 
 /** Read/write strings to files for each key. */
@@ -42,7 +42,7 @@ class FileStore(
     private fun String.keyFile() = File(dir.also { dir.mkdirs() }, "$this$dotSuffix")
 
     override suspend fun get(key: String) =
-        key.keyFile().takeIf { dir.exists() }?.readText()
+        key.keyFile().takeIf { it.isFile }?.readText()
             ?: cannot("find $name for key")
 
     override suspend fun put(key: String, value: String) {
@@ -54,10 +54,9 @@ class FileStore(
     }
 
     override fun keys() = flow<Flow<File>> {
-        withContext(Dispatchers.IO) {
-            emit((dir.listFiles() ?: arrayOf()).asFlow())
-        }
-    }.flattenConcat().mapNotNull {
+        emit((dir.listFiles() ?: arrayOf()).asFlow())
+    }.flowOn(Dispatchers.IO)
+        .flattenConcat().mapNotNull {
         if (it.name.endsWith(dotSuffix)) {
             it.name.removeSuffix(dotSuffix)
         } else null

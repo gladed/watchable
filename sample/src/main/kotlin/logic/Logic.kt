@@ -3,7 +3,9 @@ package logic
 import io.gladed.watchable.Period.INLINE
 import io.gladed.watchable.store.Hold
 import io.gladed.watchable.store.Store
+import io.gladed.watchable.store.cannot
 import io.gladed.watchable.store.holding
+import io.gladed.watchable.store.plus
 import io.gladed.watchable.watch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -20,7 +22,7 @@ class Logic(
     context: CoroutineContext,
     birdStore: Store<MutableBird>,
     chirpStore: Store<Chirp>,
-    private val ops: Operations
+    val ops: Operations
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
@@ -32,6 +34,10 @@ class Logic(
                     ops.chirpsForBird(bird.id).collect { chirpId ->
                         chirps.delete(chirpId)
                     }
+                }
+            }, onCreate = {
+                if (bird.following.isNotEmpty()) {
+                    cannot("create a bird with followers")
                 }
             }) + watch(bird.watchables) {
                 if (!it.isInitial) {
