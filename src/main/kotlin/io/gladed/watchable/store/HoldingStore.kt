@@ -118,14 +118,10 @@ class HoldingStore<T : Any>(
                 // Kill the old hold if there was one, it's being replaced.
                 map { remove(key) }?.stop()
 
-                println("Creating hold")
                 val newHold = createHold(value)
                 // Handle create attempt
-                println("Calling onCreate on $newHold")
                 newHold.onCreate()
-                println("Put($key, $value)")
                 back.put(key, value)
-                println("Calling onStart on $newHold")
                 newHold.onStart()
 
                 map {
