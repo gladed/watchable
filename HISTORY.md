@@ -3,10 +3,10 @@
 ## 0.6.10
 * Add `Watcher.start()`.
 * Add `Watchable.waitFor { }`
-* Remove `suspend` from all operation signatures.
 * Remove `use` in favor of operator `invoke`.
+* Remove `suspend` from all operation signatures (`batch`, `watch`, etc).
 * Add `isInitial` to all changes (#49).
-* Add `Store`, `HoldingStore`, `MemoryStore`, and `Inflater` for convenient integration with external data sources.
+* Add `Store`, `Cache`, `HoldingStore`, `MemoryStore`, and `Inflater` for integration with external data.
 
 ## 0.6.9
 * `Watcher.close` -> `Watcher.stop` to prevent confusion with file close operations

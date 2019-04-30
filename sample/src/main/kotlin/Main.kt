@@ -42,7 +42,7 @@ data class CreateBird(
 class Main : CoroutineScope {
 
     override val coroutineContext = Dispatchers.Default + Job()
-    private val logic = Adapter.createLogic(coroutineContext, File("store"))
+    private val logic = Adapter.createLogic(coroutineContext, File(".data"))
 
     fun go() {
         embeddedServer(Netty, SAMPLE_PORT) {
@@ -66,6 +66,7 @@ class Main : CoroutineScope {
 
     private fun Route.birdRoutes() {
         post {
+            // Create a new bird with the specified name
             val birdRequest = call.receive<CreateBird>()
 
             val bird = coroutineScope {
