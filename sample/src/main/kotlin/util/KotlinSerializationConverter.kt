@@ -32,33 +32,29 @@ import kotlinx.serialization.SerializationStrategy
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
 
-/** Ktor content converter for known @Serializable classes. */
+/** Ktor content converter for explicitly registered @Serializable classes. */
 @UseExperimental(UnstableDefault::class, KtorExperimentalAPI::class)
 class KotlinSerializationConverter : ContentConverter {
     var serializers = mutableMapOf<Class<*>, KSerializer<*>>()
 
     override suspend fun convertForReceive(
         context: PipelineContext<ApplicationReceiveRequest, ApplicationCall>
-    ): Any? {
-        val request = context.subject
-        return serializers[request.type.javaObjectType]?.let {
-            Json.parse(it, (request.value as? ByteReadChannel
-                ?: return null)
-                .readRemaining(MAX_REQUEST_SIZE, 0).readText())
+    ): Any? =
+        serializers[context.subject.type.javaObjectType]?.let {
+            val bytes = context.subject.value as? ByteReadChannel ?: return null
+            Json.parse(it, bytes.readRemaining(MAX_REQUEST_SIZE, 0).readText())
         }
-    }
 
     override suspend fun convertForSend(
         context: PipelineContext<Any, ApplicationCall>,
         contentType: ContentType,
         value: Any
-    ): Any? {
-        return serializers[value.javaClass]?.let { serializer ->
+    ): Any? =
+        serializers[value.javaClass]?.let { serializer ->
             @Suppress("UNCHECKED_CAST") // Necessary to extract known-good serializer
             TextContent(Json.stringify(serializer as SerializationStrategy<Any>, value),
                 contentType.withCharset(context.call.suitableCharset()))
         }
-    }
 
     /** Install a serializer for the specified type. */
     inline fun <reified T : Any> add(serializer: KSerializer<T>) {
