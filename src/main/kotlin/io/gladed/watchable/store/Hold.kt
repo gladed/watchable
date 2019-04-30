@@ -18,44 +18,59 @@ package io.gladed.watchable.store
 
 import io.gladed.watchable.Watcher
 
-/** Represents an object being held for use. */
+/**
+ * Represents an object being held for use with resources or side effects to be managed by
+ * this object.
+ */
 interface Hold {
-    /** Return when the watcher has become effective. */
-    suspend fun start()
+    /** Handle the initial creation of the underlying held object. */
+    suspend fun onCreate()
 
-    /** Gracefully stop, suspending as necessary to allow outstanding operations to complete. */
-    suspend fun stop()
+    /** Start any internals with a delayed start. */
+    suspend fun onStart()
 
-    /** Immediately stop. */
-    fun cancel()
+    /** Called to gently stop any internal aspects of the hold. */
+    suspend fun onStop()
 
-    /** Action to take upon removing this item. */
-    suspend fun remove()
+    /** Immediately cancel the hold. */
+    fun onCancel()
 
-    operator fun plus(other: Hold) = Hold(
-        onStart = { start(); other.start() },
-        onStop = { stop(); other.stop() },
-        onCancel = { cancel(); other.cancel() },
-        onRemove = { remove(); other.remove() }
-    )
-
-    operator fun plus(other: Watcher) = this + Hold(
-        onStart = { other.start() },
-        onStop = { other.stop() },
-        onCancel = { other.cancel() }
-    )
+    /** Handle impending removal of the held object. */
+    suspend fun onRemove()
 
     companion object {
+
+        /** Create a [Hold] object with supplied implementations. */
         operator fun invoke(
             onStart: suspend () -> Unit = { },
             onStop: suspend () -> Unit = { },
             onCancel: () -> Unit = { },
-            onRemove: suspend () -> Unit = { }
-        ) = object : Hold {
-            override suspend fun start() { onStart() }
-            override suspend fun stop() { onStop() }
-            override fun cancel() { onCancel() }
-            override suspend fun remove() { onRemove() }
+            onRemove: suspend () -> Unit = { },
+            onCreate: suspend () -> Unit = { }
+        ): Hold = object : Hold {
+            override suspend fun onStart() { onStart() }
+            override suspend fun onStop() { onStop() }
+            override fun onCancel() { onCancel() }
+            override suspend fun onRemove() { onRemove() }
+            override suspend fun onCreate() { onCreate() }
         }
     }
 }
+
+/** Combine the behaviors of this [Hold] object with [other]. */
+operator fun Hold.plus(other: Hold) = Hold(
+    onStart = { onStart(); other.onStart() },
+    onStop = { onStop(); other.onStop() },
+    onCancel = { onCancel(); other.onCancel() },
+    onRemove = { onRemove(); other.onRemove() },
+    onCreate = { onCreate(); other.onCreate() }
+)
+
+/** Combine the behaviors of this [Hold] object with a [Watcher]. */
+operator fun Hold.plus(other: Watcher) = Hold(
+    onStart = { onStart(); other.start() },
+    onStop = { onStop(); other.stop() },
+    onCancel = { onCancel(); other.cancel() },
+    onRemove = { onRemove() },
+    onCreate = { onCreate() }
+)

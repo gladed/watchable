@@ -10,6 +10,7 @@ import model.MutableBird
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import io.gladed.watchable.store.MemoryStore
+import model.toMutable
 import test.impossible
 import test.runTest
 
@@ -34,7 +35,7 @@ class LogicTest {
     }
 
     @Test fun `write bird to store`() = test {
-        val bird = MutableBird.inflate(robin)
+        val bird = robin.toMutable()
         logic.birds.create(this).put(robin.id, bird)
         assertEquals(robin, birdStore.get(robin.id))
     }
@@ -47,7 +48,7 @@ class LogicTest {
     }
 
     @Test fun `cannot update deleted bird`() = test {
-        val bird = MutableBird.inflate(robin)
+        val bird = robin.toMutable()
         val birds = logic.birds.create(this)
         birds.put(robin.id, bird)
         birds.delete(robin.id)
@@ -60,7 +61,7 @@ class LogicTest {
     }
 
     @Test fun `cannot follow bird that does not exist`() = test {
-        val bird = MutableBird.inflate(robin)
+        val bird = robin.toMutable()
         logic.birds.create(this).put(robin.id, bird)
 
         impossible {
@@ -70,7 +71,7 @@ class LogicTest {
 
     @Test fun `bird sends a chirp`() = test {
         coroutineScope {
-            val bird = MutableBird.inflate(robin)
+            val bird = robin.toMutable()
             logic.birds.create(this).put(robin.id, bird)
             logic.chirps.create(this).put(chirp.id, chirp)
         }
@@ -90,12 +91,19 @@ class LogicTest {
         val birds = logic.birds.create(this)
         val chirps = logic.chirps.create(this)
 
-        birds.put(robin.id, MutableBird.inflate(robin))
+        birds.put(robin.id, robin.toMutable())
         chirps.put(chirp.id, chirp)
         birds.delete(robin.id)
 
         impossible {
             chirps.get(chirp.id)
+        }
+    }
+
+    @Test fun `cannot create with bad followers`() = test {
+        val birds = logic.birds.create(this)
+        impossible {
+            birds.put(robin.id, robin.copy(following = listOf("bad")).toMutable())
         }
     }
 
