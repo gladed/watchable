@@ -22,7 +22,7 @@ import logic.Operations
 import model.Bird
 import model.Chirp
 import model.MutableBird
-import store.FileStore
+import io.gladed.watchable.store.FileStore
 import util.inflate
 import java.io.File
 import kotlin.coroutines.CoroutineContext

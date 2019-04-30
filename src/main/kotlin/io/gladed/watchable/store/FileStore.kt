@@ -14,10 +14,8 @@
  * limitations under the License.
  */
 
-package store
+package io.gladed.watchable.store
 
-import io.gladed.watchable.store.Store
-import io.gladed.watchable.store.cannot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
@@ -26,6 +24,7 @@ import kotlinx.coroutines.flow.flattenConcat
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.mapNotNull
+import kotlinx.coroutines.withContext
 import java.io.File
 
 /** Read/write strings to files for each key. */
@@ -42,15 +41,21 @@ class FileStore(
     private fun String.keyFile() = File(dir.also { dir.mkdirs() }, "$this$dotSuffix")
 
     override suspend fun get(key: String) =
-        key.keyFile().takeIf { it.isFile }?.readText()
-            ?: cannot("find $name for key")
+        withContext(Dispatchers.IO) {
+            key.keyFile().takeIf { it.isFile }?.readText()
+                ?: cannot("find $name for key")
+        }
 
     override suspend fun put(key: String, value: String) {
-        key.keyFile().writeText(value)
+        withContext(Dispatchers.IO) {
+            key.keyFile().writeText(value)
+        }
     }
 
     override suspend fun delete(key: String) {
-        key.keyFile().delete()
+        withContext(Dispatchers.IO) {
+            key.keyFile().delete()
+        }
     }
 
     override fun keys() = flow<Flow<File>> {
