@@ -20,6 +20,9 @@ import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
 import io.gladed.watchable.store.Inflater
 import io.gladed.watchable.store.Store
+import kotlinx.serialization.Decoder
+import kotlinx.serialization.Encoder
+import kotlinx.serialization.SerialDescriptor
 import kotlinx.serialization.UnstableDefault
 
 /** Convert this [KSerializer] to an [Inflater] of [String] and [T] */
@@ -30,3 +33,15 @@ fun <T : Any> KSerializer<T>.toInflater() = object : Inflater<String, T> {
 }
 
 fun <T : Any> Store<String>.inflate(serializer: KSerializer<T>): Store<T> = inflate(serializer.toInflater())
+
+/** Return a new serializer from this [T] serializer which automatically inflates/deflates to [U]. */
+fun <T : Any, U : Any> KSerializer<T>.wrap(inflater: Inflater<T, U>): KSerializer<U> =
+    object : KSerializer<U> {
+        override val descriptor: SerialDescriptor = this@wrap.descriptor
+
+        override fun deserialize(decoder: Decoder): U = inflater.inflate(this@wrap.deserialize(decoder))
+
+        override fun serialize(encoder: Encoder, obj: U) {
+            this@wrap.serialize(encoder, inflater.deflate(obj))
+        }
+    }

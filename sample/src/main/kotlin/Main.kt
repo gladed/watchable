@@ -1,3 +1,19 @@
+/*
+ * (c) Copyright 2019 Glade Diviney.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import external.Adapter
 import io.ktor.application.call
 import io.ktor.application.install
@@ -22,21 +38,18 @@ import kotlinx.coroutines.flow.toList
 import kotlinx.serialization.Serializable
 import model.Bird
 import model.MutableBird
+import model.toMutable
 import util.KotlinSerializationConverter
+import util.wrap
 import java.io.File
 
 fun main() = Main().go()
 
 @Serializable
-data class Home(
-    val birdsUrl: String = "/bird",
-    val someBirdUrls: List<String>
-)
+data class Home(val birdsUrl: String = "/bird", val someBirdUrls: List<String>)
 
 @Serializable
-data class CreateBird(
-    val name: String
-)
+data class CreateBird(val name: String)
 
 @UseExperimental(FlowPreview::class)
 class Main : CoroutineScope {
@@ -51,6 +64,7 @@ class Main : CoroutineScope {
                     add(Home.serializer())
                     add(CreateBird.serializer())
                     add(Bird.serializer())
+                    add(Bird.serializer().wrap(MutableBird))
                 }
             }
 
@@ -68,22 +82,19 @@ class Main : CoroutineScope {
         post {
             // Create a new bird with the specified name
             val birdRequest = call.receive<CreateBird>()
+            val bird = Bird(name = birdRequest.name).toMutable()
 
-            val bird = coroutineScope {
-                val birds = logic.birds.create(this)
-                MutableBird.inflate(Bird(name = birdRequest.name)).also { bird ->
-                    birds.put(bird.id, bird)
-                }
-            }.toImmutable()
+            coroutineScope {
+                logic.birds.create(this).put(bird.id, bird)
+            }
 
             call.respond(bird)
         }
-        get("{id}") {
-            val bird = coroutineScope {
-                logic.birds.create(this).get(call.parameters["id"]!!)
-            }.toImmutable()
 
-            call.respond(bird)
+        get("{id}") {
+            call.respond(coroutineScope {
+                logic.birds.create(this).get(call.parameters["id"]!!)
+            })
         }
     }
 

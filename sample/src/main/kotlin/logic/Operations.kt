@@ -12,7 +12,7 @@ open class Operations(private val chirps: Store<Chirp>) {
     /**
      * Returns the ids of all chirps issued by a bird.
      *
-     * The default operation iterates through all chirps, comparing IDs.
+     * The default operation iterates through all chirps, comparing IDs. This will get pretty slow if there are many.
      */
     open fun chirpsForBird(birdId: String) =
         chirps.keys()
