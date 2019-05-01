@@ -12,7 +12,6 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collect
-import model.Chirp
 import model.MutableBird
 import model.MutableChirp
 import kotlin.coroutines.CoroutineContext

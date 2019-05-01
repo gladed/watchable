@@ -19,9 +19,7 @@ package model
 import io.gladed.watchable.WatchableMap
 import io.gladed.watchable.store.Inflater
 import io.gladed.watchable.toWatchableMap
-import java.time.Clock
 import java.time.LocalDateTime
-import java.time.ZoneOffset
 
 /** Mutable form of a [Chirp]. */
 data class MutableChirp(
