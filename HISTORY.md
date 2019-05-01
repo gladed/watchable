@@ -1,5 +1,8 @@
 # Version History
 
+## 0.6.11
+* Fix a memory leak (#68).
+
 ## 0.6.10
 * Add `Watcher.start()`.
 * Add `Watchable.waitFor { }`
