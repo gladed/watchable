@@ -15,6 +15,7 @@
  */
 
 import external.Adapter
+import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
@@ -28,6 +29,7 @@ import io.ktor.routing.route
 import io.ktor.routing.routing
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
+import io.ktor.util.pipeline.PipelineContext
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
@@ -56,6 +58,9 @@ data class CreateBird(val name: String)
 @Serializable
 data class CreateChirp(val text: String)
 
+@Serializable
+data class ReactToChirp(val reaction: String?)
+
 @UseExperimental(FlowPreview::class)
 class Main : CoroutineScope {
 
@@ -66,10 +71,12 @@ class Main : CoroutineScope {
         val chirps by lazy { logic.chirps.create(scope) }
     }
 
-    private suspend fun <T> logically(func: suspend InLogic.() -> T): T =
-        coroutineScope {
-            InLogic(this, logic).func()
-        }
+    // Note: This could be a feature
+    private suspend inline fun <reified T : Any> PipelineContext<Unit, ApplicationCall>.logically(
+        crossinline func: suspend InLogic.() -> T
+    ) = coroutineScope {
+        call.respond(InLogic(this, logic).func())
+    }
 
     fun go() {
         embeddedServer(Netty, SAMPLE_PORT) {
@@ -78,6 +85,7 @@ class Main : CoroutineScope {
                     add(Home.serializer())
                     add(CreateBird.serializer())
                     add(CreateChirp.serializer())
+                    add(ReactToChirp.serializer())
                     add(Bird.serializer(), MutableBird)
                     add(Chirp.serializer(), MutableChirp)
                 }
@@ -95,9 +103,9 @@ class Main : CoroutineScope {
     }
 
     private fun Route.chirpRoutes() {
-        get("{id}") {
+        get("{chirpId}") {
             logically {
-                call.respond(chirps.get(call.parameters["id"]!!))
+                chirps.get(call.parameters["chirpId"]!!)
             }
         }
     }
@@ -109,24 +117,40 @@ class Main : CoroutineScope {
                 val birdRequest = call.receive<CreateBird>()
                 val bird = Bird(name = birdRequest.name)
                 birds.put(bird.id, MutableBird(bird))
-                call.respond(bird)
+                bird
             }
         }
 
-        post("{id}/chirp") {
-            call.respond(logically {
+        post("{birdId}/chirp") {
+            logically {
                 // Create a new chirp
                 val chirpRequest = call.receive<CreateChirp>()
-                val bird = birds.get(call.parameters["id"]!!)
+                val bird = birds.get(call.parameters["birdId"]!!)
                 Chirp(from = bird.id, text = chirpRequest.text).also { chirp ->
                     chirps.put(chirp.id, MutableChirp(chirp))
                 }
-            })
+            }
         }
 
-        get("{id}") {
+        get("{birdId}") {
             logically {
-                call.respond(birds.get(call.parameters["id"]!!))
+                birds.get(call.parameters["birdId"]!!)
+            }
+        }
+
+        post("{birdId}/reactToChirp/{chirpId}") {
+            logically {
+                val reaction = call.receive<ReactToChirp>().reaction
+                val bird = birds.get(call.parameters["birdId"]!!)
+                val chirp = chirps.get(call.parameters["chirpId"]!!)
+                chirp.reactions {
+                    if (reaction == null) {
+                        remove(bird.id)
+                    } else {
+                        put(bird.id, reaction)
+                    }
+                }
+                chirp
             }
         }
     }
