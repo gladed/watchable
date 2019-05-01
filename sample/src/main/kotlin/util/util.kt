@@ -45,3 +45,11 @@ fun <T : Any, U : Any> KSerializer<T>.wrap(inflater: Inflater<T, U>): KSerialize
             this@wrap.serialize(encoder, inflater.deflate(obj))
         }
     }
+
+/** Add both native and inflated serializers. */
+inline fun <reified T : Any, reified U : Any>KotlinSerializationConverter.add(
+    serializer: KSerializer<T>,
+    inflater: Inflater<T, U>) {
+    add(serializer)
+    add(serializer.wrap(inflater))
+}

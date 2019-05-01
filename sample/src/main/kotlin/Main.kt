@@ -36,11 +36,13 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.serialization.Serializable
+import logic.Logic
 import model.Bird
+import model.Chirp
 import model.MutableBird
-import model.toMutable
+import model.MutableChirp
 import util.KotlinSerializationConverter
-import util.wrap
+import util.add
 import java.io.File
 
 fun main() = Main().go()
@@ -51,11 +53,23 @@ data class Home(val birdsUrl: String = "/bird", val someBirdUrls: List<String>)
 @Serializable
 data class CreateBird(val name: String)
 
+@Serializable
+data class CreateChirp(val text: String)
+
 @UseExperimental(FlowPreview::class)
 class Main : CoroutineScope {
 
     override val coroutineContext = Dispatchers.Default + Job()
     private val logic = Adapter.createLogic(coroutineContext, File(".data"))
+    class InLogic(scope: CoroutineScope, logic: Logic) {
+        val birds by lazy { logic.birds.create(scope) }
+        val chirps by lazy { logic.chirps.create(scope) }
+    }
+
+    private suspend fun <T> logically(func: suspend InLogic.() -> T): T =
+        coroutineScope {
+            InLogic(this, logic).func()
+        }
 
     fun go() {
         embeddedServer(Netty, SAMPLE_PORT) {
@@ -63,8 +77,9 @@ class Main : CoroutineScope {
                 register(ContentType.Application.Json, KotlinSerializationConverter()) {
                     add(Home.serializer())
                     add(CreateBird.serializer())
-                    add(Bird.serializer())
-                    add(Bird.serializer().wrap(MutableBird))
+                    add(CreateChirp.serializer())
+                    add(Bird.serializer(), MutableBird)
+                    add(Chirp.serializer(), MutableChirp)
                 }
             }
 
@@ -74,27 +89,45 @@ class Main : CoroutineScope {
                         .take(SHORT_LIST_COUNT).toList().map { "/bird/$it" }))
                 }
                 route("bird") { birdRoutes() }
+                route("chirp") { chirpRoutes() }
             }
         }.start(wait = true)
     }
 
+    private fun Route.chirpRoutes() {
+        get("{id}") {
+            logically {
+                call.respond(chirps.get(call.parameters["id"]!!))
+            }
+        }
+    }
+
     private fun Route.birdRoutes() {
         post {
-            // Create a new bird with the specified name
-            val birdRequest = call.receive<CreateBird>()
-            val bird = Bird(name = birdRequest.name).toMutable()
-
-            coroutineScope {
-                logic.birds.create(this).put(bird.id, bird)
+            logically {
+                // Create a new bird with the specified name
+                val birdRequest = call.receive<CreateBird>()
+                val bird = Bird(name = birdRequest.name)
+                birds.put(bird.id, MutableBird(bird))
+                call.respond(bird)
             }
+        }
 
-            call.respond(bird)
+        post("{id}/chirp") {
+            call.respond(logically {
+                // Create a new chirp
+                val chirpRequest = call.receive<CreateChirp>()
+                val bird = birds.get(call.parameters["id"]!!)
+                Chirp(from = bird.id, text = chirpRequest.text).also { chirp ->
+                    chirps.put(chirp.id, MutableChirp(chirp))
+                }
+            })
         }
 
         get("{id}") {
-            call.respond(coroutineScope {
-                logic.birds.create(this).get(call.parameters["id"]!!)
-            })
+            logically {
+                call.respond(birds.get(call.parameters["id"]!!))
+            }
         }
     }
 
