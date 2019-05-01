@@ -14,6 +14,7 @@
  * limitations under the License.
  */
 
+import io.gladed.watchable.store.MemoryStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.coroutineScope
@@ -23,10 +24,9 @@ import logic.Operations
 import model.Bird
 import model.Chirp
 import model.MutableBird
+import model.MutableChirp
 import org.junit.Assert.assertEquals
 import org.junit.Test
-import io.gladed.watchable.store.MemoryStore
-import model.toMutable
 import test.impossible
 import test.runTest
 
@@ -44,14 +44,14 @@ class LogicTest {
             (object : Context, TestCoroutineScope by this {
                 override val logic = Logic(coroutineContext,
                     birdStore.inflate(MutableBird),
-                    chirpStore,
+                    chirpStore.inflate(MutableChirp),
                     Operations(chirpStore))
             }).func()
         }
     }
 
     @Test fun `write bird to store`() = test {
-        val bird = robin.toMutable()
+        val bird = MutableBird(robin)
         logic.birds.create(this).put(robin.id, bird)
         assertEquals(robin, birdStore.get(robin.id))
     }
@@ -64,7 +64,7 @@ class LogicTest {
     }
 
     @Test fun `cannot update deleted bird`() = test {
-        val bird = robin.toMutable()
+        val bird = MutableBird(robin)
         val birds = logic.birds.create(this)
         birds.put(robin.id, bird)
         birds.delete(robin.id)
@@ -77,7 +77,7 @@ class LogicTest {
     }
 
     @Test fun `cannot follow bird that does not exist`() = test {
-        val bird = robin.toMutable()
+        val bird = MutableBird(robin)
         logic.birds.create(this).put(robin.id, bird)
 
         impossible {
@@ -87,19 +87,18 @@ class LogicTest {
 
     @Test fun `bird sends a chirp`() = test {
         coroutineScope {
-            val bird = robin.toMutable()
-            logic.birds.create(this).put(robin.id, bird)
-            logic.chirps.create(this).put(chirp.id, chirp)
+            logic.birds.create(this).put(robin.id, MutableBird(robin))
+            logic.chirps.create(this).put(chirp.id, MutableChirp(chirp))
         }
 
         coroutineScope {
-            assertEquals(chirp, logic.chirps.create(this).get(chirp.id))
+            assertEquals(chirp, logic.chirps.create(this).get(chirp.id).toChirp())
         }
     }
 
     @Test fun `unknown bird cannot chirp`() = test {
         impossible {
-            logic.chirps.create(this).put(chirp.id, chirp)
+            logic.chirps.create(this).put(chirp.id, MutableChirp(chirp))
         }
     }
 
@@ -107,8 +106,8 @@ class LogicTest {
         val birds = logic.birds.create(this)
         val chirps = logic.chirps.create(this)
 
-        birds.put(robin.id, robin.toMutable())
-        chirps.put(chirp.id, chirp)
+        birds.put(robin.id, MutableBird(robin))
+        chirps.put(chirp.id, MutableChirp(chirp))
         birds.delete(robin.id)
 
         impossible {
@@ -119,7 +118,7 @@ class LogicTest {
     @Test fun `cannot create with bad followers`() = test {
         val birds = logic.birds.create(this)
         impossible {
-            birds.put(robin.id, robin.copy(following = listOf("bad")).toMutable())
+            birds.put(robin.id, MutableBird(robin.copy(following = listOf("bad"))))
         }
     }
 

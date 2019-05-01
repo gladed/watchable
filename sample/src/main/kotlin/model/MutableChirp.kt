@@ -14,30 +14,29 @@
  * limitations under the License.
  */
 
-@file:UseSerializers(LocalDateTimeSerializer::class)
 package model
 
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.UseSerializers
-import util.LocalDateTimeSerializer
+import io.gladed.watchable.WatchableMap
+import io.gladed.watchable.store.Inflater
+import io.gladed.watchable.toWatchableMap
+import java.time.Clock
 import java.time.LocalDateTime
-import java.util.UUID
+import java.time.ZoneOffset
 
-/** Something memorable sent out by a [Bird]. */
-@Serializable
-data class Chirp(
-    /** A unique identifier for this [Chirp]. */
-    val id: String = UUID.randomUUID().toString(),
-
-    /** ID of originating [Bird]. */
+/** Mutable form of a [Chirp]. */
+data class MutableChirp(
+    val id: String,
     val from: String,
-
-    /** Time the [Chirp] was sent. */
     val sentAt: LocalDateTime = LocalDateTime.now(),
-
-    /** [Chirp] content. */
     val text: String,
+    val reactions: WatchableMap<String, String>
+) {
+    constructor(chirp: Chirp) : this(
+        chirp.id, chirp.from, chirp.sentAt, chirp.text, chirp.reactions.toWatchableMap())
+    fun toChirp() = Chirp(id, from, sentAt, text, reactions.toMap())
 
-    /** Map of other [Bird] ID's to short reactions to this chirp. */
-    val reactions: Map<String, String> = emptyMap()
-)
+    companion object : Inflater<Chirp, MutableChirp> {
+        override fun inflate(value: Chirp) = MutableChirp(value)
+        override fun deflate(value: MutableChirp) = value.toChirp()
+    }
+}

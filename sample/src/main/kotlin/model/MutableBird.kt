@@ -25,24 +25,25 @@ import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.store.Inflater
 import java.util.UUID
 
-/** Mutable form of [Bird]. */
+/**
+ * Mutable form of [Bird].
+ *
+ * Note: this is kept distinct from [Bird] so that the holder can modify it only when
+ * held. We can also add other features while keeping a clean core data model.
+ */
 data class MutableBird(
     val id: String = UUID.randomUUID().toString(),
     val name: WatchableValue<String>,
     val following: WatchableList<String> = watchableListOf()
 ) {
+    constructor(bird: Bird) : this(bird.id, bird.name.toWatchableValue(), bird.following.toWatchableList())
+
+    fun toBird() = Bird(id, name.value, following.toList())
+
     val watchables = group(name, following)
 
     companion object : Inflater<Bird, MutableBird> {
-        override fun inflate(value: Bird) = with(value) {
-            MutableBird(id, name.toWatchableValue(), following.toWatchableList())
-        }
-        override fun deflate(value: MutableBird) = with(value) {
-            Bird(id, name.value, following.toList())
-        }
+        override fun inflate(value: Bird) = MutableBird(value)
+        override fun deflate(value: MutableBird) = value.toBird()
     }
-
-    fun toImmutable() = deflate(this)
 }
-
-fun Bird.toMutable() = MutableBird.inflate(this)

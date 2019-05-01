@@ -14,6 +14,7 @@ import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collect
 import model.Chirp
 import model.MutableBird
+import model.MutableChirp
 import kotlin.coroutines.CoroutineContext
 
 /** Implement business logic required by components of the application. */
@@ -21,7 +22,7 @@ import kotlin.coroutines.CoroutineContext
 class Logic(
     context: CoroutineContext,
     birdStore: Store<MutableBird>,
-    chirpStore: Store<Chirp>,
+    chirpStore: Store<MutableChirp>,
     val ops: Operations
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
