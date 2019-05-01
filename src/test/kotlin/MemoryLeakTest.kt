@@ -16,7 +16,9 @@
 
 import io.gladed.watchable.ListChange
 import io.gladed.watchable.WatchableList
+import io.gladed.watchable.batch
 import io.gladed.watchable.bind
+import io.gladed.watchable.group
 import io.gladed.watchable.watch
 import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CoroutineScope
@@ -24,9 +26,12 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -110,5 +115,16 @@ class MemoryLeakTest {
         assertNull(list1)
 
         scour { assertNull(ref.get()) }
+    }
+
+    @Test fun `group handle stop allows gc`() = runTest {
+        val listRef = watchableListOf(1, 2, 3).let { list ->
+            batch(group(list)) { }.stop()
+            WeakReference(list)
+        }
+        scour {
+            assertNull(listRef.get())
+        }
+
     }
 }

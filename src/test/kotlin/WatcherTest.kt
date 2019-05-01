@@ -25,7 +25,7 @@ import kotlinx.coroutines.channels.Channel
 import org.junit.Test
 
 @UseExperimental(ExperimentalCoroutinesApi::class)
-class FlushTest {
+class WatcherTest {
     val changes = Channel<Any>(Channel.UNLIMITED)
 
     @Test fun `receive events while flushing`() = runTest {
@@ -66,4 +66,41 @@ class FlushTest {
         }
         changes.mustBe()
     }
+
+    @Test fun `start twice`() = runTest {
+        val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
+        val list = watchableListOf(1)
+        pauseDispatcher {
+            val watcher = watch(list) { changes.send(it) }
+            watcher.start()
+            watcher.start()
+            changes.mustBe(ListChange.Initial(listOf(1)))
+        }
+    }
+
+
+    @Test fun `stop twice`() = runTest {
+        val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
+        val list = watchableListOf(1)
+        val watcher = watch(list) { changes.send(it) }
+        watcher.stop()
+        watcher.stop()
+        watcher.start()
+        watcher.cancel()
+        changes.mustBe(ListChange.Initial(listOf(1)))
+    }
+
+    @Test fun `cancel twice`() = runTest {
+        val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
+        val list = watchableListOf(1)
+        pauseDispatcher {
+            val watcher = watch(list) { changes.send(it) }
+            watcher.cancel()
+            watcher.cancel()
+            watcher.start()
+            watcher.stop()
+        }
+        changes.mustBe()
+    }
+
 }

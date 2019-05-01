@@ -18,85 +18,84 @@ package io.gladed.watchable
 
 import io.gladed.watchable.Period.IMMEDIATE
 import io.gladed.watchable.Period.INLINE
-import io.gladed.watchable.util.Guard
+import io.gladed.watchable.util.guarded
 import io.gladed.watchable.watcher.Immediate
 import io.gladed.watchable.watcher.Inline
 import io.gladed.watchable.watcher.Periodic
 import io.gladed.watchable.watcher.WatcherBase
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.launch
-import java.lang.ref.WeakReference
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.async
 
 /** Base for an object that generates change events of type [C] as its underlying data changes. */
 abstract class WatchableBase<C : Change> : Watchable<C> {
 
-    class Droppable<T : Any>(value: T) {
-        private val ref = WeakReference(value)
-        private var holding: T? = value
-        fun drop() { holding = null }
-        fun get(): T? { return ref.get() }
-    }
-
     /** Objects watching this one. */
-    private val watchers = Guard(mutableListOf<Droppable<WatcherBase<C>>>())
+    private val watchers = mutableListOf<WatcherBase<C>>().guarded()
 
     /** Deliver changes to watchers if any. */
     protected suspend fun dispatch(change: List<C>) {
-        // Upon any change, dispatch it to all watchers
+        // Upon any change, dispatch it to all watchers, removing dead ones
         watchers {
-            val toRemove = mapNotNull { it.get() }
-                .filter { !it.dispatch(change) }
-            removeAll { ref ->
-                ref.get()?.let { toRemove.contains(it) } ?: true
-            }
+            val toRemove = filter { !it.dispatch(change) }
+            removeAll(toRemove)
         }
     }
 
     /** Return the initial change that a new watcher should receive, if any */
     protected abstract fun getInitialChange(): C?
 
+    @UseExperimental(ExperimentalCoroutinesApi::class)
     override fun batch(
         scope: CoroutineScope,
         period: Long,
         func: suspend (List<C>) -> Unit
     ): Watcher {
-        val changeWatcher = when {
-            period == INLINE -> Inline(scope.coroutineContext, func)
-            period == IMMEDIATE -> Immediate(scope.coroutineContext, func)
-            period < 0 -> throw IllegalArgumentException("Invalid period")
-            else -> Periodic(scope.coroutineContext, period, func)
+        // Asynchronously prepare a watcher
+        val droppable = scope.async {
+            when {
+                period == INLINE -> Inline(scope.coroutineContext, func)
+                period == IMMEDIATE -> Immediate(scope.coroutineContext, func)
+                period < 0 -> throw IllegalArgumentException("Invalid period")
+                else -> Periodic(scope.coroutineContext, period, func)
+            }.also { watcher ->
+                watchers {
+                    // Send the initial change
+                    getInitialChange()?.also { change ->
+                        watcher.dispatch(listOf(change))
+                    }
+
+                    // Start handling other dispatches
+                    add(watcher)
+
+                    // Sort INLINE to top
+                    sortBy { if (it is Inline<*>) 1 else 2 }
+                }
+            }
         }
 
-        // This function does not suspend (to prevent users from having to launch { }, which
-        // creates a scope that immediately completes). So we must setup in background.
-        val setupWatcher = scope.launch {
-            val toDrop = Droppable(changeWatcher)
-            watchers {
-                add(toDrop)
-                sortBy {
-                    when (it) {
-                        is Inline<*> -> 1 // INLINE always comes first
-                        else -> 2
-                    }
-                }
-
-                getInitialChange()?.also { change ->
-                    changeWatcher.dispatch(listOf(change))
+        // Hide the asynchronous behavior behind a front-end Watcher
+        return object : Watcher {
+            override fun cancel() {
+                if (droppable.isCancelled) return
+                droppable.cancel()
+                if (droppable.isCompleted && droppable.getCompletionExceptionOrNull() == null) {
+                    droppable.getCompleted().cancel()
                 }
             }
 
-            scope.coroutineContext[Job]?.invokeOnCompletion {
-                toDrop.drop()
+            override suspend fun stop() {
+                if (droppable.isCancelled) return
+                droppable.await().also { watcher ->
+                    watchers { remove(watcher) }
+                    watcher.stop()
+                }
             }
-        }.toWatcher()
 
-        return setupWatcher + changeWatcher
-    }
-
-    private fun Job.toWatcher() = object : Watcher {
-        override suspend fun start() { join() }
-        override fun cancel() { this@toWatcher.cancel() }
-        override suspend fun stop() { join() }
+            override suspend fun start() {
+                if (droppable.isCancelled) return
+                droppable.await().start()
+            }
+        }
     }
 }
