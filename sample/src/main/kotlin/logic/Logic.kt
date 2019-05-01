@@ -57,6 +57,10 @@ class Logic(
 
     val chirps = chirpStore
         .holding(coroutineContext) { chirp ->
-            Hold(onStart = { birdStore.get(chirp.from) })
+            Hold(onStart = {
+                // Originator of chirp must be a valid bird
+                birdStore.get(chirp.from)
+            })
+            // Could add additional business logic, e.g. to reject invalid "reactions".
         }
 }
