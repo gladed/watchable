@@ -31,7 +31,7 @@ class WatchableGroup(
         period: Long,
         func: suspend (List<GroupChange>) -> Unit
     ): Watcher {
-        val handles = watchables.map { watchable ->
+        val watchers = watchables.map { watchable ->
             watchable.batch(scope) { changes ->
                 func(changes.map { GroupChange(watchable, it) })
             }
@@ -39,15 +39,17 @@ class WatchableGroup(
 
         return object : Watcher {
             override suspend fun start() {
-                handles.forEach { it.start() }
+                watchers.forEach { it.start() }
             }
 
             override fun cancel() {
-                handles.forEach { it.cancel() }
+                watchers.forEach { it.cancel() }
+                watchers.clear()
             }
 
             override suspend fun stop() {
-                handles.forEach { it.stop() }
+                watchers.forEach { it.stop() }
+                watchers.clear()
             }
         }
     }
