@@ -23,6 +23,9 @@ import io.gladed.watchable.toWatchableList
 import io.gladed.watchable.toWatchableValue
 import io.gladed.watchable.watchableListOf
 import io.gladed.watchable.store.Inflater
+import kotlinx.serialization.Serializable
+import util.WatchableListSerializer
+import util.WatchableValueSerializer
 import java.util.UUID
 
 /**
@@ -31,19 +34,21 @@ import java.util.UUID
  * Note: this is kept distinct from [Bird] so that the holder can modify it only when
  * held. We can also add other features while keeping a clean core data model.
  */
+@Serializable
 data class MutableBird(
     val id: String = UUID.randomUUID().toString(),
+    @Serializable(with = WatchableValueSerializer::class)
     val name: WatchableValue<String>,
+    @Serializable(with = WatchableListSerializer::class)
     val following: WatchableList<String> = watchableListOf()
 ) {
     constructor(bird: Bird) : this(bird.id, bird.name.toWatchableValue(), bird.following.toWatchableList())
 
     fun toBird() = Bird(id, name.value, following.toList())
 
-    val watchables = group(name, following)
-
     companion object : Inflater<Bird, MutableBird> {
         override fun inflate(value: Bird) = MutableBird(value)
         override fun deflate(value: MutableBird) = value.toBird()
+        fun extract(item: MutableBird) = with(item) { group(name, following) }
     }
 }
