@@ -138,7 +138,10 @@ class Main : CoroutineScope {
         get("{birdId}/chirp") {
             logically {
                 val bird = birds.get(call.parameters["birdId"]!!)
-                ChirpPage(logic.ops.chirpsForBird(bird.id).take(SHORT_LIST_COUNT).map { chirps.get(it).toChirp() }.toList())
+                ChirpPage(logic.ops.chirpsForBird(bird.id)
+                    .take(SHORT_LIST_COUNT)
+                    .map { chirps.get(it).toChirp() }
+                    .toList())
             }
         }
         post("{birdId}/chirp") {

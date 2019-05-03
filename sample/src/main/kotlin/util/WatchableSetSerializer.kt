@@ -18,19 +18,13 @@ package util
 
 import io.gladed.watchable.WatchableList
 import io.gladed.watchable.WatchableSet
-import io.gladed.watchable.toWatchableList
 import io.gladed.watchable.toWatchableSet
-import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.CompositeDecoder
 import kotlinx.serialization.Decoder
 import kotlinx.serialization.Encoder
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialDescriptor
 import kotlinx.serialization.Serializer
-import kotlinx.serialization.internal.ArrayListSerializer
-import kotlinx.serialization.internal.HashMapSerializer
 import kotlinx.serialization.internal.HashSetSerializer
-import kotlinx.serialization.internal.MapLikeSerializer
 import kotlinx.serialization.internal.NamedListClassDescriptor
 
 @Serializer(forClass = WatchableList::class)
