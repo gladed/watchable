@@ -38,6 +38,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.serialization.Serializable
@@ -64,6 +65,9 @@ data class CreateChirp(val text: String)
 @Serializable
 data class ReactToChirp(val reaction: String?)
 
+@Serializable
+data class ChirpPage(val chirps: List<Chirp>)
+
 @UseExperimental(FlowPreview::class)
 class Main : CoroutineScope {
 
@@ -89,6 +93,7 @@ class Main : CoroutineScope {
                     add(CreateBird.serializer())
                     add(CreateChirp.serializer())
                     add(ReactToChirp.serializer())
+                    add(ChirpPage.serializer())
                     add(Bird.serializer(), MutableBird)
                     add(Chirp.serializer(), MutableChirp)
                 }
@@ -130,6 +135,12 @@ class Main : CoroutineScope {
             }
         }
 
+        get("{birdId}/chirp") {
+            logically {
+                val bird = birds.get(call.parameters["birdId"]!!)
+                ChirpPage(logic.ops.chirpsForBird(bird.id).take(SHORT_LIST_COUNT).map { chirps.get(it).toChirp() }.toList())
+            }
+        }
         post("{birdId}/chirp") {
             logically {
                 // Create a new chirp
@@ -141,18 +152,18 @@ class Main : CoroutineScope {
             }
         }
 
-        post("{id}/chirp") {
+        post("{birdId}/chirp") {
             logically {
                 // Create a new chirp
                 val chirpRequest = call.receive<CreateChirp>()
-                val bird = birds.get(call.parameters["id"]!!)
+                val bird = birds.get(call.parameters["birdId"]!!)
                 Chirp(from = bird.id, text = chirpRequest.text).also { chirp ->
                     chirps.put(chirp.id, MutableChirp(chirp))
                 }
             }
         }
 
-        get("{id}") {
+        get("{birdId}") {
             logically {
                 birds.get(call.parameters["birdId"]!!)
             }

@@ -13,20 +13,26 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
+@file:UseSerializers(LocalDateTimeSerializer::class)
 package model
 
 import io.gladed.watchable.WatchableMap
 import io.gladed.watchable.store.Inflater
 import io.gladed.watchable.toWatchableMap
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.UseSerializers
+import util.LocalDateTimeSerializer
+import util.WatchableMapSerializer
 import java.time.LocalDateTime
 
 /** Mutable form of a [Chirp]. */
+@Serializable
 data class MutableChirp(
     val id: String,
     val from: String,
     val sentAt: LocalDateTime = LocalDateTime.now(),
     val text: String,
+    @Serializable(with = WatchableMapSerializer::class)
     val reactions: WatchableMap<String, String>
 ) {
     constructor(chirp: Chirp) : this(
