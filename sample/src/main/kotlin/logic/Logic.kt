@@ -46,9 +46,9 @@ class Logic(
                 }
             } + watch(bird.following, INLINE) {
                 if (!it.isInitial) it.simple.forEach { simple ->
-                    simple.add?.also { addKey ->
+                    simple.add?.also { birdId ->
                         // Just get the bird to make sure it's there
-                        birdStore.get(addKey)
+                        birdStore.get(birdId)
                     }
                 }
             }
@@ -56,10 +56,28 @@ class Logic(
 
     val chirps = chirpStore
         .holding(coroutineContext) { chirp ->
-            Hold(onStart = {
-                // Originator of chirp must be a valid bird
-                birdStore.get(chirp.from)
-            })
-            // Could add additional business logic, e.g. to reject invalid "reactions".
+            Hold(
+                onStart = { birdStore.get(chirp.from) },
+                onCreate = {
+                    if (chirp.text.length > MAX_CHIRP_LENGTH) {
+                        cannot("chirp with text longer than $MAX_CHIRP_LENGTH")
+                    }
+                }
+            ) + watch(chirp.reactions, INLINE) { change ->
+                if (!change.isInitial) change.simple.forEach { simple ->
+                    simple.add?.also { addValue ->
+                        // Make sure the reactioner exists
+                        birdStore.get(simple.key)
+                        if (addValue.length > MAX_REACTION_LENGTH) {
+                            cannot("react with text longer than $MAX_REACTION_LENGTH")
+                        }
+                    }
+                }
+            }
         }
+
+    companion object {
+        const val MAX_REACTION_LENGTH = 6
+        const val MAX_CHIRP_LENGTH = 320
+    }
 }

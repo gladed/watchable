@@ -19,7 +19,7 @@ package io.gladed.watchable.store
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 
-/** An object that retrieves elements by key. */
+/** An object that retrieves elements by a String key. */
 @UseExperimental(FlowPreview::class)
 interface Store<T : Any> {
     /** Return the corresponding element, or throw if not present. */
