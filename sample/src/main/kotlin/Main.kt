@@ -15,11 +15,14 @@
  */
 
 import external.Adapter
+import io.gladed.watchable.store.Cannot
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.ContentNegotiation
+import io.ktor.features.StatusPages
 import io.ktor.http.ContentType
+import io.ktor.http.HttpStatusCode
 import io.ktor.request.receive
 import io.ktor.response.respond
 import io.ktor.routing.Route
@@ -91,6 +94,12 @@ class Main : CoroutineScope {
                 }
             }
 
+            install(StatusPages) {
+                exception<Cannot> { cause ->
+                    call.respond(HttpStatusCode.BadRequest, "cannot ${cause.message}")
+                }
+            }
+
             routing {
                 get("/") {
                     call.respond(Home(someBirdUrls = logic.birds.back.keys()
@@ -132,7 +141,18 @@ class Main : CoroutineScope {
             }
         }
 
-        get("{birdId}") {
+        post("{id}/chirp") {
+            logically {
+                // Create a new chirp
+                val chirpRequest = call.receive<CreateChirp>()
+                val bird = birds.get(call.parameters["id"]!!)
+                Chirp(from = bird.id, text = chirpRequest.text).also { chirp ->
+                    chirps.put(chirp.id, MutableChirp(chirp))
+                }
+            }
+        }
+
+        get("{id}") {
             logically {
                 birds.get(call.parameters["birdId"]!!)
             }
