@@ -66,7 +66,11 @@ class Logic(
             ) + watch(chirp.reactions, INLINE) { change ->
                 if (!change.isInitial) change.simple.forEach { simple ->
                     simple.add?.also { addValue ->
-                        // Make sure the reactioner exists
+                        if (chirp.from == simple.key) {
+                            cannot("react to own chirp")
+                        }
+
+                        // React initiator must exist
                         birdStore.get(simple.key)
                         if (addValue.length > MAX_REACTION_LENGTH) {
                             cannot("react with text longer than $MAX_REACTION_LENGTH")
