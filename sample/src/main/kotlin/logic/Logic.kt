@@ -39,7 +39,7 @@ class Logic(
                 if (bird.following.isNotEmpty()) {
                     cannot("create a bird with followers")
                 }
-            }) + watch(bird.watchables) {
+            }) + watch(MutableBird.extract(bird)) {
                 if (!it.isInitial) {
                     // For any non-initial change, store the current version
                     birdStore.put(bird.id, bird)
