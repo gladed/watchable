@@ -22,14 +22,14 @@ fun <T> T.toWatchableValue(): WatchableValue<T> = WatchableValueBase(this)
 /** Return a new [WatchableValue] wrapping [value]. */
 fun <T> watchableValueOf(value: T): WatchableValue<T> = value.toWatchableValue()
 
-/** Return a new [WatchableSet] containing the elements of this [Collection]. */
-fun <T> Collection<T>.toWatchableSet(): WatchableSet<T> = WatchableSetBase(this)
+/** Return a new [WatchableSet] containing the elements of this [Iterable]. */
+fun <T> Iterable<T>.toWatchableSet(): WatchableSet<T> = WatchableSetBase(this)
 
 /** Return a new [WatchableSet] containing [values]. */
 fun <T> watchableSetOf(vararg values: T): WatchableSet<T> = values.toSet().toWatchableSet()
 
-/** Return a new [WatchableList] containing the elements of this [Collection]. */
-fun <T> Collection<T>.toWatchableList(): WatchableList<T> = WatchableListBase(this)
+/** Return a new [WatchableList] containing the elements of this [Iterable]. */
+fun <T> Iterable<T>.toWatchableList(): WatchableList<T> = WatchableListBase(this)
 
 /** Return a new [WatchableList] containing [values]. */
 fun <T> watchableListOf(vararg values: T): WatchableList<T> = values.toList().toWatchableList()
