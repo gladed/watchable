@@ -23,8 +23,9 @@ import model.Bird
 import model.Chirp
 import model.MutableBird
 import io.gladed.watchable.store.FileStore
+import io.gladed.watchable.store.transform
 import model.MutableChirp
-import util.inflate
+import util.serialize
 import java.io.File
 import kotlin.coroutines.CoroutineContext
 
@@ -33,9 +34,9 @@ object Adapter {
 
     /** Create a Logic object based on a folder on disk. */
     fun createLogic(context: CoroutineContext, root: File): Logic {
-        val birds = FileStore(root, "bird", JSON_SUFFIX).inflate(Bird.serializer()).cached(context)
-        val chirps = FileStore(root, "chirp", JSON_SUFFIX).inflate(Chirp.serializer()).cached(context)
-        return Logic(context, birds.inflate(MutableBird), chirps.inflate(MutableChirp), Operations(chirps))
+        val birds = FileStore(root, "bird", JSON_SUFFIX).serialize(Bird.serializer()).cached(context)
+        val chirps = FileStore(root, "chirp", JSON_SUFFIX).serialize(Chirp.serializer()).cached(context)
+        return Logic(context, birds.transform(MutableBird), chirps.transform(MutableChirp), Operations(chirps))
     }
 
     private const val JSON_SUFFIX = "json"

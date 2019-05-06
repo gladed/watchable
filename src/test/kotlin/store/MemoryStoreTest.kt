@@ -44,7 +44,7 @@ class MemoryStoreTest {
 
     @Test fun `remove by id`() = runTest {
         store.put(thing.id, thing)
-        store.delete(thing.id)
+        store.remove(thing.id)
         impossible {
             store.get(thing.id)
         }

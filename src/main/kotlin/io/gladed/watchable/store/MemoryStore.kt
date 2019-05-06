@@ -34,7 +34,7 @@ class MemoryStore<T : Any>(private val name: String) : Store<T> {
         map { put(key, value) }
     }
 
-    override suspend fun delete(key: String) {
+    override suspend fun remove(key: String) {
         map { remove(key) }
     }
 

@@ -52,7 +52,7 @@ class FileStore(
         }
     }
 
-    override suspend fun delete(key: String) {
+    override suspend fun remove(key: String) {
         withContext(Dispatchers.IO) {
             key.keyFile().delete()
         }

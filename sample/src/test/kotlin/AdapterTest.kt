@@ -32,20 +32,20 @@ class AdapterTest {
     @Test fun `read and write`() = runBlocking {
         val adapter = Adapter.createLogic(coroutineContext, folder.root)
         val birds = adapter.birds.create(this)
-        birds.put(robin.id, MutableBird.inflate(robin))
+        birds.put(robin.id, MutableBird.toTarget(robin))
     }
 
     @Test fun `read and write between adapter instances`() {
         runBlocking {
             val adapter = Adapter.createLogic(coroutineContext, folder.root)
             val birds = adapter.birds.create(this)
-            birds.put(robin.id, MutableBird.inflate(robin))
+            birds.put(robin.id, MutableBird.toTarget(robin))
         }
 
         runBlocking {
             val adapter = Adapter.createLogic(coroutineContext, folder.root)
             val birds = adapter.birds.create(this)
-            assertEquals(robin, MutableBird.deflate(birds.get(robin.id)))
+            assertEquals(robin, MutableBird.fromTarget(birds.get(robin.id)))
         }
     }
 }

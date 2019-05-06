@@ -17,8 +17,9 @@
 package store
 
 import impossible
-import io.gladed.watchable.store.Inflater
+import io.gladed.watchable.store.Transformer
 import io.gladed.watchable.store.MemoryStore
+import io.gladed.watchable.store.transform
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.toList
 import org.junit.Assert.assertEquals
@@ -26,29 +27,29 @@ import org.junit.Test
 import runTest
 
 @UseExperimental(FlowPreview::class)
-class InflaterTest {
-    private val stringToInt = object : Inflater<String, Int> {
-        override fun inflate(value: String): Int = value.toInt()
-        override fun deflate(value: Int): String = value.toString()
+class TransformerTest {
+    private val stringToInt = object : Transformer<String, Int> {
+        override fun toTarget(value: String): Int = value.toInt()
+        override fun fromTarget(value: Int): String = value.toString()
     }
 
-    private val intToString = object : Inflater<Int, String> {
-        override fun inflate(value: Int): String = value.toString()
-        override fun deflate(value: String): Int = value.toInt()
+    private val intToString = object : Transformer<Int, String> {
+        override fun toTarget(value: Int): String = value.toString()
+        override fun fromTarget(value: String): Int = value.toInt()
     }
 
     @Test fun cycle() {
-        assertEquals(5, (intToString + stringToInt).inflate(5))
-        assertEquals(5, (intToString + stringToInt).deflate(5))
+        assertEquals(5, (intToString + stringToInt).toTarget(5))
+        assertEquals(5, (intToString + stringToInt).fromTarget(5))
     }
 
     @Test fun inflateStore() = runTest {
         val memory = MemoryStore<Int>("int")
-        val inflated = memory.inflate(intToString)
+        val inflated = memory.transform(intToString)
         inflated.put(":1", "1")
         assertEquals("1", inflated.get(":1"))
         assertEquals(listOf(":1"), inflated.keys().toList())
-        inflated.delete(":1")
+        inflated.remove(":1")
         impossible {
             memory.get(":1")
         }

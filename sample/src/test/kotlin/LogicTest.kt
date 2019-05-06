@@ -29,7 +29,6 @@ import org.junit.Assert.assertEquals
 import org.junit.Test
 import test.impossible
 import test.runTest
-import kotlin.coroutines.CoroutineContext
 
 @UseExperimental(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class LogicTest {
@@ -52,8 +51,8 @@ class LogicTest {
     private fun test(func: suspend Context.() -> Unit) {
         runTest {
             val logic = Logic(coroutineContext,
-                birdStore.inflate(MutableBird),
-                chirpStore.inflate(MutableChirp),
+                birdStore.transform(MutableBird),
+                chirpStore.transform(MutableChirp),
                 Operations(chirpStore))
             Context(this, logic).func()
         }
@@ -72,7 +71,7 @@ class LogicTest {
 
     @Test fun `cannot update deleted bird`() = test {
         birds.put(robin.id, robin)
-        birds.delete(robin.id)
+        birds.remove(robin.id)
         // We can change it but it makes no difference
         robin.name.set("robin2")
 
@@ -109,7 +108,7 @@ class LogicTest {
     @Test fun `delete bird causes chirp delete`() = test {
         birds.put(robin.id, robin)
         chirps.put(chirp.id, chirp)
-        birds.delete(robin.id)
+        birds.remove(robin.id)
 
         impossible {
             chirps.get(chirp.id)
