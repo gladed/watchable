@@ -1,0 +1,33 @@
+[io.gladed.watchable.store](../index.md) / [MemoryStore](./index.md)
+
+# MemoryStore
+
+`class MemoryStore<T : `[`Any`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html)`> : `[`Store`](../-store/index.md)`<`[`T`](index.md#T)`>`
+
+A store entirely in RAM.
+
+### Constructors
+
+| Name | Summary |
+|---|---|
+| [&lt;init&gt;](-init-.md) | `MemoryStore(name: `[`String`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)`)`<br>A store entirely in RAM. |
+
+### Functions
+
+| Name | Summary |
+|---|---|
+| [get](get.md) | `suspend fun get(key: `[`String`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)`): `[`T`](index.md#T)<br>Return the corresponding element, or throw if not present. |
+| [keys](keys.md) | `fun keys(): Flow<`[`String`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)`>`<br>Return the keys available in memory at the moment the flow is first consumed. |
+| [put](put.md) | `suspend fun put(key: `[`String`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)`, value: `[`T`](index.md#T)`): `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)<br>Write something to the store at the given key, overwriting what was there, if anything. |
+| [remove](remove.md) | `suspend fun remove(key: `[`String`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)`): `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)<br>Delete any data found at [key](../-store/remove.md#io.gladed.watchable.store.Store$remove(kotlin.String)/key). |
+
+### Extension Functions
+
+| Name | Summary |
+|---|---|
+| [cached](../cached.md) | `fun <T : `[`Any`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html)`> `[`Store`](../-store/index.md)`<`[`T`](../cached.md#T)`>.cached(context: `[`CoroutineContext`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.coroutines/-coroutine-context/index.html)`): `[`Cache`](../-cache/index.md)`<`[`T`](../cached.md#T)`>`<br>Return a memory cached version of this [Store](../-store/index.md). |
+| [guarded](../../io.gladed.watchable.util/guarded.md) | `fun <T> `[`T`](../../io.gladed.watchable.util/guarded.md#T)`.guarded(): `[`Guard`](../../io.gladed.watchable.util/-guard/index.md)`<`[`T`](../../io.gladed.watchable.util/guarded.md#T)`>`<br>Return [T](../../io.gladed.watchable.util/guarded.md#T) surrounded by a [Guard](../../io.gladed.watchable.util/-guard/index.md). |
+| [holding](../holding.md) | `fun <T : `[`Any`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html)`> `[`Store`](../-store/index.md)`<`[`T`](../holding.md#T)`>.holding(context: `[`CoroutineContext`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin.coroutines/-coroutine-context/index.html)`, start: suspend (`[`T`](../holding.md#T)`) -> `[`Hold`](../-hold/index.md)`): `[`HoldingStore`](../-holding-store/index.md)`<`[`T`](../holding.md#T)`>`<br>Return a [HoldingStore](../-holding-store/index.md) around this [Store](../-store/index.md). |
+| [toWatchableMap](../to-watchable-map.md) | `fun <T : `[`Any`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html)`> `[`Store`](../-store/index.md)`<`[`T`](../to-watchable-map.md#T)`>.toWatchableMap(scope: CoroutineScope, period: `[`Long`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html)`): `[`WatchableMap`](../../io.gladed.watchable/-watchable-map/index.md)`<`[`String`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-string/index.html)`, `[`T`](../to-watchable-map.md#T)`>`<br>Return a [WatchableMap](../../io.gladed.watchable/-watchable-map/index.md) containing all items in this [Store](../-store/index.md), and persisting changes from the map to the store as they happen until [scope](../to-watchable-map.md#io.gladed.watchable.store$toWatchableMap(io.gladed.watchable.store.Store((io.gladed.watchable.store.toWatchableMap.T)), kotlinx.coroutines.CoroutineScope, kotlin.Long)/scope) completes. If items implement [Container](../-container/index.md) their contents also trigger a put into the background store. |
+| [toWatchableValue](../../io.gladed.watchable/to-watchable-value.md) | `fun <T> `[`T`](../../io.gladed.watchable/to-watchable-value.md#T)`.toWatchableValue(): `[`WatchableValue`](../../io.gladed.watchable/-watchable-value/index.md)`<`[`T`](../../io.gladed.watchable/to-watchable-value.md#T)`>`<br>Convert this [T](../../io.gladed.watchable/to-watchable-value.md#T) to a watchable value of [T](../../io.gladed.watchable/to-watchable-value.md#T). |
+| [transform](../transform.md) | `fun <U : `[`Any`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html)`, T : `[`Any`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-any/index.html)`> `[`Store`](../-store/index.md)`<`[`T`](../transform.md#T)`>.transform(transformer: `[`Transformer`](../-transformer/index.md)`<`[`T`](../transform.md#T)`, `[`U`](../transform.md#U)`>): `[`Store`](../-store/index.md)`<`[`U`](../transform.md#U)`>`<br>Expose this [Store](../-store/index.md) of [T](../transform.md#T) items as a [Store](../-store/index.md) of transformed items [U](../transform.md#U). |
