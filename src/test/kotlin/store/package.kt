@@ -14,7 +14,8 @@
  * limitations under the License.
  */
 
-package io.gladed.watchable.store
+package store
 
-/** Throw an exception to complain that something cannot be done. */
-fun cannot(doSomething: String): Nothing = throw Cannot(doSomething)
+import java.util.UUID
+
+data class Thing(val id: String = UUID.randomUUID().toString(), val value: Int)

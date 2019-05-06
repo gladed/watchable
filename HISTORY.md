@@ -4,6 +4,7 @@
 * Renamed `Store.delete` to `remove` to make it more map-like.
 * Renamed `inflate` to `transform`.
 * Expose `MultiHold` for external use.
+* Implement `Store.toWatchableMap` and allow objects to implement `Container`.
 
 ## 0.6.11
 * Fix a memory leak (#68).
