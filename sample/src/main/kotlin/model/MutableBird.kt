@@ -22,7 +22,7 @@ import io.gladed.watchable.group
 import io.gladed.watchable.toWatchableList
 import io.gladed.watchable.toWatchableValue
 import io.gladed.watchable.watchableListOf
-import io.gladed.watchable.store.Inflater
+import io.gladed.watchable.store.Transformer
 import kotlinx.serialization.Serializable
 import util.WatchableListSerializer
 import util.WatchableValueSerializer
@@ -46,9 +46,9 @@ data class MutableBird(
 
     fun toBird() = Bird(id, name.value, following.toList())
 
-    companion object : Inflater<Bird, MutableBird> {
-        override fun inflate(value: Bird) = MutableBird(value)
-        override fun deflate(value: MutableBird) = value.toBird()
+    companion object : Transformer<Bird, MutableBird> {
+        override fun toTarget(value: Bird) = MutableBird(value)
+        override fun fromTarget(value: MutableBird) = value.toBird()
         fun extract(item: MutableBird) = with(item) { group(name, following) }
     }
 }

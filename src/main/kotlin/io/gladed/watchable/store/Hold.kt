@@ -16,11 +16,8 @@
 
 package io.gladed.watchable.store
 
-import io.gladed.watchable.Watcher
-
 /**
- * Represents an object being held for use with resources or side effects to be managed by
- * this object.
+ * Represents resources held on behalf of an object.
  */
 interface Hold {
     /** Handle the initial creation of the underlying held object. */
@@ -35,11 +32,10 @@ interface Hold {
     /** Immediately cancel the hold. */
     fun onCancel()
 
-    /** Handle impending removal of the held object. */
+    /** Handle removal of the held object. */
     suspend fun onRemove()
 
     companion object {
-
         /** Create a [Hold] object with supplied implementations. */
         operator fun invoke(
             onStart: suspend () -> Unit = { },
@@ -56,21 +52,3 @@ interface Hold {
         }
     }
 }
-
-/** Combine the behaviors of this [Hold] object with [other]. */
-operator fun Hold.plus(other: Hold) = Hold(
-    onStart = { onStart(); other.onStart() },
-    onStop = { onStop(); other.onStop() },
-    onCancel = { onCancel(); other.onCancel() },
-    onRemove = { onRemove(); other.onRemove() },
-    onCreate = { onCreate(); other.onCreate() }
-)
-
-/** Combine the behaviors of this [Hold] object with a [Watcher]. */
-operator fun Hold.plus(other: Watcher) = Hold(
-    onStart = { onStart(); other.start() },
-    onStop = { onStop(); other.stop() },
-    onCancel = { onCancel(); other.cancel() },
-    onRemove = { onRemove() },
-    onCreate = { onCreate() }
-)

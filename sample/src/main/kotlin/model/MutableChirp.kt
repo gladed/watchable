@@ -17,7 +17,7 @@
 package model
 
 import io.gladed.watchable.WatchableMap
-import io.gladed.watchable.store.Inflater
+import io.gladed.watchable.store.Transformer
 import io.gladed.watchable.toWatchableMap
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
@@ -39,8 +39,8 @@ data class MutableChirp(
         chirp.id, chirp.from, chirp.sentAt, chirp.text, chirp.reactions.toWatchableMap())
     fun toChirp() = Chirp(id, from, sentAt, text, reactions.toMap())
 
-    companion object : Inflater<Chirp, MutableChirp> {
-        override fun inflate(value: Chirp) = MutableChirp(value)
-        override fun deflate(value: MutableChirp) = value.toChirp()
+    companion object : Transformer<Chirp, MutableChirp> {
+        override fun toTarget(value: Chirp) = MutableChirp(value)
+        override fun fromTarget(value: MutableChirp) = value.toChirp()
     }
 }

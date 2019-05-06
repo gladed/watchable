@@ -29,24 +29,8 @@ interface Store<T : Any> {
     suspend fun put(key: String, value: T)
 
     /** Delete any data found at [key]. */
-    suspend fun delete(key: String)
+    suspend fun remove(key: String)
 
     /** Return a flow of all keys present in the store. */
     fun keys(): Flow<String>
-
-    /** Convert this [Store] of deflated items into a [Store] of inflated items [U]. */
-    fun <U : Any> inflate(inflater: Inflater<T, U>): Store<U> = object : Store<U> {
-        override suspend fun get(key: String): U =
-            inflater.inflate(this@Store.get(key))
-
-        override suspend fun put(key: String, value: U) {
-            this@Store.put(key, inflater.deflate(value))
-        }
-
-        override suspend fun delete(key: String) {
-            this@Store.delete(key)
-        }
-
-        override fun keys() = this@Store.keys()
-    }
 }

@@ -17,9 +17,7 @@
 package io.gladed.watchable.store
 
 import io.gladed.watchable.util.guarded
-import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
@@ -42,7 +40,7 @@ class HoldingStore<T : Any>(
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
-    private val map = mutableMapOf<String, MultiHold<T>>().guarded()
+    private val map = mutableMapOf<String, MultiHold<Store<T>, T>>().guarded()
 
     /**
      * Return a new [Store]; items accessed by this store will have a corresponding hold (see [createHold]) in
@@ -54,7 +52,7 @@ class HoldingStore<T : Any>(
             launch {
                 map {
                     // Yank this store from all holds
-                    val dead = filterValues { it.remove(newStore) }
+                    val dead = filterValues { it.release(newStore) }
                     // Yank all newly stopped holds
                     keys.removeAll(dead.keys)
                 }
@@ -67,44 +65,6 @@ class HoldingStore<T : Any>(
     suspend fun stop() {
         map { toMap().also { clear() } }.values
             .forEach { it.stop() }
-    }
-
-    /** Attempt to hold an instance of [T] on behalf of one or more [Store]s. */
-    private class MultiHold<T : Any>(first: Store<T>, val hold: Deferred<Pair<T, Hold>>) {
-        private val stores = mutableSetOf(first).guarded()
-
-        suspend fun add(store: Store<T>) {
-            stores { add(store) }
-        }
-
-        /** Removes a store and returns true if this object can be discarded (e.g. no more stores). */
-        suspend fun remove(store: Store<T>) =
-            if (stores { remove(store); isEmpty() }) {
-                stop()
-                true
-            } else {
-                false
-            }
-
-        /** Stop holding as we delete this item. */
-        suspend fun delete() {
-            val toStop = hold.await().second
-            toStop.onRemove()
-            toStop.onStop()
-        }
-
-        /** Stop holding. */
-        suspend fun stop() {
-            // If the request isn't done then cancel it
-            hold.cancel()
-            @Suppress("EmptyCatchBlock") // Ignore cancellations
-            try {
-                // Stop watching if not already cancelled
-                if (!hold.isCancelled) {
-                    hold.await().second.onStop()
-                }
-            } catch (c: CancellationException) { }
-        }
     }
 
     /** A [Store] whose objects are held when accessing them. */
@@ -125,7 +85,7 @@ class HoldingStore<T : Any>(
                 newHold.onStart()
 
                 map {
-                    put(key, MultiHold(this@SingleStore, async { value to newHold }))
+                    put(key, MultiHold(this@SingleStore, value, newHold))
                 }
                 return
             }
@@ -141,25 +101,26 @@ class HoldingStore<T : Any>(
             throw t
         }
 
-        override suspend fun delete(key: String) {
-            map { get(key) }?.delete()
+        override suspend fun remove(key: String) {
+            map { get(key) }?.remove()
             map { remove(key) }
-            back.delete(key)
+            back.remove(key)
         }
 
         override fun keys(): Flow<String> = back.keys()
 
         private suspend fun hold(key: String, getValue: suspend () -> T): Pair<T, Hold> =
             map {
-                get(key)?.also { it.add(this@SingleStore) }
-                    ?: MultiHold(this@SingleStore, async(SupervisorJob()) {
+                get(key)?.also { it.reserve(this@SingleStore) } ?: MultiHold(this@SingleStore as Store<T>,
+                    async(SupervisorJob()) {
                         val value = getValue()
                         val hold = createHold(value)
                         hold.onStart()
                         value to hold
-                    }).also {
-                        put(key, it)
                     }
+                ).also {
+                    put(key, it)
+                }
             }.hold.await()
     }
 }

@@ -1,5 +1,10 @@
 # Version History
 
+## 0.6.12
+* Renamed `Store.delete` to `remove` to make it more map-like.
+* Renamed `inflate` to `transform`.
+* Expose `MultiHold` for external use.
+
 ## 0.6.11
 * Fix a memory leak (#68).
 * Add more features to sample app.

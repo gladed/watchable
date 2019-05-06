@@ -18,39 +18,40 @@ package util
 
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.json.Json
-import io.gladed.watchable.store.Inflater
+import io.gladed.watchable.store.Transformer
 import io.gladed.watchable.store.Store
+import io.gladed.watchable.store.transform
 import kotlinx.serialization.Decoder
 import kotlinx.serialization.Encoder
 import kotlinx.serialization.SerialDescriptor
 import kotlinx.serialization.UnstableDefault
 
-/** Convert this [KSerializer] to an [Inflater] of [String] and [T] */
+/** Convert this [KSerializer] to an [Transformer] of [String] and [T] */
 @UseExperimental(UnstableDefault::class)
-fun <T : Any> KSerializer<T>.toInflater() = object : Inflater<String, T> {
-    override fun inflate(value: String) = Json.parse(this@toInflater, value)
-    override fun deflate(value: T): String = Json.stringify(this@toInflater, value)
+fun <T : Any> KSerializer<T>.toInflater() = object : Transformer<String, T> {
+    override fun toTarget(value: String) = Json.parse(this@toInflater, value)
+    override fun fromTarget(value: T): String = Json.stringify(this@toInflater, value)
 }
 
-fun <T : Any> Store<String>.inflate(serializer: KSerializer<T>): Store<T> = inflate(serializer.toInflater())
+fun <T : Any> Store<String>.serialize(serializer: KSerializer<T>): Store<T> = transform(serializer.toInflater())
 
-/** Return a new serializer from this [T] serializer which automatically inflates/deflates to [U]. */
-fun <T : Any, U : Any> KSerializer<T>.wrap(inflater: Inflater<T, U>): KSerializer<U> =
+/** Return a new serializer from this [T] serializer which automatically transforms to [U]. */
+fun <T : Any, U : Any> KSerializer<T>.wrap(transformer: Transformer<T, U>): KSerializer<U> =
     object : KSerializer<U> {
         override val descriptor: SerialDescriptor = this@wrap.descriptor
 
-        override fun deserialize(decoder: Decoder): U = inflater.inflate(this@wrap.deserialize(decoder))
+        override fun deserialize(decoder: Decoder): U = transformer.toTarget(this@wrap.deserialize(decoder))
 
         override fun serialize(encoder: Encoder, obj: U) {
-            this@wrap.serialize(encoder, inflater.deflate(obj))
+            this@wrap.serialize(encoder, transformer.fromTarget(obj))
         }
     }
 
-/** Add both native and inflated serializers. */
+/** Add both native and transformed serializers. */
 inline fun <reified T : Any, reified U : Any> KotlinSerializationConverter.add(
     serializer: KSerializer<T>,
-    inflater: Inflater<T, U>
+    transformer: Transformer<T, U>
 ) {
     add(serializer)
-    add(serializer.wrap(inflater))
+    add(serializer.wrap(transformer))
 }

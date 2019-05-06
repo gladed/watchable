@@ -115,7 +115,7 @@ class CacheTest {
         val get1 = async { cache.get(thing.id) }
 
         //  Kill thing
-        cache.delete(thing.id)
+        cache.remove(thing.id)
 
         // Allow thing1 get to complete
         mutex.unlock()

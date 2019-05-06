@@ -199,9 +199,9 @@ class HoldingStoreTest {
         coroutineScope {
             val store = scopeStore.create(this)
             store.get(robin.id)
-            store.delete(robin.id)
+            store.remove(robin.id)
             coVerify { hold.onStop() }
-            coVerify { rootStore.delete(robin.id) }
+            coVerify { rootStore.remove(robin.id) }
         }
     }
 
