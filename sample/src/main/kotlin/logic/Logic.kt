@@ -1,6 +1,7 @@
 package logic
 
 import io.gladed.watchable.Period.INLINE
+import io.gladed.watchable.batch
 import io.gladed.watchable.store.Hold
 import io.gladed.watchable.store.Store
 import io.gladed.watchable.store.cannot
@@ -39,8 +40,8 @@ class Logic(
                 if (bird.following.isNotEmpty()) {
                     cannot("create a bird with followers")
                 }
-            }) + watch(MutableBird.extract(bird)) {
-                if (!it.isInitial) {
+            }) + batch(bird.watchables, SAVE_DELAY_PERIOD) { changes ->
+                if (changes.any { !it.isInitial }) {
                     // For any non-initial change, store the current version
                     birdStore.put(bird.id, bird)
                 }
@@ -77,11 +78,17 @@ class Logic(
                         }
                     }
                 }
+            } + batch(chirp.watchables, SAVE_DELAY_PERIOD) { changes ->
+                if (changes.any { !it.isInitial }) {
+                    // For any non-initial change, store the current version
+                    chirpStore.put(chirp.id, chirp)
+                }
             }
         }
 
     companion object {
         const val MAX_REACTION_LENGTH = 6
         const val MAX_CHIRP_LENGTH = 320
+        const val SAVE_DELAY_PERIOD = 500L
     }
 }

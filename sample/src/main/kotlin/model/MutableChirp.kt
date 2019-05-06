@@ -17,6 +17,7 @@
 package model
 
 import io.gladed.watchable.WatchableMap
+import io.gladed.watchable.store.Container
 import io.gladed.watchable.store.Transformer
 import io.gladed.watchable.toWatchableMap
 import kotlinx.serialization.Serializable
@@ -34,7 +35,9 @@ data class MutableChirp(
     val text: String,
     @Serializable(with = WatchableMapSerializer::class)
     val reactions: WatchableMap<String, String>
-) {
+) : Container {
+    override val watchables = reactions
+
     constructor(chirp: Chirp) : this(
         chirp.id, chirp.from, chirp.sentAt, chirp.text, chirp.reactions.toWatchableMap())
     fun toChirp() = Chirp(id, from, sentAt, text, reactions.toMap())

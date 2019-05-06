@@ -16,13 +16,16 @@
 
 package model
 
+import io.gladed.watchable.Change
+import io.gladed.watchable.Watchable
 import io.gladed.watchable.WatchableList
 import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.group
+import io.gladed.watchable.store.Container
+import io.gladed.watchable.store.Transformer
 import io.gladed.watchable.toWatchableList
 import io.gladed.watchable.toWatchableValue
 import io.gladed.watchable.watchableListOf
-import io.gladed.watchable.store.Transformer
 import kotlinx.serialization.Serializable
 import util.WatchableListSerializer
 import util.WatchableValueSerializer
@@ -41,7 +44,9 @@ data class MutableBird(
     val name: WatchableValue<String>,
     @Serializable(with = WatchableListSerializer::class)
     val following: WatchableList<String> = watchableListOf()
-) {
+) : Container {
+    override val watchables: Watchable<Change> = group(name, following)
+
     constructor(bird: Bird) : this(bird.id, bird.name.toWatchableValue(), bird.following.toWatchableList())
 
     fun toBird() = Bird(id, name.value, following.toList())
@@ -49,6 +54,5 @@ data class MutableBird(
     companion object : Transformer<Bird, MutableBird> {
         override fun toTarget(value: Bird) = MutableBird(value)
         override fun fromTarget(value: MutableBird) = value.toBird()
-        fun extract(item: MutableBird) = with(item) { group(name, following) }
     }
 }
