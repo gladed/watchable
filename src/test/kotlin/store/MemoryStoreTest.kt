@@ -23,12 +23,9 @@ import kotlinx.coroutines.flow.toList
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import runTest
-import java.util.UUID
 
 @UseExperimental(FlowPreview::class)
 class MemoryStoreTest {
-    data class Thing(val id: String = UUID.randomUUID().toString(), val value: Int)
-
     private val store = MemoryStore<Thing>("thing")
     private val thing = Thing(value = 1)
 

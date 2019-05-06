@@ -16,5 +16,10 @@
 
 package io.gladed.watchable.store
 
-/** Throw an exception to complain that something cannot be done. */
-fun cannot(doSomething: String): Nothing = throw Cannot(doSomething)
+import io.gladed.watchable.Change
+import io.gladed.watchable.Watchable
+
+/** An object containing a watchable representing changes for a whole object. */
+interface Container {
+    val watchables: Watchable<Change>
+}
