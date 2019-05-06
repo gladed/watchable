@@ -22,7 +22,7 @@ import io.gladed.watchable.util.guarded
 /** Internal implementation of [WatchableSet]. */
 @Suppress("TooManyFunctions")
 internal class WatchableSetBase<T>(
-    initial: Collection<T>
+    initial: Iterable<T>
 ) : MutableWatchableBase<Set<T>, T, MutableSet<T>, SetChange<T>>(), WatchableSet<T> {
     override var immutable: Set<T> = initial.toSet()
 
