@@ -32,7 +32,7 @@ class Logic(
                 coroutineScope {
                     val chirps = chirps.create(this)
                     ops.chirpsForBird(bird.id).collect { chirpId ->
-                        chirps.delete(chirpId)
+                        chirps.remove(chirpId)
                     }
                 }
             }, onCreate = {

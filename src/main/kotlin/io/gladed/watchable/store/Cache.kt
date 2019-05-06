@@ -66,10 +66,10 @@ class Cache<T : Any>(
         entries.removeIf { it.value.get() == null }
     }
 
-    override suspend fun delete(key: String) {
+    override suspend fun remove(key: String) {
         quashFind(key) // Outstanding gets should not update cache
         found { remove(key) }
-        back.delete(key)
+        back.remove(key)
     }
 
     private suspend fun quashFind(key: String): Boolean =

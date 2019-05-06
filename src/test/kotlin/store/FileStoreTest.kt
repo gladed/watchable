@@ -66,7 +66,7 @@ class FileStoreTest {
 
     @Test fun `delete an object`() = runBlocking {
         store.put("^1", "1")
-        store.delete("^1")
+        store.remove("^1")
         impossible { store.get("^1") }
     }
 
