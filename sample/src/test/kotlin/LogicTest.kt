@@ -15,6 +15,7 @@
  */
 
 import io.gladed.watchable.store.MemoryStore
+import io.gladed.watchable.store.transform
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.coroutineScope
