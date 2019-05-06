@@ -52,7 +52,7 @@ operator fun Hold.plus(other: Watcher) = Hold(
 )
 
 /** Expose this [Store] of [T] items as a [Store] of transformed items [U]. */
-fun <U : Any, T: Any> Store<T>.transform(transformer: Transformer<T, U>): Store<U> = object : Store<U> {
+fun <U : Any, T : Any> Store<T>.transform(transformer: Transformer<T, U>): Store<U> = object : Store<U> {
     override suspend fun get(key: String): U =
         transformer.toTarget(this@transform.get(key))
 
