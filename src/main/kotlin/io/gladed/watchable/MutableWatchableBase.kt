@@ -16,6 +16,7 @@
 
 package io.gladed.watchable
 
+import io.gladed.watchable.Period.INLINE
 import io.gladed.watchable.util.Guard
 import kotlinx.coroutines.CoroutineScope
 
@@ -129,7 +130,7 @@ internal abstract class MutableWatchableBase<T, M : T, C : Change> : WatchableBa
         period: Long,
         apply: M.(C2) -> Unit
     ): Watcher {
-        if (binding != null) throw IllegalStateException("Object already bound")
+        if (binding != null) throw IllegalStateException("object already bound")
         throwIfAlreadyBoundTo(origin)
 
         var mustErase = true
@@ -153,24 +154,85 @@ internal abstract class MutableWatchableBase<T, M : T, C : Change> : WatchableBa
         return Binding(origin, job).also { binding = it }
     }
 
-    override fun <M2, C2 : Change> bind(
+    override fun <M2, C2 : Change> twoWayBind(
         scope: CoroutineScope,
         other: MutableWatchable<M2, C2>,
         update: M.(C2) -> Unit,
         updateOther: M2.(C) -> Unit
     ): Watcher {
-        TODO()
+        val otherBase = other as MutableWatchableBase<*, M2, C2>
+        if (binding != null || otherBase.binding != null) throw IllegalStateException("object already bound")
+
+        var mustErase = true
+        var bouncing = false // Prevent infinite bounce
+
+        val fromOther = other.batch(scope, INLINE) {
+            if (!bouncing) {
+                bouncing = true
+                invoke {
+                    changesAllowed = true
+                    if (mustErase) {
+                        mustErase = false
+                        erase()
+                    }
+                    for (change in it) update(change)
+                    changesAllowed = false
+                }
+                bouncing = false
+            }
+        }
+
+        val fromThis = batch(scope, INLINE) {
+            if (!bouncing) {
+                bouncing = true
+                with(other) {
+                    invoke {
+                        changesAllowed = true
+                        for (change in it) updateOther(change)
+                        changesAllowed = false
+                    }
+                }
+                bouncing = false
+            }
+        }
+        return setBinding(other, fromThis) + otherBase.setBinding(this, fromOther)
+    }
+
+    /** Provide access to [applyBoundChange] when T isn't known. */
+    private fun doChange(mutable: M, change: C) {
+        with(mutable) { applyBoundChange(change) }
+    }
+
+    /** Allow setting of [binding] when T isn't known. */
+    private fun setBinding(other: Watchable<*>, watcher: Watcher) =
+        Binding(other, watcher).also { binding = it }
+
+    override fun twoWayBind(scope: CoroutineScope, other: MutableWatchable<M, C>): Watcher {
+        val otherBase = other as MutableWatchableBase<*, M, C>
+        return twoWayBind(scope, other, { applyBoundChange(it) }) {
+            otherBase.doChange(this, it)
+        }
     }
 
     private tailrec fun throwIfAlreadyBoundTo(other: Watchable<*>) {
-        if (this === other) throw IllegalStateException("Circular binding not permitted")
+        if (this === other) throw IllegalStateException("circular binding not permitted")
+        // It's OK to bind to something that's two-way bound
+        if (isTwoWayBound()) return
         throwIfAlreadyBoundTo((other as? MutableWatchable<*, *>)?.boundTo ?: return)
     }
 
     override fun unbind() {
-        binding?.apply {
-            watcher.cancel()
-            binding = null
+        if (isTwoWayBound()) {
+            binding?.apply {
+                watcher.cancel()
+                binding = null
+                (other as? MutableWatchableBase<*, *, *>)?.unbind()
+            }
+        } else {
+            binding?.apply {
+                watcher.cancel()
+                binding = null
+            }
         }
     }
 }
