@@ -1,5 +1,8 @@
 # Version History
 
+## 0.6.13
+* Add `twoWayBind` (#76).
+
 ## 0.6.12
 * Renamed `Store.delete` to `remove` to make it more map-like.
 * Renamed `inflate` to `transform`.

@@ -7,7 +7,7 @@ buildscript {
         mockk_version = '1.9.3'
         detekt_version = '1.0.0-RC14'
         // Version to publish
-        watchable_version = '0.6.12'
+        watchable_version = '0.6.13'
     }
 
     repositories {
