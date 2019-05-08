@@ -25,7 +25,6 @@ class TwoWayBindTest {
     private val set = watchableSetOf<String>()
     private val set2 = watchableSetOf<String>()
     private val map = watchableMapOf(1 to "1")
-    private val map2 = watchableMapOf<Int, String>()
 
     @Test fun `complex bind`() = runTest {
         twoWayBind(set, map, { mapChange ->

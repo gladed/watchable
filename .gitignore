@@ -1,5 +1,4 @@
 build/
-local.properties
 *.iml
 .*
 gradle.properties
