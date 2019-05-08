@@ -22,7 +22,7 @@ import io.gladed.watchable.util.guarded
 @Suppress("TooManyFunctions")
 internal class WatchableListBase<T>(
     initial: Iterable<T>
-) : MutableWatchableBase<List<T>, T, MutableList<T>, ListChange<T>>(), WatchableList<T> {
+) : MutableWatchableBase<List<T>, MutableList<T>, ListChange<T>>(), WatchableList<T> {
     override var immutable: List<T> = initial.toList()
 
     override val size: Int get() = immutable.size

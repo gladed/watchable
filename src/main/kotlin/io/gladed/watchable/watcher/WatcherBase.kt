@@ -30,7 +30,8 @@ internal abstract class WatcherBase<C : Change>(
 ) : Watcher, CoroutineScope {
     override val coroutineContext = context + Job()
 
-    abstract suspend fun onDispatch(changes: List<C>)
+    /** Deliver [changes] to whoever is watching via this [Watcher]. */
+    protected abstract suspend fun onDispatch(changes: List<C>)
 
     /** Deliver this change to the watcher according to its timing rules. */
     suspend fun dispatch(changes: List<C>) =

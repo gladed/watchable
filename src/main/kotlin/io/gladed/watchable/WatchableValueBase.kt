@@ -22,7 +22,7 @@ import io.gladed.watchable.util.guarded
 /** Internal implementation of [WatchableValue]. */
 internal class WatchableValueBase<T>(
     initial: T
-) : MutableWatchableBase<Value<T>, T, MutableValue<T>, ValueChange<T>>(), WatchableValue<T> {
+) : MutableWatchableBase<Value<T>, MutableValue<T>, ValueChange<T>>(), WatchableValue<T> {
 
     /** A holder for data. */
     private data class ValueData<T>(override val value: T) : Value<T>

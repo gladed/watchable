@@ -23,7 +23,7 @@ import io.gladed.watchable.util.guarded
 @Suppress("TooManyFunctions")
 internal class WatchableMapBase<K, V>(
     initial: Map<K, V>
-) : MutableWatchableBase<Map<K, V>, V, MutableMap<K, V>, MapChange<K, V>>(), WatchableMap<K, V> {
+) : MutableWatchableBase<Map<K, V>, MutableMap<K, V>, MapChange<K, V>>(), WatchableMap<K, V> {
     override var immutable: Map<K, V> = initial.toMap()
 
     override val entries get() = immutable.entries

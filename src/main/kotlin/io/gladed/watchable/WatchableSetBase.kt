@@ -23,7 +23,7 @@ import io.gladed.watchable.util.guarded
 @Suppress("TooManyFunctions")
 internal class WatchableSetBase<T>(
     initial: Iterable<T>
-) : MutableWatchableBase<Set<T>, T, MutableSet<T>, SetChange<T>>(), WatchableSet<T> {
+) : MutableWatchableBase<Set<T>, MutableSet<T>, SetChange<T>>(), WatchableSet<T> {
     override var immutable: Set<T> = initial.toSet()
 
     override val size get() = immutable.size
