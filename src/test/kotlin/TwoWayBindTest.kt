@@ -1,40 +1,118 @@
-import io.gladed.watchable.MapChange
-import io.gladed.watchable.SetChange
+/*
+ * (c) Copyright 2019 Glade Diviney.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *      http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 import io.gladed.watchable.bind
+import io.gladed.watchable.twoWayBind
 import io.gladed.watchable.watchableMapOf
 import io.gladed.watchable.watchableSetOf
 import org.junit.Assert.assertEquals
-import org.junit.Ignore
 import org.junit.Test
 
 class TwoWayBindTest {
     private val set = watchableSetOf<String>()
+    private val set2 = watchableSetOf<String>()
     private val map = watchableMapOf(1 to "1")
+    private val map2 = watchableMapOf<Int, String>()
 
-    @Test @Ignore
-    fun `bind set with map`() = runTest {
-        bind(set, map, { mapChange ->
-            println("Handling map change $mapChange")
-            when (mapChange) {
-                is MapChange.Initial -> addAll(mapChange.map.values)
-                is MapChange.Put -> {
-                    mapChange.remove?.also { remove(it) }
-                    add(mapChange.add)
-                }
-                is MapChange.Remove -> remove(mapChange.remove)
+    @Test fun `bind set with map`() = runTest {
+        twoWayBind(set, map, { mapChange ->
+            mapChange.simple.forEach { change ->
+                change.remove?.also { remove(it) }
+                change.add?.also { add(it) }
             }
         }) { setChange ->
-            println("Handling set change $setChange")
-            when (setChange) {
-                is SetChange.Initial -> { } // Ignore
-                is SetChange.Add -> setChange.add.forEach { this[it.toInt()] = it }
-                is SetChange.Remove -> setChange.remove.forEach { remove(it.toInt()) }
+            setChange.simple.forEach { change ->
+                change.remove?.also { remove(it.toInt()) }
+                change.add?.also { put(it.toInt(), it) }
             }
         }
         assertEquals(setOf("1"), set)
-        println("Adding 2 to set")
         set { add("2") }
-        println("Asserting 2 is in set")
         assertEquals("2", map[2])
+    }
+
+    @Test fun `cannot dual-rebind`() = runTest {
+        twoWayBind(set, map, { mapChange ->
+            mapChange.simple.forEach { change ->
+                change.remove?.also { remove(it) }
+                change.add?.also { add(it) }
+            }
+        }) { setChange ->
+            setChange.simple.forEach { change ->
+                change.remove?.also { remove(it.toInt()) }
+                change.add?.also { put(it.toInt(), it) }
+            }
+        }
+
+        mustThrow(IllegalStateException::class.java) {
+            twoWayBind(set, map, { mapChange ->
+                mapChange.simple.forEach { change ->
+                    change.remove?.also { remove(it) }
+                    change.add?.also { add(it) }
+                }
+            }) { setChange ->
+                setChange.simple.forEach { change ->
+                    change.remove?.also { remove(it.toInt()) }
+                    change.add?.also { put(it.toInt(), it) }
+                }
+            }
+        }
+    }
+
+    @Test fun `cannot rebind`() = runTest {
+        twoWayBind(set, map, { mapChange ->
+            mapChange.simple.forEach { change ->
+                change.remove?.also { remove(it) }
+                change.add?.also { add(it) }
+            }
+        }) { setChange ->
+            setChange.simple.forEach { change ->
+                change.remove?.also { remove(it.toInt()) }
+                change.add?.also { put(it.toInt(), it) }
+            }
+        }
+        mustThrow(IllegalStateException::class.java) { bind(set, set2) }
+        mustThrow(IllegalStateException::class.java) { bind(map, map2) }
+    }
+
+    @Test fun `can bind from outside of two-way bind`() = runTest {
+        val set3 = watchableSetOf("2")
+        twoWayBind(set, set2)
+        bind(set3, set)
+        set2.add("1")
+        assertEquals(setOf("1"), set3)
+    }
+
+    @Test fun `simple bind between sets`() = runTest {
+        set2.add("1")
+        twoWayBind(set, set2)
+        set.add("2")
+        set2.add("3")
+
+        assertEquals(setOf("1", "2", "3"), set)
+        assertEquals(setOf("1", "2", "3"), set2)
+    }
+
+    @Test fun `unbind both with either one`() = runTest {
+        twoWayBind(set, set2)
+        set.unbind()
+        set.add("1")
+        set2.add("2")
+
+        assertEquals(setOf("1"), set)
+        assertEquals(setOf("2"), set2)
     }
 }

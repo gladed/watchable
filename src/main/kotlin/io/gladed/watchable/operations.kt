@@ -69,13 +69,24 @@ fun <M, C : Change, C2 : Change> CoroutineScope.bind(
 ) = dest.bind(this, origin, period, apply)
 
 /**
- * Bi-directionally bind [left] and [right] together so that any change to one is reflected in the other.
+ * Bi-directionally bind [left] and [right] together so that any change to one is reflected in the other
+ * (see [MutableWatchable.twoWayBind]).
  */
-fun <M, M2, C : Change, C2 : Change> CoroutineScope.bind(
+fun <M, C : Change> CoroutineScope.twoWayBind(
+    left: MutableWatchable<M, C>,
+    right: MutableWatchable<M, C>
+) = left.twoWayBind(this, right)
+
+/**
+ * Bi-directionally bind [left] and [right] together so that any change to one is reflected in the other
+ * (see [MutableWatchable.twoWayBind]).
+ */
+fun <M, M2, C : Change, C2 : Change> CoroutineScope.twoWayBind(
     left: MutableWatchable<M, C>,
     right: MutableWatchable<M2, C2>,
     updateLeft: M.(C2) -> Unit,
-    updateRight: M2.(C) -> Unit) = left.bind(this, right, updateLeft, updateRight)
+    updateRight: M2.(C) -> Unit
+) = left.twoWayBind(this, right, updateLeft, updateRight)
 
 /** Suspend until [condition] returns true, calling it after each group of changes. */
 suspend fun <C : Change, W : Watchable<C>> CoroutineScope.waitFor(
