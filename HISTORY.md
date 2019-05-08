@@ -1,5 +1,8 @@
 # Version History
 
+## 0.6.14
+* Add `twoWayBind` (#76).
+
 ## 0.6.13
 * `Store.toWatchableMap` -> `Store.bind` (#74).
 
