@@ -2,6 +2,7 @@
 
 ## 0.6.14
 * Add `twoWayBind` (#76).
+* Simplified internal generics.
 
 ## 0.6.13
 * `Store.toWatchableMap` -> `Store.bind` (#74).
