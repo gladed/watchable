@@ -17,6 +17,7 @@
 package store
 
 import io.gladed.watchable.Change
+import io.gladed.watchable.Period.INLINE
 import io.gladed.watchable.Watchable
 import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.store.Container
@@ -32,6 +33,7 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import java.util.UUID
@@ -56,28 +58,31 @@ class BindStoreTest {
         assertEquals(thing, map[thing.id])
     }
 
-    @Test fun `put when new contents are stored`() {
-        runBlockingTest {
-            store.bind(this, 50, map)
-            map { put(thing.id, thing.copy(value = 2)) }
-
-        }
+    @Test fun `put when new contents are stored`() = runBlockingTest {
+        val binding = store.bind(this, 50, map)
+        map { put(thing.id, thing.copy(value = 2)) }
+        // Make sure changes are applied after stop
+        binding.stop()
         coVerify { store.put(thing.id, thing.copy(value = 2)) }
     }
 
-    @Test fun `remove when items are removed`() {
-        runBlockingTest {
-            store.bind(this, 50, map)
-            map.remove(thing.id)
-        }
+    @Test fun `remove when items are removed`() = runBlockingTest {
+        store.bind(this, INLINE, map)
+        map.remove(thing.id)
         coVerify { store.remove(thing.id) }
     }
 
-    @Test fun `put when contents of container items change`() {
-        runBlockingTest {
-            store.bind(this, 50, map)
-            thing.name.set("One")
-        }
+    @Test fun `put when contents of container items change`() = runBlockingTest {
+        store.bind(this, INLINE, map)
+        thing.name.set("One")
         coVerify { store.put(thing.id, thing) }
+    }
+
+    @Test fun `make sure elements in map are gone after bind`() {
+        runBlockingTest {
+            map.put("a", thing)
+            store.bind(this, 50, map).start()
+            assertNull(map["a"])
+        }
     }
 }
