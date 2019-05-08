@@ -63,10 +63,22 @@ interface MutableWatchable<M, C : Change> : Watchable<C> {
     /**
      * Bind [other] to this so that any change in either object is reflected in the other.
      */
-    fun <M2, C2 : Change> bind(
+    fun twoWayBind(
         scope: CoroutineScope,
+        /** The other side of the bind. The initial state of [other] is delivered to this object. */
+        other: MutableWatchable<M, C>
+    ): Watcher
+
+    /**
+     * Bind [other] to this so that any change in either object is reflected in the other.
+     */
+    fun <M2, C2 : Change> twoWayBind(
+        scope: CoroutineScope,
+        /** The other side of the bind. The initial state of [other] is delivered to this object. */
         other: MutableWatchable<M2, C2>,
+        /** Update the mutable form of this object with changes from [other]. */
         update: M.(C2) -> Unit,
+        /** Update the mutable form of [other] with changes from this object. */
         updateOther: M2.(C) -> Unit
     ): Watcher
 
