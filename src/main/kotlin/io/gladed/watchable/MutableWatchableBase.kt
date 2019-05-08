@@ -21,7 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 
 /** Base for implementing a type that is watchable, mutable, and bindable. */
 @Suppress("TooManyFunctions") // Useful
-internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : WatchableBase<C>(), MutableWatchable<M, C> {
+internal abstract class MutableWatchableBase<T, M : T, C : Change> : WatchableBase<C>(), MutableWatchable<M, C> {
 
     /** The underlying mutable form of the data this object. When changes are applied, [changes] must be updated. */
     protected abstract val mutable: Guard<M>
@@ -46,8 +46,8 @@ internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : Watchabl
 
     override val boundTo get() = binding?.other
 
-    /** True if current processing a change from the watchable to which this object is bound. */
-    private var isOnBoundChange: Boolean = false
+    /** True when this object may be modified. */
+    private var changesAllowed = true
 
     /** Clear the contents of the mutable form of the underlying data. */
     protected abstract fun M.erase()
@@ -69,8 +69,8 @@ internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : Watchabl
 
     /** Run [func] if changes are currently allowed, or throw if not. */
     protected fun <U> doChange(func: () -> U): U =
-        if (boundTo != null && !isOnBoundChange) {
-            throw IllegalStateException("A bound object may not be modified.")
+        if (boundTo != null && (!changesAllowed && !isTwoWayBound())) {
+            throw IllegalStateException("attempt to modify a bound object: ${isTwoWayBound()}")
         } else func()
 
     override suspend operator fun <U> invoke(func: M.() -> U): U =
@@ -120,6 +120,9 @@ internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : Watchabl
             applyBoundChange(it)
         }
 
+    private fun isTwoWayBound() =
+        (boundTo as? MutableWatchableBase<*, *, *>)?.let { it == this.boundTo && it.boundTo == this } == true
+
     override fun <C2 : Change> bind(
         scope: CoroutineScope,
         origin: Watchable<C2>,
@@ -127,28 +130,36 @@ internal abstract class MutableWatchableBase<T, V, M : T, C : Change> : Watchabl
         apply: M.(C2) -> Unit
     ): Watcher {
         if (binding != null) throw IllegalStateException("Object already bound")
-
         throwIfAlreadyBoundTo(origin)
 
-        var uncleared = true
+        var mustErase = true
 
         // Start watching
         val job = origin.batch(scope, period) {
             invoke {
-                isOnBoundChange = true
-                if (uncleared) {
-                    uncleared = false
+                changesAllowed = true
+                if (mustErase) {
+                    mustErase = false
                     erase()
                 }
                 for (change in it) {
                     apply(change)
                 }
-                isOnBoundChange = false
+                changesAllowed = false
             }
         }
 
         // Store the binding
         return Binding(origin, job).also { binding = it }
+    }
+
+    override fun <M2, C2 : Change> bind(
+        scope: CoroutineScope,
+        other: MutableWatchable<M2, C2>,
+        update: M.(C2) -> Unit,
+        updateOther: M2.(C) -> Unit
+    ): Watcher {
+        TODO()
     }
 
     private tailrec fun throwIfAlreadyBoundTo(other: Watchable<*>) {

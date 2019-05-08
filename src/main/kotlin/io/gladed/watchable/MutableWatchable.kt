@@ -32,6 +32,9 @@ interface MutableWatchable<M, C : Change> : Watchable<C> {
      */
     suspend operator fun <U> invoke(func: M.() -> U): U
 
+    /** Return a read-only form of this [MutableWatchable]. */
+    fun readOnly(): Watchable<C>
+
     /**
      * Binds this unbound object to [origin], such that when [origin] changes, this object is updated to match
      * [origin] exactly, until [scope] completes. While bound, this object may not be externally modified or
@@ -57,8 +60,15 @@ interface MutableWatchable<M, C : Change> : Watchable<C> {
     /** Return true if this object is already bound. */
     fun isBound() = boundTo != null
 
-    /** Return a read-only form of this [MutableWatchable]. */
-    fun readOnly(): Watchable<C>
+    /**
+     * Bind [other] to this so that any change in either object is reflected in the other.
+     */
+    fun <M2, C2 : Change> bind(
+        scope: CoroutineScope,
+        other: MutableWatchable<M2, C2>,
+        update: M.(C2) -> Unit,
+        updateOther: M2.(C) -> Unit
+    ): Watcher
 
     /** The [Watchable] to which this object is bound, if any. */
     val boundTo: Watchable<*>?
