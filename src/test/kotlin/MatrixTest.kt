@@ -169,7 +169,7 @@ class MatrixTest<M, C: Change> {
         val start = System.currentTimeMillis()
         val count = 1000
 
-        bind(watchable2, watchable1)
+        val binding = bind(watchable2, watchable1)
 
         log("Launching $count modification jobs while bound")
         val allJobs = (0 until count).map {
@@ -191,13 +191,10 @@ class MatrixTest<M, C: Change> {
 
         // Wait for all modifications to be complete
         allJobs.joinAll()
-        watchable1 { finalMod(this) }
 
-        // Eventually w2 will catch up to w1
-        log("Waiting for everything to match")
-        eventually(timeout = 5000) {
-            assertEquals(watchable1, watchable2)
-        }
+        // Stop the binding allowing everything to settle down
+        binding.stop()
+        assertEquals(watchable1, watchable2)
         val elapsed = System.currentTimeMillis() - start
         log("$count in $elapsed ms. ${elapsed * 1000 / count} μs per iteration.")
     }
