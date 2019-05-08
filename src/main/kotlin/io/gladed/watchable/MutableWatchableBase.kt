@@ -122,7 +122,7 @@ internal abstract class MutableWatchableBase<T, M : T, C : Change> : WatchableBa
         }
 
     private fun isTwoWayBound() =
-        (boundTo as? MutableWatchableBase<*, *, *>)?.let { it == this.boundTo && it.boundTo == this } == true
+        (boundTo as? MutableWatchableBase<*, *, *>)?.let { it == boundTo && it.boundTo == this } == true
 
     override fun <C2 : Change> bind(
         scope: CoroutineScope,
@@ -217,7 +217,7 @@ internal abstract class MutableWatchableBase<T, M : T, C : Change> : WatchableBa
     private tailrec fun throwIfAlreadyBoundTo(other: Watchable<*>) {
         if (this === other) throw IllegalStateException("circular binding not permitted")
         // It's OK to bind to something that's two-way bound
-        if (isTwoWayBound()) return
+        if ((other as? MutableWatchableBase<*, *, *>)?.isTwoWayBound() == true) return
         throwIfAlreadyBoundTo((other as? MutableWatchable<*, *>)?.boundTo ?: return)
     }
 
