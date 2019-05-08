@@ -16,17 +16,16 @@
 
 package io.gladed.watchable.store
 
+import io.gladed.watchable.DeferredWatcher
 import io.gladed.watchable.MapChange
 import io.gladed.watchable.WatchableMap
 import io.gladed.watchable.Watcher
 import io.gladed.watchable.util.guarded
-import io.gladed.watchable.watchableMapOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
@@ -60,9 +59,9 @@ fun <U : Any, T : Any> Store<T>.transform(transformer: Transformer<T, U>): Store
  * Load up a [WatchableMap] with all items in this [Store], and persisting changes from the map to the store
  * as they happen until [scope] completes.
  *
- * Also, changes to items implementing [Container] will trigger a put into the store.
+ * Changes to items implementing [Container] will trigger a put into the store.
  *
- * Note: initial population of the map will occur concurrently on [scope].
+ * This is a one-way bind; external changes to the [Store] will not be reflected in [map].
  */
 @UseExperimental(ExperimentalCoroutinesApi::class, FlowPreview::class)
 fun <T : Any> Store<T>.bind(scope: CoroutineScope, period: Long, map: WatchableMap<String, T>): Watcher {
@@ -114,23 +113,5 @@ fun <T : Any> Store<T>.bind(scope: CoroutineScope, period: Long, map: WatchableM
         }
     }
 
-    return object : Watcher {
-        override fun cancel() {
-            if (setup.isCancelled) return
-            setup.cancel()
-            if (setup.isCompleted && setup.getCompletionExceptionOrNull() == null) {
-                setup.getCompleted().cancel()
-            }
-        }
-
-        override suspend fun stop() {
-            if (setup.isCancelled) return
-            setup.await().also { it.stop() }
-        }
-
-        override suspend fun start() {
-            if (setup.isCancelled) return
-            setup.await().also { it.start() }
-        }
-    }
+    return DeferredWatcher(setup)
 }

@@ -75,26 +75,10 @@ abstract class WatchableBase<C : Change> : Watchable<C> {
         }
 
         // Hide the asynchronous behavior behind a front-end Watcher
-        return object : Watcher {
-            override fun cancel() {
-                if (setup.isCancelled) return
-                setup.cancel()
-                if (setup.isCompleted && setup.getCompletionExceptionOrNull() == null) {
-                    setup.getCompleted().cancel()
-                }
-            }
-
+        return object : DeferredWatcher(setup) {
             override suspend fun stop() {
-                if (setup.isCancelled) return
-                setup.await().also { watcher ->
-                    watchers { remove(watcher) }
-                    watcher.stop()
-                }
-            }
-
-            override suspend fun start() {
-                if (setup.isCancelled) return
-                setup.await().start()
+                super.stop()
+                if (!setup.isCancelled) watchers { remove(setup.await()) }
             }
         }
     }
