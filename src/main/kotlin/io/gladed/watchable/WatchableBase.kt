@@ -52,7 +52,7 @@ abstract class WatchableBase<C : Change> : Watchable<C> {
         func: suspend (List<C>) -> Unit
     ): Watcher {
         // Asynchronously prepare a watcher
-        val droppable = scope.async {
+        val setup = scope.async {
             when {
                 period == INLINE -> Inline(scope.coroutineContext, func)
                 period == IMMEDIATE -> Immediate(scope.coroutineContext, func)
@@ -77,24 +77,24 @@ abstract class WatchableBase<C : Change> : Watchable<C> {
         // Hide the asynchronous behavior behind a front-end Watcher
         return object : Watcher {
             override fun cancel() {
-                if (droppable.isCancelled) return
-                droppable.cancel()
-                if (droppable.isCompleted && droppable.getCompletionExceptionOrNull() == null) {
-                    droppable.getCompleted().cancel()
+                if (setup.isCancelled) return
+                setup.cancel()
+                if (setup.isCompleted && setup.getCompletionExceptionOrNull() == null) {
+                    setup.getCompleted().cancel()
                 }
             }
 
             override suspend fun stop() {
-                if (droppable.isCancelled) return
-                droppable.await().also { watcher ->
+                if (setup.isCancelled) return
+                setup.await().also { watcher ->
                     watchers { remove(watcher) }
                     watcher.stop()
                 }
             }
 
             override suspend fun start() {
-                if (droppable.isCancelled) return
-                droppable.await().start()
+                if (setup.isCancelled) return
+                setup.await().start()
             }
         }
     }

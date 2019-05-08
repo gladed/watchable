@@ -21,8 +21,9 @@ import io.gladed.watchable.Watchable
 import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.store.Container
 import io.gladed.watchable.store.Store
-import io.gladed.watchable.store.toWatchableMap
+import io.gladed.watchable.store.bind
 import io.gladed.watchable.toWatchableValue
+import io.gladed.watchable.watchableMapOf
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -36,13 +37,14 @@ import org.junit.Test
 import java.util.UUID
 
 @UseExperimental(ExperimentalCoroutinesApi::class, FlowPreview::class)
-class StoreToMapTest {
+class BindStoreTest {
     data class Thing(val id: String = UUID.randomUUID().toString(), val value: Int, val name: WatchableValue<String>) : Container {
         override val watchables: Watchable<Change> = name
     }
 
     private val store = mockk<Store<Thing>>(relaxUnitFun = true)
     private val thing = Thing(value = 1, name = "one".toWatchableValue())
+    private val map = watchableMapOf<String, Thing>()
 
     @Before fun setup() {
         coEvery { store.keys() } coAnswers { listOf(thing.id).asFlow() }
@@ -50,13 +52,13 @@ class StoreToMapTest {
     }
 
     @Test fun `load initial values`() = runBlockingTest {
-        val map = store.toWatchableMap(this, 50)
+        store.bind(this, 50, map)
         assertEquals(thing, map[thing.id])
     }
 
     @Test fun `put when new contents are stored`() {
         runBlockingTest {
-            val map = store.toWatchableMap(this, 50)
+            store.bind(this, 50, map)
             map { put(thing.id, thing.copy(value = 2)) }
 
         }
@@ -65,7 +67,7 @@ class StoreToMapTest {
 
     @Test fun `remove when items are removed`() {
         runBlockingTest {
-            val map = store.toWatchableMap(this, 50)
+            store.bind(this, 50, map)
             map.remove(thing.id)
         }
         coVerify { store.remove(thing.id) }
@@ -73,7 +75,7 @@ class StoreToMapTest {
 
     @Test fun `put when contents of container items change`() {
         runBlockingTest {
-            store.toWatchableMap(this, 50)
+            store.bind(this, 50, map)
             thing.name.set("One")
         }
         coVerify { store.put(thing.id, thing) }
