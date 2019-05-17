@@ -31,8 +31,10 @@ fun <M, C : Change> CoroutineScope.bind(
  */
 fun <S, C : HasSimpleChange<S>> CoroutineScope.simple(
     watchable: SimpleWatchable<S, C>,
+    /** When to receive changes, see [Period]. */
+    period: Long = IMMEDIATE,
     func: suspend (S) -> Unit
-) = watchable.simple(this@simple, func)
+) = watchable.simple(this@simple, period, func)
 
 /**
  * Deliver changes for this [Watchable] to [func] until the returned [Watcher] is closed or this

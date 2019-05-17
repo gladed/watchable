@@ -16,6 +16,7 @@
 
 package io.gladed.watchable
 
+import io.gladed.watchable.Period.IMMEDIATE
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.isActive
 
@@ -23,8 +24,14 @@ import kotlinx.coroutines.isActive
  * A [Watchable] that allows for a more verbose series of simpler changes.
  */
 interface SimpleWatchable<S, C : HasSimpleChange<S>> : Watchable<C> {
-    fun simple(scope: CoroutineScope, func: suspend (S) -> Unit): Watcher =
-        watch(scope) {
+    /** Deliver simplified changes to [func] until [scope] completes. */
+    fun simple(
+        scope: CoroutineScope,
+        /** When to receive changes, see [Period]. */
+        period: Long = IMMEDIATE,
+        func: suspend (S) -> Unit
+    ): Watcher =
+        watch(scope, period) {
             for (simpleChange in it.simple) {
                 if (scope.isActive) func(simpleChange) else break
             }
