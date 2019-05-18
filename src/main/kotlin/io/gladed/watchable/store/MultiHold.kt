@@ -22,21 +22,22 @@ import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
 
 /**
- * A deferred attempt to acquire an instance of [T] on behalf of one or more holding entities,
- * starting with [entity].
+ * A deferred attempt to acquire an instance of [T] on behalf of one or more holding entities.
+ * When the list of holding entities becomes empty, the hold is stopped.
  */
-class MultiHold<E, T : Any>(private val entity: E, val hold: Deferred<Pair<T, Hold>>) {
+internal class MultiHold<E, T : Any>(val hold: Deferred<Pair<T, Hold>>) {
 
     /** Construct a non-deferred version of this [MultiHold]. */
-    constructor(entity: E, value: T, hold: Hold) : this(entity, CompletableDeferred(value to hold))
+    constructor(value: T, hold: Hold) : this(CompletableDeferred(value to hold))
 
-    private val entities = mutableSetOf(entity).guarded()
+    private val entities = mutableSetOf<E>().guarded()
 
-    suspend fun reserve(store: E) {
-        entities { add(store) }
+    /** Add [entity] to the collection of reserved entities. */
+    suspend fun reserve(entity: E) {
+        entities { add(entity) }
     }
 
-    /** Removes a store and returns true if this object can be discarded (e.g. no more stores). */
+    /** Removes a store and returns true if this object can be discarded (e.g. no more entities). */
     suspend fun release(entity: E) =
         if (entities { remove(entity); isEmpty() }) {
             stop()
@@ -52,7 +53,7 @@ class MultiHold<E, T : Any>(private val entity: E, val hold: Deferred<Pair<T, Ho
         toStop.onStop()
     }
 
-    /** Stop holding. */
+    /** Stop holding regardless of the number of holding entities. */
     suspend fun stop() {
         // If the request isn't done then cancel it
         hold.cancel()

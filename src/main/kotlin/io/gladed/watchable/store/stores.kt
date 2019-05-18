@@ -28,11 +28,16 @@ import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.collect
 import kotlin.coroutines.CoroutineContext
 
+const val DEFAULT_CONTAINER_PERIOD = 1000L
 /**
  * Return a [HoldingStore] around this [Store].
  */
-fun <T : Any> Store<T>.holding(context: CoroutineContext, start: suspend (T) -> Hold) =
-    HoldingStore(context, this, start)
+fun <T : Any> Store<T>.holding(
+    context: CoroutineContext,
+    containerPeriod: Long = DEFAULT_CONTAINER_PERIOD,
+    start: suspend (T) -> Hold
+) =
+    HoldingStore(context, this, containerPeriod, start)
 
 /**
  * Return a memory cached version of this [Store].

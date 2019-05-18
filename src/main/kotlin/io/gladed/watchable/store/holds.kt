@@ -27,10 +27,11 @@ operator fun Hold.plus(other: Hold) = Hold(
 )
 
 /** Combine the behaviors of this [Hold] object with a [Watcher]. */
-operator fun Hold.plus(other: Watcher) = Hold(
-    onStart = { onStart(); other.start() },
-    onStop = { onStop(); other.stop() },
-    onCancel = { onCancel(); other.cancel() },
-    onRemove = { onRemove() },
-    onCreate = { onCreate() }
+operator fun Hold.plus(other: Watcher) = this + other.toHold()
+
+/** Return a [Hold] form of this [Watcher]. */
+fun Watcher.toHold() = Hold(
+    onCancel = { cancel() },
+    onStart = { start() },
+    onStop = { stop() }
 )

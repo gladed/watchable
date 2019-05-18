@@ -36,6 +36,8 @@ class HoldingStore<T : Any>(
     context: CoroutineContext,
     /** The store being wrapped. */
     val back: Store<T>,
+    /** The period over which to batch changes to [Container] items before pushing them back to the store. */
+    private val containerPeriod: Long = DEFAULT_CONTAINER_PERIOD,
     private val createHold: suspend (T) -> Hold
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
@@ -63,8 +65,7 @@ class HoldingStore<T : Any>(
 
     /** Release everything regardless of the state of scopes. */
     suspend fun stop() {
-        map { toMap().also { clear() } }.values
-            .forEach { it.stop() }
+        map { toMap().also { clear() } }.values.forEach { it.stop() }
     }
 
     /** A [Store] whose objects are held when accessing them. */
@@ -78,14 +79,13 @@ class HoldingStore<T : Any>(
                 // Kill the old hold if there was one, it's being replaced.
                 map { remove(key) }?.stop()
 
-                val newHold = createHold(value)
+                val newHold = startHold(key, value)
                 // Handle create attempt
                 newHold.onCreate()
                 back.put(key, value)
-                newHold.onStart()
 
                 map {
-                    put(key, MultiHold(this@SingleStore, value, newHold))
+                    put(key, MultiHold<Store<T>, T>(value, newHold).apply { reserve(this@SingleStore) })
                 }
                 return
             }
@@ -102,25 +102,40 @@ class HoldingStore<T : Any>(
         }
 
         override suspend fun remove(key: String) {
-            map { get(key) }?.remove()
-            map { remove(key) }
+            map { remove(key) }?.remove()
             back.remove(key)
         }
 
         override fun keys(): Flow<String> = back.keys()
 
+        /**
+         * Establish a new hold on data associated with [key]. If the data is not held yet, fetch
+         * it with [getValue] first.
+         */
         private suspend fun hold(key: String, getValue: suspend () -> T): Pair<T, Hold> =
             map {
-                get(key)?.also { it.reserve(this@SingleStore) } ?: MultiHold(this@SingleStore as Store<T>,
-                    async(SupervisorJob()) {
+                getOrPut(key) {
+                    // If not there, create a MultiHold for this key
+                    MultiHold(async(SupervisorJob()) {
                         val value = getValue()
-                        val hold = createHold(value)
-                        hold.onStart()
-                        value to hold
-                    }
-                ).also {
-                    put(key, it)
-                }
+                        value to startHold(key, value)
+                    })
+                }.apply { reserve(this@SingleStore) }
             }.hold.await()
+
+        /** Create a new hold for this key and value. */
+        private suspend fun startHold(key: String, value: T): Hold =
+            if (value is Container) {
+                // Automatically push Container objects to the backing store when they change.
+                val autoSave = value.watchables.batch(this@HoldingStore, containerPeriod) {
+                    back.put(key, value)
+                }
+                // When a held item is removed, immediately cancel the auto-save behavior
+                autoSave.toHold() + createHold(value) + Hold(onRemove = { autoSave.cancel() })
+            } else {
+                createHold(value)
+            }.apply {
+                onStart()
+            }
     }
 }
