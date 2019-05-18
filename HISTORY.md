@@ -1,5 +1,10 @@
 # Version History
 
+## 0.6.15
+* `holding` now automatically saves changes to objects implementing `Container` when those objects change (#79).
+*  Some internal-use-only objects are correctly marked internal.
+* `simple` now has a configurable period time for changes (#80).
+
 ## 0.6.14
 * Add `twoWayBind` (#76).
 * Simplified internal generics.
