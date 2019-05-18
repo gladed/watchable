@@ -16,9 +16,11 @@
 
 import external.Adapter
 import io.gladed.watchable.store.Cannot
+import io.gladed.watchable.toWatchableValue
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
 import io.ktor.application.install
+import io.ktor.features.CallLogging
 import io.ktor.features.ContentNegotiation
 import io.ktor.features.StatusPages
 import io.ktor.http.ContentType
@@ -45,16 +47,14 @@ import kotlinx.serialization.Serializable
 import logic.Logic
 import model.Bird
 import model.Chirp
-import model.MutableBird
-import model.MutableChirp
+import org.slf4j.event.Level
 import util.KotlinSerializationConverter
-import util.add
 import java.io.File
 
 fun main() = Main().go()
 
 @Serializable
-data class Home(val birdsUrl: String = "/bird", val someBirdUrls: List<String>)
+data class Home(val birdsUrl: String = "/bird", val someBirds: List<String>)
 
 @Serializable
 data class CreateBird(val name: String)
@@ -73,16 +73,12 @@ class Main : CoroutineScope {
 
     override val coroutineContext = Dispatchers.Default + Job()
     private val logic = Adapter.createLogic(coroutineContext, File(".data"))
-    class InLogic(scope: CoroutineScope, logic: Logic) {
-        val birds by lazy { logic.birds.create(scope) }
-        val chirps by lazy { logic.chirps.create(scope) }
-    }
 
     // Note: This could be a feature
-    private suspend inline fun <reified T : Any> PipelineContext<Unit, ApplicationCall>.logically(
-        crossinline func: suspend InLogic.() -> T
+    private suspend inline fun <reified T : Any> PipelineContext<Unit, ApplicationCall>.withLogic(
+        crossinline func: suspend Logic.Scoped.() -> T
     ) = coroutineScope {
-        call.respond(InLogic(this, logic).func())
+        call.respond(logic.scoped(this).func())
     }
 
     fun go() {
@@ -94,8 +90,8 @@ class Main : CoroutineScope {
                     add(CreateChirp.serializer())
                     add(ReactToChirp.serializer())
                     add(ChirpPage.serializer())
-                    add(Bird.serializer(), MutableBird)
-                    add(Chirp.serializer(), MutableChirp)
+                    add(Bird.serializer())
+                    add(Chirp.serializer())
                 }
             }
 
@@ -105,10 +101,15 @@ class Main : CoroutineScope {
                 }
             }
 
+            install(CallLogging) {
+                level = Level.INFO
+            }
+
             routing {
                 get("/") {
-                    call.respond(Home(someBirdUrls = logic.birds.back.keys()
-                        .take(SHORT_LIST_COUNT).toList().map { "/bird/$it" }))
+                    withLogic {
+                        Home(someBirds = birds.keys().take(SHORT_LIST_COUNT).toList().map { "/bird/$it" })
+                    }
                 }
                 route("bird") { birdRoutes() }
                 route("chirp") { chirpRoutes() }
@@ -118,7 +119,7 @@ class Main : CoroutineScope {
 
     private fun Route.chirpRoutes() {
         get("{chirpId}") {
-            logically {
+            withLogic {
                 chirps.get(call.parameters["chirpId"]!!)
             }
         }
@@ -126,54 +127,54 @@ class Main : CoroutineScope {
 
     private fun Route.birdRoutes() {
         post {
-            logically {
+            withLogic {
                 // Create a new bird with the specified name
                 val birdRequest = call.receive<CreateBird>()
-                val bird = Bird(name = birdRequest.name)
-                birds.put(bird.id, MutableBird(bird))
+                val bird = Bird(name = birdRequest.name.toWatchableValue())
+                birds.put(bird.id, bird)
                 bird
             }
         }
 
         get("{birdId}/chirp") {
-            logically {
+            withLogic {
                 val bird = birds.get(call.parameters["birdId"]!!)
                 ChirpPage(logic.ops.chirpsForBird(bird.id)
                     .take(SHORT_LIST_COUNT)
-                    .map { chirps.get(it).toChirp() }
+                    .map { chirps.get(it) }
                     .toList())
             }
         }
         post("{birdId}/chirp") {
-            logically {
+            withLogic {
                 // Create a new chirp
                 val chirpRequest = call.receive<CreateChirp>()
                 val bird = birds.get(call.parameters["birdId"]!!)
                 Chirp(from = bird.id, text = chirpRequest.text).also { chirp ->
-                    chirps.put(chirp.id, MutableChirp(chirp))
+                    chirps.put(chirp.id, chirp)
                 }
             }
         }
 
         post("{birdId}/chirp") {
-            logically {
+            withLogic {
                 // Create a new chirp
                 val chirpRequest = call.receive<CreateChirp>()
                 val bird = birds.get(call.parameters["birdId"]!!)
                 Chirp(from = bird.id, text = chirpRequest.text).also { chirp ->
-                    chirps.put(chirp.id, MutableChirp(chirp))
+                    chirps.put(chirp.id, chirp)
                 }
             }
         }
 
         get("{birdId}") {
-            logically {
+            withLogic {
                 birds.get(call.parameters["birdId"]!!)
             }
         }
 
         post("{birdId}/reactToChirp/{chirpId}") {
-            logically {
+            withLogic {
                 val reaction = call.receive<ReactToChirp>().reaction
                 val bird = birds.get(call.parameters["birdId"]!!)
                 val chirp = chirps.get(call.parameters["chirpId"]!!)

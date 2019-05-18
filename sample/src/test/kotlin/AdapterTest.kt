@@ -15,37 +15,68 @@
  */
 
 import external.Adapter
+import io.gladed.watchable.toWatchableValue
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.flow.take
+import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.UnstableDefault
+import kotlinx.serialization.json.Json
 import model.Bird
-import model.MutableBird
+import model.Chirp
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
+@UseExperimental(ExperimentalCoroutinesApi::class, UnstableDefault::class, FlowPreview::class)
 class AdapterTest {
     @Rule @JvmField val folder = TemporaryFolder()
     private val robin = Bird(name = "robin")
+    private val wren = Bird(name = "wren")
+    private val chirp = Chirp(from = robin.id, text = "hi")
 
-    @Test fun `read and write`() = runBlocking {
-        val adapter = Adapter.createLogic(coroutineContext, folder.root)
-        val birds = adapter.birds.create(this)
-        birds.put(robin.id, MutableBird.toTarget(robin))
+    @Test fun `read and write`() = runBlocking<Unit> {
+        Adapter.createLogic(coroutineContext, folder.root).scoped(this).apply {
+            birds.put(robin.id, robin)
+        }
     }
 
     @Test fun `read and write between adapter instances`() {
         runBlocking {
-            val adapter = Adapter.createLogic(coroutineContext, folder.root)
-            val birds = adapter.birds.create(this)
-            birds.put(robin.id, MutableBird.toTarget(robin))
+            Adapter.createLogic(coroutineContext, folder.root).scoped(this).apply {
+                birds.put(robin.id, robin)
+            }
         }
 
         runBlocking {
-            val adapter = Adapter.createLogic(coroutineContext, folder.root)
-            val birds = adapter.birds.create(this)
-            assertEquals(robin, MutableBird.fromTarget(birds.get(robin.id)))
+            Adapter.createLogic(coroutineContext, folder.root).scoped(this).apply {
+                assertEquals(robin, birds.get(robin.id))
+            }
         }
+    }
+
+    @Test fun `modified chirp is stored`() {
+        runBlocking {
+            Adapter.createLogic(coroutineContext, folder.root).scoped(this).apply {
+                birds.put(robin.id, robin)
+                birds.put(wren.id, wren)
+                chirps.put(chirp.id, chirp)
+                chirp.reactions += wren.id to "+"
+            }
+        }
+
+        runBlocking {
+            Adapter.createLogic(coroutineContext, folder.root).scoped(this).apply {
+                val chirpId = chirps.keys().take(1).toList().first()
+                assertEquals(mapOf(wren.id to "+"), chirps.get(chirpId).reactions)
+            }
+        }
+    }
+
+    @Test fun `show objects`() {
+        println(Json.stringify(Bird.serializer(), robin))
+        println(Json.stringify(Chirp.serializer(), chirp))
     }
 }

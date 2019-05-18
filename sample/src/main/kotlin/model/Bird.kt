@@ -16,17 +16,31 @@
 
 package model
 
+import io.gladed.watchable.WatchableList
+import io.gladed.watchable.WatchableValue
+import io.gladed.watchable.group
+import io.gladed.watchable.store.Container
+import io.gladed.watchable.toWatchableValue
+import io.gladed.watchable.watchableListOf
 import kotlinx.serialization.Serializable
+import util.WatchableListSerializer
+import util.WatchableValueSerializer
 import java.util.UUID
 
+/**
+ * A thing that chirps.
+ */
 @Serializable
 data class Bird(
-    /** A unique identifier for this person. */
     val id: String = UUID.randomUUID().toString(),
 
-    /** The name of this [Bird]. */
-    val name: String,
+    @Serializable(with = WatchableValueSerializer::class)
+    val name: WatchableValue<String>,
 
-    /** IDs of [Bird]s this [Bird] is following. */
-    val following: List<String> = listOf()
-)
+    @Serializable(with = WatchableListSerializer::class)
+    val following: WatchableList<String> = watchableListOf()
+) : Container {
+    constructor(name: String) : this(name = name.toWatchableValue())
+
+    override val watchables by lazy { group(name, following) }
+}

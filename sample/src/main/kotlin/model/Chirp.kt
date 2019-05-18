@@ -13,31 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
 @file:UseSerializers(LocalDateTimeSerializer::class)
 package model
 
+import io.gladed.watchable.WatchableMap
+import io.gladed.watchable.store.Container
+import io.gladed.watchable.watchableMapOf
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 import util.LocalDateTimeSerializer
+import util.WatchableMapSerializer
 import java.time.LocalDateTime
 import java.util.UUID
 
 /** Something memorable sent out by a [Bird]. */
 @Serializable
 data class Chirp(
-    /** A unique identifier for this [Chirp]. */
     val id: String = UUID.randomUUID().toString(),
-
-    /** ID of originating [Bird]. */
     val from: String,
-
-    /** Time the [Chirp] was sent. */
     val sentAt: LocalDateTime = LocalDateTime.now(),
-
-    /** [Chirp] content. */
     val text: String,
-
-    /** Map of other [Bird] ID's to short reactions to this chirp. */
-    val reactions: Map<String, String> = emptyMap()
-)
+    @Serializable(with = WatchableMapSerializer::class)
+    val reactions: WatchableMap<String, String> = watchableMapOf()
+) : Container {
+    override val watchables by lazy { reactions }
+}
