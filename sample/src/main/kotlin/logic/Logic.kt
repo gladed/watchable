@@ -1,7 +1,6 @@
 package logic
 
 import io.gladed.watchable.Period.INLINE
-import io.gladed.watchable.batch
 import io.gladed.watchable.store.Hold
 import io.gladed.watchable.store.Store
 import io.gladed.watchable.store.cannot
@@ -13,21 +12,33 @@ import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collect
-import model.MutableBird
-import model.MutableChirp
+import model.Bird
+import model.Chirp
 import kotlin.coroutines.CoroutineContext
 
 /** Implement business logic required by components of the application. */
 @UseExperimental(FlowPreview::class)
 class Logic(
     context: CoroutineContext,
-    birdStore: Store<MutableBird>,
-    chirpStore: Store<MutableChirp>,
+    birdStore: Store<Bird>,
+    chirpStore: Store<Chirp>,
     val ops: Operations
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
-    val birds = birdStore.holding(coroutineContext) { bird ->
+    fun scoped(scope: CoroutineScope) = object : Scoped {
+        override val birds by lazy { this@Logic.birds.create(scope) }
+        override val chirps by lazy { this@Logic.chirps.create(scope) }
+        override val ops = this@Logic.ops
+    }
+
+    interface Scoped {
+        val birds: Store<Bird>
+        val chirps: Store<Chirp>
+        val ops: Operations
+    }
+
+    private val birds = birdStore.holding(coroutineContext) { bird ->
             Hold(onRemove = {
                 // Delete any chirps from this bird using a throwaway scope
                 coroutineScope {
@@ -38,14 +49,9 @@ class Logic(
                 }
             }, onCreate = {
                 if (bird.following.isNotEmpty()) {
-                    cannot("create a bird with followers")
+                    cannot("create a bird following other birds")
                 }
-            }) + batch(bird.watchables, SAVE_DELAY_PERIOD) { changes ->
-                if (changes.any { !it.isInitial }) {
-                    // For any non-initial change, store the current version
-                    birdStore.put(bird.id, bird)
-                }
-            } + watch(bird.following, INLINE) {
+            }) + watch(bird.following, INLINE) {
                 if (!it.isInitial) it.simple.forEach { simple ->
                     simple.add?.also { birdId ->
                         // Just get the bird to make sure it's there
@@ -55,7 +61,7 @@ class Logic(
             }
         }
 
-    val chirps = chirpStore
+    private val chirps = chirpStore
         .holding(coroutineContext) { chirp ->
             Hold(
                 onStart = { birdStore.get(chirp.from) },
@@ -78,17 +84,11 @@ class Logic(
                         }
                     }
                 }
-            } + batch(chirp.watchables, SAVE_DELAY_PERIOD) { changes ->
-                if (changes.any { !it.isInitial }) {
-                    // For any non-initial change, store the current version
-                    chirpStore.put(chirp.id, chirp)
-                }
             }
         }
 
     companion object {
         const val MAX_REACTION_LENGTH = 6
         const val MAX_CHIRP_LENGTH = 320
-        const val SAVE_DELAY_PERIOD = 500L
     }
 }

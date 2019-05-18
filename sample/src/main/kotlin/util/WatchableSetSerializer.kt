@@ -29,7 +29,7 @@ import kotlinx.serialization.internal.NamedListClassDescriptor
 
 @Serializer(forClass = WatchableList::class)
 class WatchableSetSerializer<T : Any>(valueSerializer: KSerializer<T>) : KSerializer<WatchableSet<T>> {
-    override val descriptor: SerialDescriptor = NamedListClassDescriptor("WatchableValue", valueSerializer.descriptor)
+    override val descriptor: SerialDescriptor = NamedListClassDescriptor("WatchableSet", valueSerializer.descriptor)
 
     private val setSerializer = HashSetSerializer(valueSerializer)
 
