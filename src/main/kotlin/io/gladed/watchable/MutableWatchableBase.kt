@@ -163,10 +163,11 @@ internal abstract class MutableWatchableBase<T, M : T, C : Change> : WatchableBa
         val otherBase = other as MutableWatchableBase<*, M2, C2>
         if (binding != null || otherBase.binding != null) throw IllegalStateException("object already bound")
 
-        var mustErase = true
+        var mustErase = true // First time behavior
         var bouncing = false // Prevent infinite bounce
 
         val fromOther = other.batch(scope, INLINE) {
+            // Incoming from other must run first, copying content into this item.
             if (!bouncing) {
                 bouncing = true
                 invoke {
@@ -182,7 +183,8 @@ internal abstract class MutableWatchableBase<T, M : T, C : Change> : WatchableBa
             }
         }
 
-        val fromThis = batch(scope, INLINE) {
+        return setBinding(other, batch(scope, INLINE) {
+            // Also, copy changes from this item into other
             if (!bouncing) {
                 bouncing = true
                 with(other) {
@@ -194,8 +196,7 @@ internal abstract class MutableWatchableBase<T, M : T, C : Change> : WatchableBa
                 }
                 bouncing = false
             }
-        }
-        return setBinding(other, fromThis) + otherBase.setBinding(this, fromOther)
+        }) + otherBase.setBinding(this, fromOther)
     }
 
     /** Provide access to [applyBoundChange] when T isn't known. */
