@@ -40,6 +40,16 @@ fun <T : Any> Store<T>.holding(
 ) =
     HoldingStore(context, this, containerPeriod, start)
 
+
+/**
+ * Return a [HoldingStore] for this [CoroutineScope] around [store].
+ */
+fun <T : Any> CoroutineScope.holding(
+    store: Store<T>,
+    containerPeriod: Long = DEFAULT_CONTAINER_PERIOD,
+    start: suspend HoldBuilder.(T) -> Unit
+) = HoldingStore(coroutineContext, store, containerPeriod, start)
+
 /**
  * Return a memory cached version of this [Store].
  */

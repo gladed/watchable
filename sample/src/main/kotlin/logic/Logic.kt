@@ -41,7 +41,7 @@ class Logic(
     }
 
     /** A [HoldingStore] for birds, from which new scope-specific stores can be derived. */
-    private val birds: HoldingStore<Bird> = birdStore.holding(coroutineContext) { bird ->
+    private val birds: HoldingStore<Bird> = holding(birdStore) { bird ->
         onCreate {
             if (bird.following.isNotEmpty()) {
                 cannot("create a bird following other birds")
@@ -69,7 +69,7 @@ class Logic(
     }
 
     /** A [HoldingStore] for chirps, from which new scope-specific stores can be derived. */
-    private val chirps = chirpStore.holding(coroutineContext) { chirp ->
+    private val chirps = holding(chirpStore) { chirp ->
         onCreate {
             if (chirp.text.length > MAX_CHIRP_LENGTH) {
                 cannot("chirp with text longer than $MAX_CHIRP_LENGTH")
