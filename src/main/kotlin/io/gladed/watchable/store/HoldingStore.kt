@@ -27,9 +27,10 @@ import kotlinx.coroutines.launch
 import kotlin.coroutines.CoroutineContext
 
 /**
- * A [Store] factory producing stores that trigger operations on its items while those objects are in use.
+ * A [Store] factory, producing stores that trigger operations on its items while those objects are in use.
  *
- * For any new object retrieved, [createHold] is called to construct a [Hold] on the object.
+ * For any new object retrieved, [createHold] is called to construct a [Hold] on the object. The [Hold] remains
+ * until all scopes using the object complete.
  */
 class HoldingStore<T : Any>(
     /** The parent context for starting and stopping operations. */
@@ -38,7 +39,7 @@ class HoldingStore<T : Any>(
     val back: Store<T>,
     /** The period over which to batch changes to [Container] items before pushing them back to the store. */
     private val containerPeriod: Long = DEFAULT_CONTAINER_PERIOD,
-    private val createHold: suspend (T) -> Hold
+    private val createHold: suspend HoldBuilder.(T) -> Unit
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
@@ -125,17 +126,15 @@ class HoldingStore<T : Any>(
 
         /** Create a new hold for this key and value. */
         private suspend fun startHold(key: String, value: T): Hold =
-            if (value is Container) {
-                // Automatically push Container objects to the backing store when they change.
-                val autoSave = value.watchables.batch(this@HoldingStore, containerPeriod) {
-                    back.put(key, value)
+            HoldBuilder().apply {
+                if (value is Container) {
+                    val autoSave = value.watchables.batch(this@HoldingStore, containerPeriod) {
+                        back.put(key, value)
+                    }
+                    onWatcher(autoSave)
+                    onRemove { autoSave.cancel() }
                 }
-                // When a held item is removed, immediately cancel the auto-save behavior
-                autoSave.toHold() + createHold(value) + Hold(onRemove = { autoSave.cancel() })
-            } else {
                 createHold(value)
-            }.apply {
-                onStart()
-            }
+            }.build().apply { onStart() }
     }
 }

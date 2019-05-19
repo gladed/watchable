@@ -29,13 +29,14 @@ import kotlinx.coroutines.flow.collect
 import kotlin.coroutines.CoroutineContext
 
 const val DEFAULT_CONTAINER_PERIOD = 1000L
+
 /**
  * Return a [HoldingStore] around this [Store].
  */
 fun <T : Any> Store<T>.holding(
     context: CoroutineContext,
     containerPeriod: Long = DEFAULT_CONTAINER_PERIOD,
-    start: suspend (T) -> Hold
+    start: suspend HoldBuilder.(T) -> Unit
 ) =
     HoldingStore(context, this, containerPeriod, start)
 

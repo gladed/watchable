@@ -1,5 +1,8 @@
 # Version History
 
+## 0.6.16
+* `holding` now relies on `HoldBuilder` for more natural composition of holds (#84).
+
 ## 0.6.15
 * `holding` now automatically saves changes to objects implementing `Container` when those objects change (#79).
 *  Some internal-use-only objects are correctly marked internal.

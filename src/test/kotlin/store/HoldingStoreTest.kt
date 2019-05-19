@@ -65,12 +65,6 @@ class HoldingStoreTest {
 
     private val rootStore = mockk<Store<Bird>>(relaxUnitFun = true)
 
-    interface WatchCreator {
-        suspend fun create(bird: Bird): Hold
-    }
-
-    private val creator = mockk<WatchCreator>()
-
     private val hold = mockk<Hold>(relaxUnitFun = true)
 
     interface HoldingStoreScope : TestCoroutineScope {
@@ -79,37 +73,42 @@ class HoldingStoreTest {
 
     private fun test(func: suspend HoldingStoreScope.() -> Unit) = runTest {
         (object : HoldingStoreScope, TestCoroutineScope by this {
-            override val scopeStore = rootStore.holding(coroutineContext) { creator.create(it) }
+            override val scopeStore = rootStore.holding(coroutineContext) {
+                onCancel { hold.onCancel() }
+                onCreate { hold.onCreate() }
+                onRemove { hold.onRemove() }
+                onStop { hold.onStop() }
+                onStart { hold.onStart() }
+            }
         }).func()
     }
 
     @Before
     fun setup() {
-        coEvery { creator.create(robin) } returns hold
         coEvery { rootStore.get(robin.id) } returns robin
     }
 
     @Test fun `put an item`() = test {
         coEvery { rootStore.get(robin.id) } throws Cannot("find bird for key")
         scopeStore.create(this).put(robin.id, robin)
-        coVerify { creator.create(robin) }
+        coVerify { hold.onCreate() }
         coVerify { rootStore.put(robin.id, robin) }
     }
 
     @Test fun `release when scope completes`() = test {
         coroutineScope {
             assertEquals(robin, scopeStore.create(this).get(robin.id))
-            coVerify { creator.create(robin) }
+            coVerify { hold.onStart() }
         }
         coVerify { hold.onStop() }
     }
 
     @Test fun `hold only once when two scopes get`() = test {
         assertEquals(robin, scopeStore.create(this).get(robin.id))
-        coVerify(exactly = 1) { creator.create(robin) }
+        coVerify(exactly = 1) { hold.onStart() }
         coroutineScope {
             assertEquals(robin, scopeStore.create(this).get(robin.id))
-            coVerify(exactly = 1) { creator.create(robin) }
+            coVerify(exactly = 1) { hold.onStart() }
         }
     }
 
@@ -129,7 +128,7 @@ class HoldingStoreTest {
             val store = scopeStore.create(this)
             store.get(robin.id)
             store.get(robin.id)
-            coVerify(exactly = 1) { creator.create(robin) }
+            coVerify(exactly = 1) { hold.onStart() }
         }
         coVerify(exactly = 1) { hold.onStop() }
     }
@@ -138,7 +137,7 @@ class HoldingStoreTest {
         coroutineScope { scopeStore.create(this).get(robin.id) }
         coroutineScope { scopeStore.create(this).get(robin.id) }
 
-        coVerify(exactly = 2) { creator.create(robin) }
+        coVerify(exactly = 2) { hold.onStart() }
         coVerify(exactly = 2) { hold.onStop() }
     }
 
@@ -182,7 +181,7 @@ class HoldingStoreTest {
         assertEquals(listOf(robin, robin), birds)
 
         // Should only be one hold and one release even though two scopes were getting
-        coVerify(exactly = 1) { creator.create(robin) }
+        coVerify(exactly = 1) { hold.onStart() }
 
         scope1.cancel()
         coVerify(exactly = 0) { hold.onStop() }

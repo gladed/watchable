@@ -29,7 +29,7 @@ import kotlin.coroutines.CoroutineContext
 /** Construct real-world objects for use by the application. */
 object Adapter {
 
-    /** Create a Logic object based on a folder on disk. */
+    /** Create a [Logic] object based on a root directory. */
     fun createLogic(context: CoroutineContext, root: File): Logic {
         val birds = FileStore(root, "bird", JSON_SUFFIX).serialize(Bird.serializer()).cached(context)
         val chirps = FileStore(root, "chirp", JSON_SUFFIX).serialize(Chirp.serializer()).cached(context)
