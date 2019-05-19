@@ -1,12 +1,11 @@
 package logic
 
 import io.gladed.watchable.Period.INLINE
+import io.gladed.watchable.simple
 import io.gladed.watchable.store.HoldingStore
 import io.gladed.watchable.store.Store
 import io.gladed.watchable.store.cannot
 import io.gladed.watchable.store.holding
-import io.gladed.watchable.store.plus
-import io.gladed.watchable.watch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -41,7 +40,7 @@ class Logic(
     }
 
     /** A [HoldingStore] for birds, from which new scope-specific stores can be derived. */
-    private val birds: HoldingStore<Bird> = holding(birdStore) { bird ->
+    private val birds = holding(birdStore) { bird ->
         onCreate {
             if (bird.following.isNotEmpty()) {
                 cannot("create a bird following other birds")
@@ -58,9 +57,9 @@ class Logic(
             }
         }
 
-        onWatcher(watch(bird.following, INLINE) {
-            if (!it.isInitial) it.simple.forEach { simple ->
-                simple.add?.also { birdId ->
+        onWatcher(simple(bird.following, INLINE) {
+            if (!it.isInitial) {
+                it.add?.also { birdId ->
                     // Just get the bird to make sure it's there
                     birdStore.get(birdId)
                 }
@@ -78,8 +77,8 @@ class Logic(
             birdStore.get(chirp.from)
         }
 
-        onWatcher(watch(chirp.reactions, INLINE) { change ->
-            if (!change.isInitial) change.simple.forEach { simple ->
+        onWatcher(simple(chirp.reactions, INLINE) { simple ->
+            if (!simple.isInitial) {
                 simple.add?.also { addValue ->
                     if (chirp.from == simple.key) {
                         cannot("react to own chirp")
