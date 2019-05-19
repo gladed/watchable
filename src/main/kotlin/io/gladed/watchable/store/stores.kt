@@ -110,7 +110,7 @@ fun <T : Any> Store<T>.bind(scope: CoroutineScope, period: Long, map: WatchableM
         map.batch(scope, period) { changes ->
             for (change in changes) {
                 when (change) {
-                    is MapChange.Initial -> { }
+                    // Ignore MapChange.Initial
                     is MapChange.Remove -> {
                         containerWatchers { remove(change.key) }?.cancel()
                         remove(change.key)
