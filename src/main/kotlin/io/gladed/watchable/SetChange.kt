@@ -23,7 +23,7 @@ sealed class SetChange<T> : HasSimpleChange<SetChange.Simple<T>> {
     /** The initial state of the set. */
     data class Initial<T>(val set: Set<T>) : SetChange<T>() {
         override val isInitial = true
-        override val simple by lazy { set.map { Simple(add = it) } }
+        override val simple by lazy { set.map { Simple(add = it, isInitial = true) } }
     }
 
     /** An addition of items. */
@@ -41,5 +41,9 @@ sealed class SetChange<T> : HasSimpleChange<SetChange.Simple<T>> {
     }
 
     /** The simplest form of a set change, affecting only a single item (either [add] or [remove]). */
-    data class Simple<T>(val add: T? = null, val remove: T? = null)
+    data class Simple<T>(
+        val add: T? = null,
+        val remove: T? = null,
+        val isInitial: Boolean = false
+    )
 }

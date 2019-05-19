@@ -40,7 +40,6 @@ fun <T : Any> Store<T>.holding(
 ) =
     HoldingStore(context, this, containerPeriod, start)
 
-
 /**
  * Return a [HoldingStore] for this [CoroutineScope] around [store].
  */

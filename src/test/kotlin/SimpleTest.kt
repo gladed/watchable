@@ -32,8 +32,8 @@ class SimpleTest {
         simple(list) { channel.send(it) }
 
         channel.mustBe(
-            ListChange.Simple(index = 0, add = 1),
-            ListChange.Simple(index = 1, add = 2))
+            ListChange.Simple(index = 0, add = 1, isInitial = true),
+            ListChange.Simple(index = 1, add = 2, isInitial = true))
 
         list { removeAt(1); set(0, 3); add(4) }
         channel.mustBe(
@@ -46,7 +46,7 @@ class SimpleTest {
         val map = watchableMapOf(1 to "1")
         val channel = Channel<MapChange.Simple<Int, String>>(Channel.UNLIMITED)
         simple(map) { channel.send(it) }
-        channel.mustBe(MapChange.Simple(key = 1, add = "1"))
+        channel.mustBe(MapChange.Simple(key = 1, add = "1", isInitial = true))
         map { put(2, "2"); remove(1); put(2, "22") }
         channel.mustBe(
             MapChange.Simple(key = 2, add = "2"),
@@ -58,7 +58,7 @@ class SimpleTest {
         val set = watchableSetOf(1, 2)
         val channel = Channel<SetChange.Simple<Int>>(Channel.UNLIMITED)
         simple(set) { channel.send(it) }
-        channel.mustBe(SetChange.Simple(add = 1), SetChange.Simple(add = 2))
+        channel.mustBe(SetChange.Simple(add = 1, isInitial = true), SetChange.Simple(add = 2, isInitial = true))
         set { remove(1); add(3) }
         channel.mustBe(
             SetChange.Simple(remove = 1),

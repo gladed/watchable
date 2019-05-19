@@ -24,7 +24,7 @@ sealed class MapChange<K, V> : HasSimpleChange<MapChange.Simple<K, V>> {
     data class Initial<K, V>(val map: Map<K, V>) : MapChange<K, V>() {
         override val isInitial = true
         override val simple by lazy {
-            map.entries.map { Simple(key = it.key, add = it.value) }
+            map.entries.map { Simple(key = it.key, add = it.value, isInitial = true) }
         }
     }
 
@@ -54,6 +54,8 @@ sealed class MapChange<K, V> : HasSimpleChange<MapChange.Simple<K, V>> {
         /** Value removed or replaced for [key] if any. */
         val remove: V? = null,
         /** Value added or updated for [key] if any. */
-        val add: V? = null
+        val add: V? = null,
+        /** True if this change came from an initial change. */
+        val isInitial: Boolean = false
     )
 }

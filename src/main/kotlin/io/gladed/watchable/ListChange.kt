@@ -24,7 +24,7 @@ sealed class ListChange<T> : HasSimpleChange<ListChange.Simple<T>> {
     data class Initial<T>(val list: List<T>) : ListChange<T>() {
         override val isInitial = true
         override val simple by lazy {
-            list.mapIndexed { index, item -> Simple(index, add = item) }
+            list.mapIndexed { index, item -> Simple(index, add = item, isInitial = true) }
         }
     }
 
@@ -61,6 +61,8 @@ sealed class ListChange<T> : HasSimpleChange<ListChange.Simple<T>> {
         /** Item removed at [index] if any. */
         val remove: T? = null,
         /** Item added at [index] if any. */
-        val add: T? = null
+        val add: T? = null,
+        /** Originally came from an initial change. */
+        val isInitial: Boolean = false
     )
 }
