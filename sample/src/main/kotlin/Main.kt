@@ -18,6 +18,7 @@ import api.Routes
 import api.registerSerializers
 import external.Adapter
 import io.gladed.watchable.store.Cannot
+import io.ktor.application.Application
 import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.CallLogging
@@ -50,28 +51,32 @@ class Main : CoroutineScope {
 
     fun go() {
         embeddedServer(Netty, SAMPLE_PORT) {
-            install(ContentNegotiation) {
-                register(ContentType.Application.Json, KotlinSerializationConverter()) {
-                    registerSerializers()
-                    add(Bird.serializer())
-                    add(Chirp.serializer())
-                }
-            }
-
-            install(StatusPages) {
-                exception<Cannot> { cause ->
-                    call.respond(HttpStatusCode.BadRequest, "cannot ${cause.message}")
-                }
-            }
-
-            install(CallLogging) {
-                level = Level.INFO
-            }
-
-            routing {
-                with(routes) { install() }
-            }
+            setup()
         }.start(wait = true)
+    }
+
+    fun Application.setup() {
+        install(ContentNegotiation) {
+            register(ContentType.Application.Json, KotlinSerializationConverter()) {
+                registerSerializers()
+                add(Bird.serializer())
+                add(Chirp.serializer())
+            }
+        }
+
+        install(StatusPages) {
+            exception<Cannot> { cause ->
+                call.respond(HttpStatusCode.BadRequest, "cannot ${cause.message}")
+            }
+        }
+
+        install(CallLogging) {
+            level = Level.INFO
+        }
+
+        routing {
+            with(routes) { install() }
+        }
     }
 
     companion object {
