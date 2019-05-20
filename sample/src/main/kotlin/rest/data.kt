@@ -19,6 +19,8 @@ package rest
 import util.KotlinSerializationConverter
 import kotlinx.serialization.Serializable
 
+// Data objects for interacting with REST clients.
+
 const val BIRD_PATH = "/bird"
 const val CHIRP_PATH = "/chirp"
 const val REACT_PATH = "/react"

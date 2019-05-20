@@ -38,7 +38,8 @@ import logic.Logic
 @UseExperimental(FlowPreview::class)
 class Routes(private val logic: Logic) {
 
-    fun Routing.install() {
+    /** Expose REST APIs for manipulating [Bird] and [Chirp] activities. */
+    fun Routing.installRoutes() {
         get("/") {
             respond {
                 Home(someBirds = birds.keys().take(SHORT_LIST_COUNT).map { Bird.keyToPath(it) }.toList())
@@ -46,20 +47,6 @@ class Routes(private val logic: Logic) {
         }
         route(BIRD_PATH) { birdRoutes() }
         route(CHIRP_PATH) { chirpRoutes() }
-    }
-
-    /** Respond with result. */
-    private suspend inline fun <Tx : Any> PipelineContext<Unit, ApplicationCall>.respond(
-        crossinline func: suspend Logic.Scoped.() -> Tx
-    ) = coroutineScope {
-        call.respond(logic.scoped(this).func())
-    }
-
-    /** Parse incoming data, process it, and respond with result. */
-    private suspend inline fun <reified Rx : Any, Tx : Any> PipelineContext<Unit, ApplicationCall>.process(
-        crossinline func: suspend Logic.Scoped.(Rx) -> Tx
-    ) = respond {
-        func(call.receive())
     }
 
     private fun Route.chirpRoutes() {
@@ -121,6 +108,21 @@ class Routes(private val logic: Logic) {
             }
         }
     }
+
+    /** Respond with result. */
+    private suspend inline fun <Tx : Any> PipelineContext<Unit, ApplicationCall>.respond(
+        crossinline func: suspend Logic.Scoped.() -> Tx
+    ) = coroutineScope {
+        call.respond(logic.scoped(this).func())
+    }
+
+    /** Parse incoming data, process it, and respond with result. */
+    private suspend inline fun <reified Rx : Any, Tx : Any> PipelineContext<Unit, ApplicationCall>.process(
+        crossinline func: suspend Logic.Scoped.(Rx) -> Tx
+    ) = respond {
+        func(call.receive())
+    }
+
     companion object {
         const val SHORT_LIST_COUNT = 10
     }

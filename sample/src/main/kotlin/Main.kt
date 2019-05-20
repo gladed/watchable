@@ -71,7 +71,7 @@ class Main(dataDir: File) : CoroutineScope {
         }
 
         routing {
-            with(routes) { install() }
+            with(routes) { installRoutes() }
         }
     }
 
