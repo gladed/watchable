@@ -4,6 +4,7 @@
 * `holding` now relies on `HoldBuilder` for more natural composition of holds (#84).
 * Add a new way to create holding stores (#86).
 * Simple changes now all bear `isInitial` field (#85).
+* Improved sample app REST APIs (#89).
 
 ## 0.6.15
 * `holding` now automatically saves changes to objects implementing `Container` when those objects change (#79).
