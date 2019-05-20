@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package api
+package rest
 
 import util.KotlinSerializationConverter
 import kotlinx.serialization.Serializable
@@ -27,7 +27,8 @@ const val REACT_PATH = "/react"
 data class Home(
     val birds: String = BIRD_PATH,
     val chirps: String = CHIRP_PATH,
-    val someBirds: List<String>)
+    val someBirds: List<String>
+)
 
 @Serializable
 data class Bird(
@@ -51,12 +52,17 @@ data class Bird(
 data class Chirp(
     val self: String,
     val from: String,
-    val text: String
+    val text: String,
+    // Map of reactions from bird ids to reaction texts
+    val reactions: Map<String, String>,
+    val react: String
 ) {
     constructor(chirp: model.Chirp) : this(
         self = "$CHIRP_PATH/${chirp.id}",
         from = Bird.keyToPath(chirp.from),
-        text = chirp.text
+        text = chirp.text,
+        reactions = chirp.reactions.mapKeys { "$BIRD_PATH/${it.key}" },
+        react = "$CHIRP_PATH/${chirp.id}$REACT_PATH"
     )
 }
 
@@ -67,7 +73,7 @@ data class CreateBird(val name: String)
 data class CreateChirp(val text: String)
 
 @Serializable
-data class ChirpReaction(val reaction: String?)
+data class ChirpReact(val from: String, val reaction: String?)
 
 @Serializable
 data class ChirpPage(
@@ -79,8 +85,9 @@ data class ChirpPage(
 fun KotlinSerializationConverter.registerSerializers() {
     add(Home.serializer())
     add(Bird.serializer())
+    add(Chirp.serializer())
     add(CreateBird.serializer())
     add(CreateChirp.serializer())
-    add(ChirpReaction.serializer())
+    add(ChirpReact.serializer())
     add(ChirpPage.serializer())
 }

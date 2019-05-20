@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-package api
+package rest
 
 import io.gladed.watchable.toWatchableValue
 import io.ktor.application.ApplicationCall
@@ -33,15 +33,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import logic.Logic
-import model.Bird
 
+/** Convert REST API requests into [Logic] changes. */
 @UseExperimental(FlowPreview::class)
 class Routes(private val logic: Logic) {
 
     fun Routing.install() {
         get("/") {
             respond {
-                Home(someBirds = birds.keys().take(SHORT_LIST_COUNT).map { api.Bird.keyToPath(it) }.toList())
+                Home(someBirds = birds.keys().take(SHORT_LIST_COUNT).map { Bird.keyToPath(it) }.toList())
             }
         }
         route(BIRD_PATH) { birdRoutes() }
@@ -65,22 +65,22 @@ class Routes(private val logic: Logic) {
     private fun Route.chirpRoutes() {
         get("{chirpId}") {
             respond {
-                chirps.get(call.parameters["chirpId"]!!)
+                Chirp(chirps.get(call.parameters["chirpId"]!!))
             }
         }
 
-        post("{chirpId}$REACT_PATH/{birdId}") {
-            process { reaction: ChirpReaction ->
-                val bird = birds.get(call.parameters["birdId"]!!)
+        post("{chirpId}$REACT_PATH") {
+            process { react: ChirpReact ->
+                val bird = birds.get(react.from.split("/").last())
                 val chirp = chirps.get(call.parameters["chirpId"]!!)
                 chirp.reactions {
-                    if (reaction.reaction == null) {
+                    if (react.reaction == null) {
                         remove(bird.id)
                     } else {
-                        put(bird.id, reaction.reaction)
+                        put(bird.id, react.reaction)
                     }
                 }
-                chirp
+                Chirp(chirp)
             }
         }
     }
@@ -89,7 +89,7 @@ class Routes(private val logic: Logic) {
         post {
             process { birdRequest: CreateBird ->
                 // Create a new bird with the specified name
-                val bird = Bird(name = birdRequest.name.toWatchableValue())
+                val bird = model.Bird(name = birdRequest.name.toWatchableValue())
                 birds.put(bird.id, bird)
                 Bird(bird)
             }

@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-import api.Routes
-import api.registerSerializers
 import external.Adapter
 import io.gladed.watchable.store.Cannot
 import io.ktor.application.Application
@@ -34,19 +32,19 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import model.Bird
-import model.Chirp
 import org.slf4j.event.Level
+import rest.Routes
+import rest.registerSerializers
 import util.KotlinSerializationConverter
 import java.io.File
 
-fun main() = Main().go()
+fun main() = Main(File(".data")).go()
 
 @UseExperimental(FlowPreview::class)
-class Main : CoroutineScope {
+class Main(dataDir: File) : CoroutineScope {
 
     override val coroutineContext = Dispatchers.Default + Job()
-    private val logic = Adapter.createLogic(coroutineContext, File(".data"))
+    private val logic = Adapter.createLogic(coroutineContext, dataDir)
     private val routes = Routes(logic)
 
     fun go() {
@@ -59,8 +57,6 @@ class Main : CoroutineScope {
         install(ContentNegotiation) {
             register(ContentType.Application.Json, KotlinSerializationConverter()) {
                 registerSerializers()
-                add(Bird.serializer())
-                add(Chirp.serializer())
             }
         }
 
