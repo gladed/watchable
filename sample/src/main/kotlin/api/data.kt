@@ -27,7 +27,8 @@ const val REACT_PATH = "/react"
 data class Home(
     val birds: String = BIRD_PATH,
     val chirps: String = CHIRP_PATH,
-    val someBirds: List<String>)
+    val someBirds: List<String>
+)
 
 @Serializable
 data class Bird(
