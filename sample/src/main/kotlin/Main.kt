@@ -14,10 +14,9 @@
  * limitations under the License.
  */
 
-import api.Routes
-import api.registerSerializers
 import external.Adapter
 import io.gladed.watchable.store.Cannot
+import io.ktor.application.Application
 import io.ktor.application.call
 import io.ktor.application.install
 import io.ktor.features.CallLogging
@@ -33,45 +32,47 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
-import model.Bird
-import model.Chirp
 import org.slf4j.event.Level
+import rest.Routes
+import rest.registerSerializers
 import util.KotlinSerializationConverter
 import java.io.File
 
-fun main() = Main().go()
+fun main() = Main(File(".data")).go()
 
 @UseExperimental(FlowPreview::class)
-class Main : CoroutineScope {
+class Main(dataDir: File) : CoroutineScope {
 
     override val coroutineContext = Dispatchers.Default + Job()
-    private val logic = Adapter.createLogic(coroutineContext, File(".data"))
+    private val logic = Adapter.createLogic(coroutineContext, dataDir)
     private val routes = Routes(logic)
 
     fun go() {
         embeddedServer(Netty, SAMPLE_PORT) {
-            install(ContentNegotiation) {
-                register(ContentType.Application.Json, KotlinSerializationConverter()) {
-                    registerSerializers()
-                    add(Bird.serializer())
-                    add(Chirp.serializer())
-                }
-            }
-
-            install(StatusPages) {
-                exception<Cannot> { cause ->
-                    call.respond(HttpStatusCode.BadRequest, "cannot ${cause.message}")
-                }
-            }
-
-            install(CallLogging) {
-                level = Level.INFO
-            }
-
-            routing {
-                with(routes) { install() }
-            }
+            setup()
         }.start(wait = true)
+    }
+
+    fun Application.setup() {
+        install(ContentNegotiation) {
+            register(ContentType.Application.Json, KotlinSerializationConverter()) {
+                registerSerializers()
+            }
+        }
+
+        install(StatusPages) {
+            exception<Cannot> { cause ->
+                call.respond(HttpStatusCode.BadRequest, "cannot ${cause.message}")
+            }
+        }
+
+        install(CallLogging) {
+            level = Level.INFO
+        }
+
+        routing {
+            with(routes) { installRoutes() }
+        }
     }
 
     companion object {
