@@ -14,8 +14,8 @@ apply plugin: 'kotlin'
 apply plugin: 'kotlinx-serialization'
 apply plugin: 'application'
 
-group 'io.gladed.sample'
-version '1.0'
+group 'com.example'
+version '0.0.1'
 
 repositories {
     mavenCentral()
@@ -25,6 +25,8 @@ repositories {
 
 dependencies {
     implementation rootProject  // Local version, otherwise use: compile "io.gladed:watchable:x.x.x"
+    implementation project(':sample:lib')
+
     implementation "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kotlin_serialization_version"
     implementation "io.ktor:ktor-server-netty:$ktor_version"
     implementation "ch.qos.logback:logback-classic:1.2.3"

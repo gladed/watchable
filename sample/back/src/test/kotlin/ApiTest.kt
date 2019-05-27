@@ -23,7 +23,7 @@ import kotlin.test.assertEquals
 @UseExperimental(UnstableDefault::class)
 class ApiTest {
     @Rule @JvmField val folder = TemporaryFolder()
-    lateinit var main: Main
+    private lateinit var main: Main
 
     @Before fun setup() {
         main = Main(folder.root.apply { mkdirs() })
@@ -56,7 +56,6 @@ class ApiTest {
         responseSerializer: KSerializer<U>): U =
         handleRequest(HttpMethod.Get, path).run {
             assertEquals(HttpStatusCode.OK, response.status())
-            println(response.content)
             Json.parse(responseSerializer, response.content!!)
         }
 
@@ -95,5 +94,4 @@ class ApiTest {
             assertEquals("+", newChirp.reactions[roadrunner.self])
         }
     }
-
 }

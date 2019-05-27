@@ -56,6 +56,11 @@ class KotlinSerializationConverter : ContentConverter {
                 contentType.withCharset(context.call.suitableCharset()))
         }
 
+    /** Install a bunch of serializers for the specified type. */
+    fun addAll(items: Map<Class<*>, KSerializer<*>>) {
+        serializers.putAll(items)
+    }
+
     /** Install a serializer for the specified type. */
     inline fun <reified T : Any> add(serializer: KSerializer<T>) {
         serializers[T::class.java] = serializer

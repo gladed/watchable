@@ -1,3 +1,4 @@
-rootProject.name = "watchable"
-include 'sample'
-
+include 'watchable'
+include 'sample:back'
+include 'sample:lib'
+include 'sample:front'

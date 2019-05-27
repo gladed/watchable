@@ -83,5 +83,4 @@ class WatchableSetTest {
         set.retainAll(setOf(4, 6, 7))
         assertEquals(setOf(4, 6), set)
     }
-
 }

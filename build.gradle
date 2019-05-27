@@ -21,6 +21,7 @@ buildscript {
     dependencies {
         classpath "org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version"
         classpath "org.jetbrains.dokka:dokka-gradle-plugin:$dokka_version"
+        classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
     }
 }
 
@@ -41,7 +42,6 @@ apply plugin: 'signing'
 
 version = ext.watchable_version
 group = 'io.gladed'
-//name = "watchable" (done in settings.gradle)
 description = "Listenable data structures using Kotlin coroutines"
 
 repositories {

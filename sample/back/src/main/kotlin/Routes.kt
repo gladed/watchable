@@ -14,8 +14,6 @@
  * limitations under the License.
  */
 
-package rest
-
 import io.gladed.watchable.toWatchableValue
 import io.ktor.application.ApplicationCall
 import io.ktor.application.call
@@ -33,6 +31,15 @@ import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import logic.Logic
+import rest.BIRD_PATH
+import rest.Bird
+import rest.CHIRP_PATH
+import rest.ChirpPage
+import rest.ChirpReact
+import rest.CreateBird
+import rest.CreateChirp
+import rest.Home
+import rest.REACT_PATH
 
 /** Convert REST API requests into [Logic] changes. */
 @UseExperimental(FlowPreview::class)
@@ -42,7 +49,7 @@ class Routes(private val logic: Logic) {
     fun Routing.installRoutes() {
         get("/") {
             respond {
-                Home(someBirds = birds.keys().take(SHORT_LIST_COUNT).map { Bird.keyToPath(it) }.toList())
+                Home(someBirds = birds.keys().take(SHORT_LIST_COUNT).map { Bird.idToPath(it) }.toList())
             }
         }
         route(BIRD_PATH) { birdRoutes() }
@@ -52,7 +59,7 @@ class Routes(private val logic: Logic) {
     private fun Route.chirpRoutes() {
         get("{chirpId}") {
             respond {
-                Chirp(chirps.get(call.parameters["chirpId"]!!))
+                chirps.get(call.parameters["chirpId"]!!).toRestChirp()
             }
         }
 
@@ -61,13 +68,15 @@ class Routes(private val logic: Logic) {
                 val bird = birds.get(react.from.split("/").last())
                 val chirp = chirps.get(call.parameters["chirpId"]!!)
                 chirp.reactions {
-                    if (react.reaction == null) {
-                        remove(bird.id)
-                    } else {
-                        put(bird.id, react.reaction)
+                    react.reaction.also { reaction ->
+                        if (reaction == null) {
+                            remove(bird.id)
+                        } else {
+                            put(bird.id, reaction)
+                        }
                     }
                 }
-                Chirp(chirp)
+                chirp.toRestChirp()
             }
         }
     }
@@ -78,17 +87,18 @@ class Routes(private val logic: Logic) {
                 // Create a new bird with the specified name
                 val bird = model.Bird(name = birdRequest.name.toWatchableValue())
                 birds.put(bird.id, bird)
-                Bird(bird)
+                bird.toRestBird()
             }
         }
 
         get("{birdId}$CHIRP_PATH") {
             respond {
                 val bird = birds.get(call.parameters["birdId"]!!)
-                ChirpPage(logic.ops.chirpsForBird(bird.id)
+                val chirps = logic.ops.chirpsForBird(bird.id)
+                    .map { chirps.get(it).toRestChirp() }
                     .take(SHORT_LIST_COUNT)
-                    .map { Chirp(chirps.get(it)) }
-                    .toList())
+                    .toList()
+                ChirpPage(chirps)
             }
         }
 
@@ -98,13 +108,13 @@ class Routes(private val logic: Logic) {
                 val bird = birds.get(call.parameters["birdId"]!!)
                 val chirp = model.Chirp(from = bird.id, text = chirpRequest.text)
                 chirps.put(chirp.id, chirp)
-                Chirp(chirp)
+                chirp.toRestChirp()
             }
         }
 
         get("{birdId}") {
             respond {
-                Bird(birds.get(call.parameters["birdId"]!!))
+                birds.get(call.parameters["birdId"]!!).toRestBird()
             }
         }
     }

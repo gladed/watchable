@@ -16,7 +16,6 @@
 
 package rest
 
-import util.KotlinSerializationConverter
 import kotlinx.serialization.Serializable
 
 // Data objects for interacting with REST clients.
@@ -24,6 +23,17 @@ import kotlinx.serialization.Serializable
 const val BIRD_PATH = "/bird"
 const val CHIRP_PATH = "/chirp"
 const val REACT_PATH = "/react"
+
+object Serializers {
+    val all = mapOf(
+        Home::class to Home.serializer(),
+        Bird::class to Bird.serializer(),
+        Chirp::class to Chirp.serializer(),
+        CreateBird::class to CreateBird.serializer(),
+        CreateChirp::class to CreateChirp.serializer(),
+        ChirpReact::class to ChirpReact.serializer(),
+        ChirpPage::class to ChirpPage.serializer())
+}
 
 @Serializable
 data class Home(
@@ -39,14 +49,8 @@ data class Bird(
     val following: List<String>,
     val chirps: String
 ) {
-    constructor(bird: model.Bird) : this(
-        self = keyToPath(bird.id),
-        name = bird.name.value,
-        following = bird.following.map { keyToPath(it) },
-        chirps = "${keyToPath(bird.id)}$CHIRP_PATH"
-    )
     companion object {
-        fun keyToPath(key: String) = "$BIRD_PATH/$key"
+        fun idToPath(id: String) = "$BIRD_PATH/$id"
     }
 }
 
@@ -59,13 +63,9 @@ data class Chirp(
     val reactions: Map<String, String>,
     val react: String
 ) {
-    constructor(chirp: model.Chirp) : this(
-        self = "$CHIRP_PATH/${chirp.id}",
-        from = Bird.keyToPath(chirp.from),
-        text = chirp.text,
-        reactions = chirp.reactions.mapKeys { "$BIRD_PATH/${it.key}" },
-        react = "$CHIRP_PATH/${chirp.id}$REACT_PATH"
-    )
+    companion object {
+        fun idToPath(id: String) = "$CHIRP_PATH/$id"
+    }
 }
 
 @Serializable
@@ -83,13 +83,3 @@ data class ChirpPage(
     val nextPage: String? = null
 )
 
-/** Add all serializers for types exposed here. */
-fun KotlinSerializationConverter.registerSerializers() {
-    add(Home.serializer())
-    add(Bird.serializer())
-    add(Chirp.serializer())
-    add(CreateBird.serializer())
-    add(CreateChirp.serializer())
-    add(ChirpReact.serializer())
-    add(ChirpPage.serializer())
-}

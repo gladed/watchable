@@ -51,8 +51,8 @@ class Logic(
             // Delete any chirps from this bird using a throwaway scope
             coroutineScope {
                 val chirps = chirps.create(this)
-                ops.chirpsForBird(bird.id).collect { chirpId ->
-                    chirps.remove(chirpId)
+                ops.chirpsForBird(bird.id).collect {
+                    chirps.remove(it)
                 }
             }
         }

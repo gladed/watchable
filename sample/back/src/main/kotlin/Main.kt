@@ -33,8 +33,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import org.slf4j.event.Level
-import rest.Routes
-import rest.registerSerializers
+import rest.Serializers
 import util.KotlinSerializationConverter
 import java.io.File
 
@@ -56,7 +55,7 @@ class Main(dataDir: File) : CoroutineScope {
     fun Application.setup() {
         install(ContentNegotiation) {
             register(ContentType.Application.Json, KotlinSerializationConverter()) {
-                registerSerializers()
+                addAll(Serializers.all.mapKeys { it.key.java })
             }
         }
 
@@ -76,6 +75,6 @@ class Main(dataDir: File) : CoroutineScope {
     }
 
     companion object {
-        const val SAMPLE_PORT = 8080
+        const val SAMPLE_PORT = 9090
     }
 }
