@@ -6,8 +6,7 @@ buildscript {
         jvm_version = '1.8'
         mockk_version = '1.9.3'
         detekt_version = '1.0.0-RC14'
-        // Version to publish
-        watchable_version = '0.6.16'
+        watchable_version = '0.6.17' // Version to publish
     }
 
     repositories {

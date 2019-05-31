@@ -79,15 +79,15 @@ fun <U : Any, T : Any> Store<T>.transform(transformer: Transformer<T, U>): Store
  * This is a one-way bind; external changes to the [Store] will not be reflected in [map].
  */
 @UseExperimental(ExperimentalCoroutinesApi::class, FlowPreview::class)
-fun <T : Any> Store<T>.bind(scope: CoroutineScope, period: Long, map: WatchableMap<String, T>): Watcher {
-    val setup = scope.async {
+fun <T : Any> CoroutineScope.bind(store: Store<T>, map: WatchableMap<String, T>, period: Long): Watcher {
+    val setup = async {
         val containerWatchers = mutableMapOf<String, Watcher>().guarded()
 
         fun putOnChange(key: String, item: Container) =
-            item.watchables.batch(scope, period) { changes ->
+            item.watchables.batch(this@bind, period) { changes ->
                 if (changes.any { !it.isInitial }) {
                     @Suppress("UNCHECKED_CAST")
-                    put(key, item as T)
+                    store.put(key, item as T)
                 }
             }
 
@@ -95,8 +95,8 @@ fun <T : Any> Store<T>.bind(scope: CoroutineScope, period: Long, map: WatchableM
         map.clear()
 
         // Load up initial set
-        keys().collect { key ->
-            get(key).also { item ->
+        store.keys().collect { key ->
+            store.get(key).also { item ->
                 if (item is Container) {
                     containerWatchers {
                         put(key, putOnChange(key, item))
@@ -107,13 +107,13 @@ fun <T : Any> Store<T>.bind(scope: CoroutineScope, period: Long, map: WatchableM
         }
 
         // Watch for changes to map, pushing any change back to the store
-        map.batch(scope, period) { changes ->
+        map.batch(this@bind, period) { changes ->
             for (change in changes) {
                 when (change) {
                     // Ignore MapChange.Initial
                     is MapChange.Remove -> {
                         containerWatchers { remove(change.key) }?.cancel()
-                        remove(change.key)
+                        store.remove(change.key)
                     }
                     is MapChange.Put -> {
                         val item = change.add
@@ -121,7 +121,7 @@ fun <T : Any> Store<T>.bind(scope: CoroutineScope, period: Long, map: WatchableM
                         if (item is Container) {
                             containerWatchers { put(change.key, putOnChange(change.key, item)) }
                         }
-                        put(change.key, item)
+                        store.put(change.key, item)
                     }
                 }
             }

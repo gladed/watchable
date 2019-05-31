@@ -54,12 +54,12 @@ class BindStoreTest {
     }
 
     @Test fun `load initial values`() = runBlockingTest {
-        store.bind(this, 50, map)
+        bind(store, map, 50)
         assertEquals(thing, map[thing.id])
     }
 
     @Test fun `put when new contents are stored`() = runBlockingTest {
-        val binding = store.bind(this, 50, map)
+        val binding = bind(store, map, 50)
         map { put(thing.id, thing.copy(value = 2)) }
         // Make sure changes are applied after stop
         binding.stop()
@@ -67,13 +67,13 @@ class BindStoreTest {
     }
 
     @Test fun `remove when items are removed`() = runBlockingTest {
-        store.bind(this, INLINE, map)
+        bind(store, map, INLINE)
         map.remove(thing.id)
         coVerify { store.remove(thing.id) }
     }
 
     @Test fun `put when contents of container items change`() = runBlockingTest {
-        store.bind(this, INLINE, map)
+        bind(store, map, INLINE)
         thing.name.set("One")
         coVerify { store.put(thing.id, thing) }
     }
@@ -81,7 +81,7 @@ class BindStoreTest {
     @Test fun `make sure elements in map are gone after bind`() {
         runBlockingTest {
             map.put("a", thing)
-            store.bind(this, 50, map).start()
+            bind(store, map, 50).start()
             assertNull(map["a"])
         }
     }

@@ -1,5 +1,8 @@
 # Version History
 
+## 0.6.17
+* Better semantics for binding a store to a map (#95).
+
 ## 0.6.16
 * `holding` now relies on `HoldBuilder` for more natural composition of holds (#84).
 * Add a new way to create holding stores (#86).
