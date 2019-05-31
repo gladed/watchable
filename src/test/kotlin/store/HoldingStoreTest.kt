@@ -17,16 +17,11 @@
 package store
 
 import impossible
-import io.gladed.watchable.Change
-import io.gladed.watchable.Watchable
-import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.store.Cannot
-import io.gladed.watchable.store.Container
 import io.gladed.watchable.store.Hold
 import io.gladed.watchable.store.HoldingStore
 import io.gladed.watchable.store.Store
 import io.gladed.watchable.store.holding
-import io.gladed.watchable.toWatchableValue
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -51,15 +46,10 @@ import org.junit.Test
 import runTest
 import java.util.UUID
 
-@UseExperimental(ObsoleteCoroutinesApi::class, ExperimentalCoroutinesApi::class)
+@UseExperimental(ObsoleteCoroutinesApi::class, ExperimentalCoroutinesApi::class, FlowPreview::class)
 class HoldingStoreTest {
 
     data class Bird(val id: String = randomUuidString(), val name: String)
-    data class ContainerBird(
-        val id: String = randomUuidString(),
-        val name: WatchableValue<String>) : Container {
-        override val watchables: Watchable<Change> = name
-    }
 
     private val robin = Bird(name = "robin")
 
@@ -232,52 +222,9 @@ class HoldingStoreTest {
         coVerify { hold.onStop() }
     }
 
-    @UseExperimental(FlowPreview::class)
     @Test fun `keys goes to back`() = test {
         coEvery { rootStore.keys() } returns listOf(robin.id).asFlow()
         assertEquals(listOf(robin.id), scopeStore.create(this).keys().toList())
-    }
-
-    interface ContainerWatchCreator {
-        suspend fun create(bird: ContainerBird): Hold
-    }
-
-    private val containerBird = ContainerBird(name = "one".toWatchableValue())
-    private val containerStore = mockk<Store<ContainerBird>>(relaxUnitFun = true)
-    private val containerCreator = mockk<ContainerWatchCreator>()
-
-    @Test fun `push contained changes`() = test {
-        coEvery { containerStore.get(containerBird.id) } throws Cannot("do that")
-        coEvery { containerCreator.create(containerBird) } returns hold
-        val holding = containerStore.holding(coroutineContext) { containerCreator.create(it) }
-
-        coroutineScope {
-            val scopedStore = holding.create(this)
-            scopedStore.put(containerBird.id, containerBird)
-            coVerify(exactly = 1) { containerStore.put(containerBird.id, containerBird) }
-
-            // Now change the internals of the bird which will eventually trigger re-save
-            containerBird.name.set("two")
-        }
-        // Make sure the second call happens (scope close = batch close)
-        coVerify(exactly = 2) { containerStore.put(containerBird.id, containerBird) }
-    }
-
-    @Test fun `do not push changes on deleted container item`() = test {
-        coEvery { containerStore.get(containerBird.id) } throws Cannot("do that")
-        coEvery { containerCreator.create(containerBird) } returns hold
-        val holding = containerStore.holding(coroutineContext) { containerCreator.create(it) }
-
-        coroutineScope {
-            val scopedStore = holding.create(this)
-            scopedStore.put(containerBird.id, containerBird)
-            // Change bird internals then remove it
-            containerBird.name.set("two")
-            scopedStore.remove(containerBird.id)
-            coVerify(exactly = 1) { containerStore.remove(containerBird.id) }
-        }
-        // Put only once because the bird was later removed
-        coVerify(exactly = 1) { containerStore.put(containerBird.id, containerBird) }
     }
 
     companion object {

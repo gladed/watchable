@@ -128,8 +128,10 @@ class HoldingStore<T : Any>(
         private suspend fun startHold(key: String, value: T): Hold =
             HoldBuilder().apply {
                 if (value is Container) {
-                    val autoSave = value.watchables.batch(this@HoldingStore, containerPeriod) {
-                        back.put(key, value)
+                    val autoSave = value.watchables.batch(this@HoldingStore, containerPeriod) { changes ->
+                        if (changes.any { !it.isInitial }) {
+                            back.put(key, value)
+                        }
                     }
                     onWatcher(autoSave)
                     onRemove { autoSave.cancel() }

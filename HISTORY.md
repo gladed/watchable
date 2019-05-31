@@ -2,6 +2,7 @@
 
 ## 0.6.17
 * Better semantics for binding a store to a map (#95).
+* Save less when watching Container objects (#96).
 
 ## 0.6.16
 * `holding` now relies on `HoldBuilder` for more natural composition of holds (#84).
