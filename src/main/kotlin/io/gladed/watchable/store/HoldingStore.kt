@@ -43,14 +43,14 @@ class HoldingStore<T : Any>(
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
-    private val map = mutableMapOf<String, MultiHold<Store<T>, T>>().guarded()
+    private val map = mutableMapOf<String, MultiHold<SingleStore, T>>().guarded()
 
     /**
      * Return a new [Store]; items accessed by this store will have a corresponding hold (see [createHold]) in
      * effect until the completion of all scopes using the item.
      */
     fun create(scope: CoroutineScope): Store<T> {
-        val newStore = SingleStore()
+        val newStore = SingleStore(scope)
         scope.coroutineContext[Job]?.invokeOnCompletion {
             launch {
                 map {
@@ -64,6 +64,16 @@ class HoldingStore<T : Any>(
         return newStore
     }
 
+    /**
+     * If any item corresponding to [key] is currently held by [scope], stop holding it.
+     */
+    suspend fun stop(scope: CoroutineScope, key: String) {
+        if (map { get(key) }?.release { scope == it.scope } == true) {
+            // Removed, clear it out so it can be restarted by someone else.
+            map { remove(key) }
+        }
+    }
+
     /** Release everything regardless of the state of scopes. */
     suspend fun stop() {
         map { toMap().also { clear() } }.values.forEach { it.stop() }
@@ -71,7 +81,7 @@ class HoldingStore<T : Any>(
 
     /** A [Store] whose objects are held when accessing them. */
     @UseExperimental(FlowPreview::class)
-    private inner class SingleStore : Store<T> {
+    private inner class SingleStore(val scope: CoroutineScope) : Store<T> {
         override suspend fun put(key: String, value: T) {
             // First, test to see if there's a value present.
             try {
@@ -86,7 +96,7 @@ class HoldingStore<T : Any>(
                 back.put(key, value)
 
                 map {
-                    put(key, MultiHold<Store<T>, T>(value, newHold).apply { reserve(this@SingleStore) })
+                    put(key, MultiHold<SingleStore, T>(value, newHold).apply { reserve(this@SingleStore) })
                 }
                 return
             }

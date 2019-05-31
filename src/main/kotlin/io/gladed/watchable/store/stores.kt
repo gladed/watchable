@@ -40,6 +40,10 @@ fun <T : Any> Store<T>.holding(
 ) =
     HoldingStore(context, this, containerPeriod, start)
 
+/** Derive a [Store] specific to this CoroutineScope from the supplied [holdingStore]. */
+fun <T : Any> CoroutineScope.create(holdingStore: HoldingStore<T>): Store<T> =
+    holdingStore.create(this)
+
 /**
  * Return a [HoldingStore] for this [CoroutineScope] around [store].
  */

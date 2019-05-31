@@ -21,6 +21,7 @@ import io.gladed.watchable.store.Cannot
 import io.gladed.watchable.store.Hold
 import io.gladed.watchable.store.HoldingStore
 import io.gladed.watchable.store.Store
+import io.gladed.watchable.store.create
 import io.gladed.watchable.store.holding
 import io.mockk.coEvery
 import io.mockk.coVerify
@@ -58,12 +59,12 @@ class HoldingStoreTest {
     private val hold = mockk<Hold>(relaxUnitFun = true)
 
     interface HoldingStoreScope : TestCoroutineScope {
-        val scopeStore: HoldingStore<Bird>
+        val holdingStore: HoldingStore<Bird>
     }
 
     private fun test(func: suspend HoldingStoreScope.() -> Unit) = runTest {
         (object : HoldingStoreScope, TestCoroutineScope by this {
-            override val scopeStore = rootStore.holding(coroutineContext) {
+            override val holdingStore = holding(rootStore) {
                 onCancel { hold.onCancel() }
                 onCreate { hold.onCreate() }
                 onRemove { hold.onRemove() }
@@ -80,33 +81,33 @@ class HoldingStoreTest {
 
     @Test fun `put an item`() = test {
         coEvery { rootStore.get(robin.id) } throws Cannot("find bird for key")
-        scopeStore.create(this).put(robin.id, robin)
+        create(holdingStore).put(robin.id, robin)
         coVerify { hold.onCreate() }
         coVerify { rootStore.put(robin.id, robin) }
     }
 
     @Test fun `release when scope completes`() = test {
         coroutineScope {
-            assertEquals(robin, scopeStore.create(this).get(robin.id))
+            assertEquals(robin, create(holdingStore).get(robin.id))
             coVerify { hold.onStart() }
         }
         coVerify { hold.onStop() }
     }
 
     @Test fun `hold only once when two scopes get`() = test {
-        assertEquals(robin, scopeStore.create(this).get(robin.id))
+        assertEquals(robin, create(holdingStore).get(robin.id))
         coVerify(exactly = 1) { hold.onStart() }
         coroutineScope {
-            assertEquals(robin, scopeStore.create(this).get(robin.id))
+            assertEquals(robin, create(holdingStore).get(robin.id))
             coVerify(exactly = 1) { hold.onStart() }
         }
     }
 
     @Test fun `release only when both scopes close`() = test {
         coroutineScope {
-            scopeStore.create(this).get(robin.id)
+            create(holdingStore).get(robin.id)
             coroutineScope {
-                scopeStore.create(this).get(robin.id)
+                create(holdingStore).get(robin.id)
             }
             coVerify(exactly = 0) { hold.onStop() }
         }
@@ -115,7 +116,7 @@ class HoldingStoreTest {
 
     @Test fun `hold+release only once when get twice from same scope`() = test {
         coroutineScope {
-            val store = scopeStore.create(this)
+            val store = create(holdingStore)
             store.get(robin.id)
             store.get(robin.id)
             coVerify(exactly = 1) { hold.onStart() }
@@ -124,8 +125,8 @@ class HoldingStoreTest {
     }
 
     @Test fun `second user must reallocate`() = test {
-        coroutineScope { scopeStore.create(this).get(robin.id) }
-        coroutineScope { scopeStore.create(this).get(robin.id) }
+        coroutineScope { create(holdingStore).get(robin.id) }
+        coroutineScope { create(holdingStore).get(robin.id) }
 
         coVerify(exactly = 2) { hold.onStart() }
         coVerify(exactly = 2) { hold.onStop() }
@@ -135,7 +136,7 @@ class HoldingStoreTest {
         coEvery { rootStore.get(eq(robin.id)) } throws Cannot("find value for that key")
 
         coroutineScope {
-            val store = scopeStore.create(this)
+            val store = create(holdingStore)
             try {
                 store.get(robin.id)
                 fail("Should have failed")
@@ -149,7 +150,7 @@ class HoldingStoreTest {
         coEvery { rootStore.get(robin.id) } throws Cannot("find value for that key")
 
         coroutineScope {
-            val store = scopeStore.create(this)
+            val store = create(holdingStore)
             try {
                 store.get(robin.id)
             } catch (c: Exception) { }
@@ -164,9 +165,9 @@ class HoldingStoreTest {
         val scope2 = CoroutineScope(coroutineContext + SupervisorJob())
 
         val birds = listOf(async {
-            scopeStore.create(scope1).get(robin.id)
+            holdingStore.create(scope1).get(robin.id)
         }, async {
-            scopeStore.create(scope2).get(robin.id)
+            holdingStore.create(scope2).get(robin.id)
         }).awaitAll()
         assertEquals(listOf(robin, robin), birds)
 
@@ -184,7 +185,7 @@ class HoldingStoreTest {
         coEvery { rootStore.get(robin.id) } coAnswers {
             mutex.withLock { robin }
         }
-        val store = scopeStore.create(this)
+        val store = create(holdingStore)
         val deferred = async {
             store.get(robin.id)
         }
@@ -197,7 +198,7 @@ class HoldingStoreTest {
 
     @Test fun `delete stops hold`() = test {
         coroutineScope {
-            val store = scopeStore.create(this)
+            val store = create(holdingStore)
             store.get(robin.id)
             store.remove(robin.id)
             coVerify { hold.onStop() }
@@ -207,7 +208,7 @@ class HoldingStoreTest {
 
     @Test fun `cannot re-put`() = test {
         coroutineScope {
-            val store = scopeStore.create(this)
+            val store = create(holdingStore)
             store.get(robin.id)
             impossible {
                 store.put(robin.id, robin.copy())
@@ -216,15 +217,15 @@ class HoldingStoreTest {
     }
 
     @Test fun `stop everybody`() = test {
-        scopeStore.create(this).get(robin.id)
-        scopeStore.stop()
+        create(holdingStore).get(robin.id)
+        holdingStore.stop()
         // Released even though scope still active
         coVerify { hold.onStop() }
     }
 
     @Test fun `keys goes to back`() = test {
         coEvery { rootStore.keys() } returns listOf(robin.id).asFlow()
-        assertEquals(listOf(robin.id), scopeStore.create(this).keys().toList())
+        assertEquals(listOf(robin.id), create(holdingStore).keys().toList())
     }
 
     companion object {

@@ -24,6 +24,7 @@ import io.gladed.watchable.store.Container
 import io.gladed.watchable.store.Hold
 import io.gladed.watchable.store.HoldingStore
 import io.gladed.watchable.store.Store
+import io.gladed.watchable.store.create
 import io.gladed.watchable.store.holding
 import io.gladed.watchable.toWatchableValue
 import io.mockk.coEvery
@@ -54,7 +55,7 @@ class ContainerStoreTest {
 
     private fun test(func: suspend TestScope.() -> Unit) = runBlockingTest {
         (object : TestScope, TestCoroutineScope by this {
-            override val scopeStore = rootStore.holding(coroutineContext) {
+            override val scopeStore = holding(rootStore) {
                 onCancel { hold.onCancel() }
                 onCreate { hold.onCreate() }
                 onRemove { hold.onRemove() }
@@ -76,7 +77,7 @@ class ContainerStoreTest {
     @Test fun `push contained changes`() = test {
         coEvery { backingStore.get(bird.id) } throws Cannot("do that")
         coEvery { holdCreator.create(bird) } returns hold
-        val holding = backingStore.holding(coroutineContext) { holdCreator.create(it) }
+        val holding = holding(backingStore) { holdCreator.create(it) }
 
         coroutineScope {
             val scopedStore = holding.create(this)
@@ -105,10 +106,10 @@ class ContainerStoreTest {
     @Test fun `do not push changes on deleted container item`() = test {
         coEvery { backingStore.get(bird.id) } throws Cannot("do that")
         coEvery { holdCreator.create(bird) } returns hold
-        val holding = backingStore.holding(coroutineContext) { holdCreator.create(it) }
+        val holding = holding(backingStore) { holdCreator.create(it) }
 
         coroutineScope {
-            val scopedStore = holding.create(this)
+            val scopedStore = create(holding)
             scopedStore.put(bird.id, bird)
             // Change bird internals then remove it
             bird.name.set("two")
@@ -117,5 +118,37 @@ class ContainerStoreTest {
         }
         // Put only once because the bird was later removed
         coVerify(exactly = 1) { backingStore.put(bird.id, bird) }
+    }
+
+    @Test fun `manual stop hold`() = test {
+        coEvery { backingStore.get(bird.id) } throws Cannot("do that")
+        coEvery { holdCreator.create(bird) } returns hold
+        val holdingStore = holding(backingStore) { holdCreator.create(it) }
+        coroutineScope {
+            val scoped = create(holdingStore)
+            scoped.put(bird.id, bird) // Creates a hold as well as the object
+            holdingStore.stop(this, bird.id) // Stops holding
+            bird.name.set("two")
+        }
+        // Put only once because the hold was stopped
+        coVerify(exactly = 1) { backingStore.put(bird.id, bird) }
+    }
+
+
+    @Test fun `revify hold after stopping it`() = test {
+        coEvery { backingStore.get(bird.id) } throws Cannot("do that")
+        coEvery { holdCreator.create(bird) } returns hold
+        val holdingStore = backingStore.holding(coroutineContext) { holdCreator.create(it) }
+        coroutineScope {
+            val scoped = create(holdingStore)
+            scoped.put(bird.id, bird) // Creates a hold as well as the object
+            holdingStore.stop(this, bird.id) // Stops holding
+
+            coEvery { backingStore.get(bird.id) } returns bird
+            scoped.get(bird.id) // Re-creates hold
+            bird.name.set("two")
+        }
+        // Put TWICE because the hold was restored
+        coVerify(exactly = 2) { backingStore.put(bird.id, bird) }
     }
 }
