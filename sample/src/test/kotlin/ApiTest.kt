@@ -95,5 +95,4 @@ class ApiTest {
             assertEquals("+", newChirp.reactions[roadrunner.self])
         }
     }
-
 }
