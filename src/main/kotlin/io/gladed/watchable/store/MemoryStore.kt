@@ -16,7 +16,7 @@
 
 package io.gladed.watchable.store
 
-import io.gladed.watchable.util.guarded
+import io.gladed.watchable.util.guard
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flatMapConcat
@@ -25,7 +25,7 @@ import kotlinx.coroutines.flow.flatMapConcat
 @UseExperimental(FlowPreview::class)
 class MemoryStore<T : Any>(private val name: String) : Store<T> {
 
-    private val map = mutableMapOf<String, T>().guarded()
+    private val map = mutableMapOf<String, T>().guard()
 
     override suspend fun get(key: String): T =
         map { get(key) ?: cannot("get $name by key") }

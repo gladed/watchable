@@ -17,7 +17,7 @@
 package io.gladed.watchable
 
 import io.gladed.watchable.util.Guard
-import io.gladed.watchable.util.guarded
+import io.gladed.watchable.util.guard
 
 @Suppress("TooManyFunctions")
 internal class WatchableListBase<T>(
@@ -72,7 +72,7 @@ internal class WatchableListBase<T>(
                 record(ListChange.Replace(index, remove = it, add = element))
             }
         }
-    }.guarded()
+    }.guard()
 
     override fun MutableList<T>.erase() = clear()
 

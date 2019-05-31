@@ -18,7 +18,7 @@ package io.gladed.watchable
 
 import io.gladed.watchable.Period.IMMEDIATE
 import io.gladed.watchable.Period.INLINE
-import io.gladed.watchable.util.guarded
+import io.gladed.watchable.util.lazyGuard
 import io.gladed.watchable.watcher.Immediate
 import io.gladed.watchable.watcher.Inline
 import io.gladed.watchable.watcher.Periodic
@@ -31,7 +31,7 @@ import kotlinx.coroutines.async
 abstract class WatchableBase<C : Change> : Watchable<C> {
 
     /** Objects watching this one. */
-    private val watchers = mutableListOf<WatcherBase<C>>().guarded()
+    private val watchers = lazyGuard { mutableListOf<WatcherBase<C>>() }
 
     /** Deliver changes to watchers if any. */
     protected suspend fun dispatch(change: List<C>) {

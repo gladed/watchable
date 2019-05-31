@@ -16,7 +16,7 @@
 
 package io.gladed.watchable.store
 
-import io.gladed.watchable.util.guarded
+import io.gladed.watchable.util.guard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
@@ -31,8 +31,8 @@ class Cache<T : Any>(
 ) : Store<T>, CoroutineScope {
     override val coroutineContext = context + Job()
 
-    private val finding = mutableMapOf<String, Deferred<T>>().guarded()
-    private val found = mutableMapOf<String, WeakReference<T>>().guarded()
+    private val finding = mutableMapOf<String, Deferred<T>>().guard()
+    private val found = mutableMapOf<String, WeakReference<T>>().guard()
 
     override suspend fun get(key: String): T =
         found {

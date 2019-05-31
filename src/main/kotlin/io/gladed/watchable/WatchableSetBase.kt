@@ -17,7 +17,7 @@
 package io.gladed.watchable
 
 import io.gladed.watchable.util.Guard
-import io.gladed.watchable.util.guarded
+import io.gladed.watchable.util.guard
 
 /** Internal implementation of [WatchableSet]. */
 @Suppress("TooManyFunctions")
@@ -65,7 +65,7 @@ internal class WatchableSetBase<T>(
                 }
             }
         }
-    }.guarded()
+    }.guard()
 
     override fun MutableSet<T>.erase() = clear()
 

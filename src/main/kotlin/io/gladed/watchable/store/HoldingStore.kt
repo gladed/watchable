@@ -16,7 +16,7 @@
 
 package io.gladed.watchable.store
 
-import io.gladed.watchable.util.guarded
+import io.gladed.watchable.util.guard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
@@ -43,7 +43,7 @@ class HoldingStore<T : Any>(
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
 
-    private val map = mutableMapOf<String, MultiHold<SingleStore, T>>().guarded()
+    private val map = mutableMapOf<String, MultiHold<SingleStore, T>>().guard()
 
     /**
      * Return a new [Store]; items accessed by this store will have a corresponding hold (see [createHold]) in

@@ -19,14 +19,26 @@ package io.gladed.watchable.util
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
-/** Protects all access to [item] behind a [Mutex]. */
-class Guard<T>(private val item: T) {
-    private val mutex = Mutex()
-
-    /** Operate directly on the guarded item while holding a [Mutex]. */
-    suspend operator fun <U> invoke(func: suspend T.() -> U): U =
-        mutex.withLock { item.func() }
+/** Provides mutually-exclusive access to a value of [T]. */
+interface Guard<T> {
+    /** Allows access to [T] while a [Mutex] is held. */
+    suspend operator fun <U> invoke(func: suspend T.() -> U): U
 }
 
 /** Return [T] surrounded by a [Guard]. */
-fun <T> T.guarded() = Guard(this)
+fun <T> T.guard(): Guard<T> = GuardBase { this }
+
+/** Return a [Guard] that will lazily [create] [T] on first use. */
+fun <T> lazyGuard(create: () -> T): Guard<T> = GuardBase(create)
+
+/** Protects all access to [item] behind a [Mutex]. */
+private class GuardBase<T>(private val create: () -> T) : Guard<T> {
+    private val mutex = Mutex()
+    private var item: T? = null
+
+    /** Operate directly on the guarded item while holding a [Mutex]. */
+    override suspend operator fun <U> invoke(func: suspend T.() -> U): U =
+        mutex.withLock {
+            (item ?: create().also { item = it }).func()
+        }
+}

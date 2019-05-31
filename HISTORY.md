@@ -1,5 +1,8 @@
 # Version History
 
+## 0.6.18
+* Improve guard semantics, add `lazyGuard { }` (#97).
+
 ## 0.6.17
 * Better semantics for binding a store to a map (#95).
 * Save less when watching Container objects (#96).
