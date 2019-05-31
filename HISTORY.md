@@ -1,5 +1,8 @@
 # Version History
 
+## 0.6.19
+* `lazyGuard` takes suspending func (add on to #97).
+
 ## 0.6.18
 * Improve guard semantics, add `lazyGuard { }` (#97).
 

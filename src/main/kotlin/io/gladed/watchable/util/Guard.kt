@@ -29,10 +29,10 @@ interface Guard<T> {
 fun <T> T.guard(): Guard<T> = GuardBase { this }
 
 /** Return a [Guard] that will lazily [create] [T] on first use. */
-fun <T> lazyGuard(create: () -> T): Guard<T> = GuardBase(create)
+fun <T> lazyGuard(create: suspend () -> T): Guard<T> = GuardBase(create)
 
 /** Protects all access to [item] behind a [Mutex]. */
-private class GuardBase<T>(private val create: () -> T) : Guard<T> {
+private class GuardBase<T>(private val create: suspend () -> T) : Guard<T> {
     private val mutex = Mutex()
     private var item: T? = null
 
