@@ -1,4 +1,2 @@
 include 'watchable'
-include 'sample:back'
-include 'sample:lib'
-include 'sample:front'
+include 'sample'
