@@ -1,4 +1,4 @@
-[![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.6.16)](https://bintray.com/gladed/watchable/watchable/0.6.16/link)
+[![Download](https://api.bintray.com/packages/gladed/watchable/watchable/images/download.svg?version=0.6.17)](https://bintray.com/gladed/watchable/watchable/0.6.17/link)
 [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=gladed_watchable&metric=alert_status)](https://sonarcloud.io/dashboard?id=gladed_watchable)
 [![CircleCI](https://circleci.com/gh/gladed/watchable.svg?style=svg)](https://circleci.com/gh/gladed/watchable)
 [![CodeCov](https://codecov.io/github/gladed/watchable/coverage.svg?branch=master)](https://codecov.io/github/gladed/watchable)
@@ -45,7 +45,7 @@ repositories {
 }
 
 dependencies {
-    compile 'io.gladed:watchable:0.6.16'
+    compile 'io.gladed:watchable:0.6.17'
 }
 ```
 

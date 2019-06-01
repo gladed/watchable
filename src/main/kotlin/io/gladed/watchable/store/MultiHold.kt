@@ -37,7 +37,14 @@ internal class MultiHold<E, T : Any>(val hold: Deferred<Pair<T, Hold>>) {
         entities { add(entity) }
     }
 
-    /** Removes a store and returns true if this object can be discarded (e.g. no more entities). */
+    /**
+     * Release a hold on behalf of the first [E] matching test and return true if the object can be discarded
+     * (e.g. no more entities).
+     */
+    suspend fun release(test: (E) -> Boolean): Boolean =
+        entities { find(test) }?.let { release(it) } ?: false
+
+    /** Removes a holding entity and returns true if this object can be discarded (e.g. no more entities). */
     suspend fun release(entity: E) =
         if (entities { remove(entity); isEmpty() }) {
             stop()
