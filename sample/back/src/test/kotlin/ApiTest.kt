@@ -29,7 +29,7 @@ class ApiTest {
         main = Main(folder.root.apply { mkdirs() })
     }
 
-    fun testApp(func: TestApplicationEngine.() -> Unit) {
+    private fun testApp(func: TestApplicationEngine.() -> Unit) {
         withTestApplication {
             with(main) { application.setup() }
             func()

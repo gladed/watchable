@@ -26,12 +26,8 @@ if [[ "$LAST_TAG" == "$VERSION" ]]; then
   exit -1
 fi
 
-echo "Releasing $VERSION (most recent tag was $LAST_TAG)"
-read -p "Continue (y/n)? " CONT
-[[ "$CONT" = "y" ]] || exit -1
-
 head HISTORY.md
-read -p "Have you updated HISTORY.md (above) (y/n)? " CONT
+read -p "Release $VERSION with HISTORY.md (above) after $LAST_TAG (y/n)? " CONT
 [[ "$CONT" = "y" ]] || exit -1
 
 sed -i "s@\(io.gladed:watchable:\|download.svg?version=\|watchable/watchable/\)[0-9\.]\+@\1$VERSION@g" README.md

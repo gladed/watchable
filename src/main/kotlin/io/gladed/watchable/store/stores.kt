@@ -20,7 +20,7 @@ import io.gladed.watchable.DeferredWatcher
 import io.gladed.watchable.MapChange
 import io.gladed.watchable.WatchableMap
 import io.gladed.watchable.Watcher
-import io.gladed.watchable.util.guarded
+import io.gladed.watchable.util.guard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
@@ -85,7 +85,7 @@ fun <U : Any, T : Any> Store<T>.transform(transformer: Transformer<T, U>): Store
 @UseExperimental(ExperimentalCoroutinesApi::class, FlowPreview::class)
 fun <T : Any> CoroutineScope.bind(store: Store<T>, map: WatchableMap<String, T>, period: Long): Watcher {
     val setup = async {
-        val containerWatchers = mutableMapOf<String, Watcher>().guarded()
+        val containerWatchers = mutableMapOf<String, Watcher>().guard()
 
         fun putOnChange(key: String, item: Container) =
             item.watchables.batch(this@bind, period) { changes ->

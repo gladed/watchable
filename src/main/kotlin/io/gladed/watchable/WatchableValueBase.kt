@@ -17,7 +17,7 @@
 package io.gladed.watchable
 
 import io.gladed.watchable.util.Guard
-import io.gladed.watchable.util.guarded
+import io.gladed.watchable.util.guard
 
 /** Internal implementation of [WatchableValue]. */
 internal class WatchableValueBase<T>(
@@ -37,7 +37,7 @@ internal class WatchableValueBase<T>(
                     field = value
                 }
             }
-    }.guarded()
+    }.guard()
 
     /** The currently contained value. */
     override val value: T get() = immutable.value

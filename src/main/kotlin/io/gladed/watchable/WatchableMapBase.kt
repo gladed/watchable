@@ -17,7 +17,7 @@
 package io.gladed.watchable
 
 import io.gladed.watchable.util.Guard
-import io.gladed.watchable.util.guarded
+import io.gladed.watchable.util.guard
 
 /** Internal implementation of [WatchableMap]. */
 @Suppress("TooManyFunctions")
@@ -92,7 +92,7 @@ internal class WatchableMapBase<K, V>(
                 }
             }
         }
-    }.guarded()
+    }.guard()
 
     override fun MutableMap<K, V>.erase() = clear()
 

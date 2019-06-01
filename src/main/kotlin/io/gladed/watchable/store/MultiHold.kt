@@ -16,7 +16,7 @@
 
 package io.gladed.watchable.store
 
-import io.gladed.watchable.util.guarded
+import io.gladed.watchable.util.guard
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Deferred
@@ -30,7 +30,7 @@ internal class MultiHold<E, T : Any>(val hold: Deferred<Pair<T, Hold>>) {
     /** Construct a non-deferred version of this [MultiHold]. */
     constructor(value: T, hold: Hold) : this(CompletableDeferred(value to hold))
 
-    private val entities = mutableSetOf<E>().guarded()
+    private val entities = mutableSetOf<E>().guard()
 
     /** Add [entity] to the collection of reserved entities. */
     suspend fun reserve(entity: E) {
