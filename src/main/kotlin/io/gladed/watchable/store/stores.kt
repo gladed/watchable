@@ -114,7 +114,6 @@ fun <T : Any> CoroutineScope.bind(store: Store<T>, map: WatchableMap<String, T>,
         map.batch(this@bind, period) { changes ->
             for (change in changes) {
                 when (change) {
-                    // Ignore MapChange.Initial
                     is MapChange.Remove -> {
                         containerWatchers { remove(change.key) }?.cancel()
                         store.remove(change.key)
@@ -127,6 +126,7 @@ fun <T : Any> CoroutineScope.bind(store: Store<T>, map: WatchableMap<String, T>,
                         }
                         store.put(change.key, item)
                     }
+                    is MapChange.Initial -> { } // Ignore
                 }
             }
         }

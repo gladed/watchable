@@ -44,6 +44,7 @@ class Logic(
     private val birds = holding(birdStore) { holdBird(it) }
 
     private fun HoldBuilder.holdBird(bird: Bird) {
+        println("HOLDING $bird")
         onCreate {
             println("CREATING $bird")
             if (bird.following.isNotEmpty()) {

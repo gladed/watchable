@@ -60,8 +60,7 @@ class FileStore(
 
     override fun keys() = flow<Flow<File>> {
         emit((dir.listFiles() ?: arrayOf()).asFlow())
-    }.flowOn(Dispatchers.IO)
-        .flattenConcat().mapNotNull {
+    }.flowOn(Dispatchers.IO).flattenConcat().mapNotNull {
         if (it.name.endsWith(dotSuffix)) {
             it.name.removeSuffix(dotSuffix)
         } else null

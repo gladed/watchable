@@ -113,7 +113,8 @@ class HoldingStore<T : Any>(
         }
 
         override suspend fun remove(key: String) {
-            map { remove(key) }?.remove()
+            // Retrieve the item, creating a hold for it if necessary, and remove the hold.
+            maybe { get(key) }?.let { map { remove(key) } }?.remove()
             back.remove(key)
         }
 

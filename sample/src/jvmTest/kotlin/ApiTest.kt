@@ -28,7 +28,7 @@ class ApiTest {
         withTestApplication {
             val dataDir = folder.root.apply { mkdirs() }
             val logic = Adapter.createLogic(coroutineContext, dataDir)
-            application.setup(logic)
+            application.bind(logic)
             func()
         }
     }

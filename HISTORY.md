@@ -1,5 +1,9 @@
 # Version History
 
+## 0.6.20
+* `maybe` for use with `cannot`
+* sample now has a full HTML interface.
+
 ## 0.6.19
 * `lazyGuard` takes suspending func (add on to #97).
 

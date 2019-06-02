@@ -23,6 +23,7 @@ import logic.Operations
 import model.Bird
 import model.Chirp
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 
 @UseExperimental(FlowPreview::class, ExperimentalCoroutinesApi::class)
@@ -96,6 +97,14 @@ class LogicTest {
         impossible {
             chirps.get(chirp.id)
         }
+    }
+
+    @Test fun `delete bird causes follower delete`() = test {
+        birds.put(robin.id, robin)
+        birds.put(wren.id, wren)
+        wren.following.add(robin.id)
+        birds.remove(robin.id)
+        assertTrue(wren.following.isEmpty())
     }
 
     @Test fun `cannot create with bad followers`() = test {

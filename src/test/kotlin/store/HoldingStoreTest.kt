@@ -206,6 +206,17 @@ class HoldingStoreTest {
         }
     }
 
+    @Test fun `cold delete stops hold`() = test {
+        coroutineScope {
+            val store = create(holdingStore)
+            // Note: we never did a get() first so remove() should trigger a hold and remove
+            store.remove(robin.id)
+            coVerify { hold.onStart() }
+            coVerify { hold.onRemove() }
+            coVerify { rootStore.remove(robin.id) }
+        }
+    }
+
     @Test fun `cannot re-put`() = test {
         coroutineScope {
             val store = create(holdingStore)
