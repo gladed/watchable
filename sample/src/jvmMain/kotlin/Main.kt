@@ -38,6 +38,7 @@ import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.route
 import io.ktor.routing.routing
+import io.ktor.server.engine.commandLineEnvironment
 import io.ktor.server.engine.embeddedServer
 import io.ktor.server.netty.Netty
 import kotlinx.coroutines.Dispatchers
@@ -72,7 +73,9 @@ import java.io.File
 const val SAMPLE_PORT = 9090
 const val LOCAL_HOST = "127.0.0.1"
 
-fun main() { Main.setup() }
+fun main(args: Array<String>) {
+    embeddedServer(Netty, commandLineEnvironment(args)).start(wait = true)
+}
 
 actual class Sample {
     actual fun checkMe() = 42
@@ -87,12 +90,12 @@ object Main {
         Sample().checkMe()
         Platform.name
         embeddedServer(Netty, port = SAMPLE_PORT, host = LOCAL_HOST, watchPaths = listOf("build/classes"),
-            module = Application::setup)
+            module = Application::main)
             .start(wait = true)
     }
 }
 
-fun Application.setup() {
+fun Application.main() {
     val dataDir = File(".data")
     val logic = Adapter.createLogic(coroutineContext, dataDir)
     bind(logic)
