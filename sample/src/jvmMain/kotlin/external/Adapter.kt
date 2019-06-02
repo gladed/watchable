@@ -33,7 +33,7 @@ object Adapter {
     fun createLogic(context: CoroutineContext, root: File): Logic {
         val birds = FileStore(root, "bird", JSON_SUFFIX).serialize(Bird.serializer()).cached(context)
         val chirps = FileStore(root, "chirp", JSON_SUFFIX).serialize(Chirp.serializer()).cached(context)
-        return Logic(context, birds, chirps, Operations(chirps))
+        return Logic(context, birds, chirps, Operations(chirps, birds))
     }
 
     private const val JSON_SUFFIX = "json"

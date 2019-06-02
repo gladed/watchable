@@ -43,7 +43,7 @@ class FileStore(
     override suspend fun get(key: String) =
         withContext(Dispatchers.IO) {
             key.keyFile().takeIf { it.isFile }?.readText()
-                ?: cannot("find $name for key")
+                ?: cannot("find $name for key '$key'")
         }
 
     override suspend fun put(key: String, value: String) {

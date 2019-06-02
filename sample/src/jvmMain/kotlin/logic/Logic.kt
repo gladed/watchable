@@ -2,6 +2,7 @@ package logic
 
 import io.gladed.watchable.Period.INLINE
 import io.gladed.watchable.simple
+import io.gladed.watchable.store.HoldBuilder
 import io.gladed.watchable.store.HoldingStore
 import io.gladed.watchable.store.Store
 import io.gladed.watchable.store.cannot
@@ -19,8 +20,8 @@ import kotlin.coroutines.CoroutineContext
 @UseExperimental(FlowPreview::class)
 class Logic(
     context: CoroutineContext,
-    birdStore: Store<Bird>,
-    chirpStore: Store<Chirp>,
+    private val birdStore: Store<Bird>,
+    private val chirpStore: Store<Chirp>,
     val ops: Operations
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
@@ -40,19 +41,29 @@ class Logic(
     }
 
     /** A [HoldingStore] for birds, from which new scope-specific stores can be derived. */
-    private val birds = holding(birdStore) { bird ->
+    private val birds = holding(birdStore) { holdBird(it) }
+
+    private fun HoldBuilder.holdBird(bird: Bird) {
         onCreate {
+            println("CREATING $bird")
             if (bird.following.isNotEmpty()) {
                 cannot("create a bird following other birds")
             }
         }
 
         onRemove {
-            // Delete any chirps from this bird using a throwaway scope
+            println("REMOVING $bird")
             coroutineScope {
-                val chirps = chirps.create(this)
-                ops.chirpsForBird(bird.id).collect {
-                    chirps.remove(it)
+                with(scoped(this)) {
+                    // Delete any chirps from this bird
+                    ops.chirpsForBird(bird.id).collect {
+                        chirps.remove(it)
+                    }
+
+                    // Also for any bird following this one trash it from the list
+                    ops.followersOf(bird.id).collect { followerId ->
+                        birds.get(followerId).following.also { println("From $followerId's follow list $it removing ${bird.id}") }.remove(bird.id)
+                    }
                 }
             }
         }
