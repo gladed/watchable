@@ -2,7 +2,7 @@
 
 ## 0.6.20
 * `maybe` for use with `cannot`.
-* `sample` now has a full HTML interface.
+* `sample` now has a full HTML and JSON/REST interface.
 * Remove FileStore as it is too use-case specific for the library.
 
 ## 0.6.19
