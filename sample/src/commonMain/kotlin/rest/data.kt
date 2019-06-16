@@ -22,7 +22,6 @@ import kotlinx.serialization.Serializable
 
 const val BIRD_PATH = "/bird"
 const val CHIRP_PATH = "/chirp"
-const val REACT_PATH = "/react"
 
 object Serializers {
     val all = mapOf(
@@ -31,7 +30,6 @@ object Serializers {
         Chirp::class to Chirp.serializer(),
         CreateBird::class to CreateBird.serializer(),
         CreateChirp::class to CreateChirp.serializer(),
-        ChirpReact::class to ChirpReact.serializer(),
         ChirpPage::class to ChirpPage.serializer())
 }
 
@@ -59,9 +57,7 @@ data class Chirp(
     val self: String,
     val from: String,
     val text: String,
-    // Map of reactions from bird ids to reaction texts
-    val reactions: Map<String, String>,
-    val react: String
+    val replyTo: String? = null
 ) {
     companion object {
         fun idToPath(id: String) = "$CHIRP_PATH/$id"
@@ -73,9 +69,6 @@ data class CreateBird(val name: String)
 
 @Serializable
 data class CreateChirp(val text: String)
-
-@Serializable
-data class ChirpReact(val from: String, val reaction: String?)
 
 @Serializable
 data class ChirpPage(

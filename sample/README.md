@@ -6,7 +6,6 @@
 
 # Run interactively
 PORT=9090 ./gradlew run
-
 ```
 
 * https://ktor.io/servers/autoreload.html - Reloading

@@ -16,13 +16,9 @@
 @file:UseSerializers(LocalDateTimeSerializer::class)
 package model
 
-import io.gladed.watchable.WatchableMap
-import io.gladed.watchable.store.Container
-import io.gladed.watchable.watchableMapOf
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.UseSerializers
 import util.LocalDateTimeSerializer
-import util.WatchableMapSerializer
 import java.time.LocalDateTime
 import java.util.UUID
 
@@ -30,11 +26,12 @@ import java.util.UUID
 @Serializable
 data class Chirp(
     val id: String = UUID.randomUUID().toString(),
+    /** Originator of this [Chirp]/ */
     val from: String,
-    val sentAt: LocalDateTime = LocalDateTime.now(),
+    /** Content of the chirp. */
     val text: String,
-    @Serializable(with = WatchableMapSerializer::class)
-    val reactions: WatchableMap<String, String> = watchableMapOf()
-) : Container {
-    override val watchables by lazy { reactions }
-}
+    /** Time of delivery. */
+    val sentAt: LocalDateTime = LocalDateTime.now(),
+    /** [Chirp] this is in reply to, if any. */
+    val replyTo: String? = null
+)

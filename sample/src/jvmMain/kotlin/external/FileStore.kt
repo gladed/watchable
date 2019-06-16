@@ -14,8 +14,10 @@
  * limitations under the License.
  */
 
-package io.gladed.watchable.store
+package external
 
+import io.gladed.watchable.store.Store
+import io.gladed.watchable.store.cannot
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow

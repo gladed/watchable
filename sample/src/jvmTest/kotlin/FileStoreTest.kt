@@ -14,10 +14,7 @@
  * limitations under the License.
  */
 
-package store
-
-import impossible
-import io.gladed.watchable.store.FileStore
+import external.FileStore
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.toSet

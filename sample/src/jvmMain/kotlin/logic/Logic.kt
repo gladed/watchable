@@ -88,22 +88,6 @@ class Logic(
             // Ensure the originator is valid
             birdStore.get(chirp.from)
         }
-
-        onWatcher(simple(chirp.reactions, INLINE) { simple ->
-            if (!simple.isInitial) {
-                simple.add?.also { addValue ->
-                    if (chirp.from == simple.key) {
-                        cannot("react to own chirp")
-                    }
-
-                    // React initiator must exist
-                    birdStore.get(simple.key)
-                    if (addValue.length > MAX_REACTION_LENGTH) {
-                        cannot("react with text longer than $MAX_REACTION_LENGTH")
-                    }
-                }
-            }
-        })
     }
 
     companion object {

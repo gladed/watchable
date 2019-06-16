@@ -33,19 +33,18 @@ import logic.Logic
 import rest.BIRD_PATH
 import rest.Bird
 import rest.CHIRP_PATH
+import rest.Chirp
 import rest.ChirpPage
-import rest.ChirpReact
 import rest.CreateBird
 import rest.CreateChirp
 import rest.Home
-import rest.REACT_PATH
 
 /** Convert REST API requests into [Logic] changes. */
 @UseExperimental(FlowPreview::class)
-class Routes(private val logic: Logic) {
+class ApiRoutes(private val logic: Logic) {
 
     /** Expose REST APIs for manipulating [Bird] and [Chirp] activities. */
-    fun Route.installRoutes() {
+    fun Route.routes() {
         get("/") {
             respond {
                 Home(someBirds = birds.keys().take(SHORT_LIST_COUNT).map { Bird.idToPath(it) }.toList())
@@ -59,23 +58,6 @@ class Routes(private val logic: Logic) {
         get("{chirpId}") {
             respond {
                 chirps.get(call.parameters["chirpId"]!!).toRestChirp()
-            }
-        }
-
-        post("{chirpId}$REACT_PATH") {
-            process { react: ChirpReact ->
-                val bird = birds.get(react.from.split("/").last())
-                val chirp = chirps.get(call.parameters["chirpId"]!!)
-                chirp.reactions {
-                    react.reaction.also { reaction ->
-                        if (reaction == null) {
-                            remove(bird.id)
-                        } else {
-                            put(bird.id, reaction)
-                        }
-                    }
-                }
-                chirp.toRestChirp()
             }
         }
     }

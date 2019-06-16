@@ -5,7 +5,6 @@ import io.ktor.server.testing.TestApplicationEngine
 import io.ktor.server.testing.handleRequest
 import io.ktor.server.testing.setBody
 import io.ktor.server.testing.withTestApplication
-import io.ktor.util.pipeline.ContextDsl
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
@@ -14,7 +13,6 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import rest.Bird
 import rest.Chirp
-import rest.ChirpReact
 import rest.CreateBird
 import rest.CreateChirp
 import rest.Home
@@ -77,17 +75,6 @@ class ApiTest {
             val chirp = post(bird.chirps, CreateChirp.serializer(), CreateChirp("hello"), Chirp.serializer())
             assertEquals("hello", chirp.text)
             assertEquals(chirp, get(chirp.self, Chirp.serializer()))
-        }
-    }
-
-    @Test fun `react to chirp`() {
-        testApp {
-            val birdsPath = get("", Home.serializer()).birds
-            val ostrich = post(birdsPath, CreateBird.serializer(), CreateBird("ostrich"), Bird.serializer())
-            val chirp = post(ostrich.chirps, CreateChirp.serializer(), CreateChirp("hello"), Chirp.serializer())
-            val roadrunner = post(birdsPath, CreateBird.serializer(), CreateBird("roadrunner"), Bird.serializer())
-            val newChirp = post(chirp.react, ChirpReact.serializer(), ChirpReact(roadrunner.self, "+"), Chirp.serializer())
-            assertEquals("+", newChirp.reactions[roadrunner.self])
         }
     }
 }

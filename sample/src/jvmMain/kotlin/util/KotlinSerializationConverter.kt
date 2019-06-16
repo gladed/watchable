@@ -42,7 +42,7 @@ class KotlinSerializationConverter : ContentConverter {
     ): Any? =
         serializers[context.subject.type.javaObjectType]?.let {
             val bytes = context.subject.value as? ByteReadChannel ?: return null
-            Json.parse(it, bytes.readRemaining(MAX_REQUEST_SIZE, 0).readText())
+            Json.nonstrict.parse(it, bytes.readRemaining(MAX_REQUEST_SIZE, 0).readText())
         }
 
     override suspend fun convertForSend(

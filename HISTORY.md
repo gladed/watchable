@@ -1,8 +1,9 @@
 # Version History
 
 ## 0.6.20
-* `maybe` for use with `cannot`
-* sample now has a full HTML interface.
+* `maybe` for use with `cannot`.
+* `sample` now has a full HTML interface.
+* Remove FileStore as it is too use-case specific for the library.
 
 ## 0.6.19
 * `lazyGuard` takes suspending func (add on to #97).

@@ -25,9 +25,9 @@ import kotlinx.serialization.UnstableDefault
 
 /** Convert this [KSerializer] to an [Transformer] of [String] and [T] */
 @UseExperimental(UnstableDefault::class)
-fun <T : Any> KSerializer<T>.toInflater() = object : Transformer<String, T> {
-    override fun toTarget(value: String) = Json.parse(this@toInflater, value)
-    override fun fromTarget(value: T): String = Json.stringify(this@toInflater, value)
+fun <T : Any> KSerializer<T>.toInflator() = object : Transformer<String, T> {
+    override fun toTarget(value: String) = Json.nonstrict.parse(this@toInflator, value)
+    override fun fromTarget(value: T): String = Json.stringify(this@toInflator, value)
 }
 
-fun <T : Any> Store<String>.serialize(serializer: KSerializer<T>): Store<T> = transform(serializer.toInflater())
+fun <T : Any> Store<String>.serialize(serializer: KSerializer<T>): Store<T> = transform(serializer.toInflator())

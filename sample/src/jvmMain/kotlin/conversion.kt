@@ -17,24 +17,6 @@
 import rest.Bird
 import rest.CHIRP_PATH
 import rest.Chirp
-import rest.ChirpPage
-import rest.ChirpReact
-import rest.CreateBird
-import rest.CreateChirp
-import rest.Home
-import rest.REACT_PATH
-import util.KotlinSerializationConverter
-
-/** Add all serializers for types exposed here. */
-fun KotlinSerializationConverter.registerSerializers() {
-    add(Home.serializer())
-    add(Bird.serializer())
-    add(Chirp.serializer())
-    add(CreateBird.serializer())
-    add(CreateChirp.serializer())
-    add(ChirpReact.serializer())
-    add(ChirpPage.serializer())
-}
 
 fun model.Bird.toRestBird() = Bird(
     self = Bird.idToPath(id),
@@ -46,7 +28,5 @@ fun model.Bird.toRestBird() = Bird(
 fun model.Chirp.toRestChirp() = Chirp(
     self = Chirp.idToPath(id),
     from = Bird.idToPath(from),
-    text = text,
-    reactions = reactions.mapKeys { Bird.idToPath(it.key) },
-    react = "${Chirp.idToPath(id)}$REACT_PATH"
+    text = text
 )

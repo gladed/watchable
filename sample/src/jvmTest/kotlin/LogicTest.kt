@@ -121,35 +121,4 @@ class LogicTest {
             chirps.put(chirp.id, badChirp)
         }
     }
-
-    @Test fun `bird can react to another chirp`() = test {
-        birds.put(robin.id, robin)
-        birds.put(wren.id, wren)
-        chirps.put(chirp.id, chirp)
-        chirp.reactions {
-            put(wren.id, "+1")
-        }
-    }
-
-    @Test fun `bird cannot react to own chirp`() = test {
-        birds.put(robin.id, robin)
-        birds.put(wren.id, wren)
-        chirps.put(chirp.id, chirp)
-        impossible {
-            chirp.reactions {
-                put(robin.id, "+1")
-            }
-        }
-    }
-
-    @Test fun `cannot send long reaction`() = test {
-        birds.put(robin.id, robin)
-        birds.put(wren.id, wren)
-        chirps.put(chirp.id, chirp)
-        impossible {
-            chirp.reactions {
-                put(wren.id, "+100".repeat(100))
-            }
-        }
-    }
 }
