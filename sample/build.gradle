@@ -96,7 +96,7 @@ task populateWebFolder(dependsOn: [jsMainClasses]) {
             from kotlin.sourceSets.jsMain.resources.srcDirs
             jsCompilations.test.runtimeDependencyFiles.each {
                 if (it.exists() && !it.isDirectory()) {
-                    from zipTree(it.absolutePath).matching { include '*.js' }
+                    from zipTree(it.absolutePath).matching { include('*.js','*.css') }
                 }
             }
             into webFolder
@@ -104,7 +104,7 @@ task populateWebFolder(dependsOn: [jsMainClasses]) {
     }
 }
 
-jsJar.dependsOn(populateWebFolder)
+build.dependsOn(populateWebFolder)
 
 task run(type: JavaExec, dependsOn: [jvmMainClasses, jsJar]) {
     main = "MainKt"

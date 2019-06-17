@@ -31,19 +31,21 @@ import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
 import kotlinx.html.FormMethod
+import kotlinx.html.HEAD
+import kotlinx.html.HTML
 import kotlinx.html.InputType
 import kotlinx.html.a
 import kotlinx.html.body
-import kotlinx.html.br
 import kotlinx.html.div
 import kotlinx.html.form
 import kotlinx.html.h1
 import kotlinx.html.h2
-import kotlinx.html.h3
-import kotlinx.html.head
 import kotlinx.html.input
+import kotlinx.html.link
 import kotlinx.html.p
+import kotlinx.html.strong
 import kotlinx.html.title
+import kotlinx.html.visit
 import logic.Logic
 import model.Bird
 import model.Chirp
@@ -55,6 +57,13 @@ class HtmlRoutes(private val environment: ApplicationEnvironment, private val lo
             logic.scoped(this).func()
         }
 
+    private fun HTML.birdHead(block : HEAD.() -> Unit = {}) : Unit =
+        HEAD(emptyMap(), consumer)
+            .visit {
+                link(rel = "stylesheet", href = "/static/styles.css")
+                block()
+            }
+
     fun Route.routes() {
         get("/") {
             val topBirds = withLogic {
@@ -62,25 +71,11 @@ class HtmlRoutes(private val environment: ApplicationEnvironment, private val lo
                     birds.get(it) }.toList()
             }
             call.respondHtml {
-                head {
+                birdHead {
                     title("Birds!")
                 }
                 body {
-                    +"${hello()} (from Ktor)."
-//                    div {
-//                        id = "js-response"
-//                        +"Loading..."
-//                    }
-//                    script(src = "/static/require.min.js") {
-//                    }
-//                    script {
-//                        unsafe {
-//                            +"require.config({baseUrl: '/static'});\n"
-//                            +"require(['/static/sample.js'], function(js) { js.helloWorld('Hi'); });\n"
-//                        }
-//                    }
-                    h1 { +"Birds" }
-                    p { +"Some birds:" }
+                    h1 { +"Birds!" }
                     topBirds.forEach { bird ->
                         div {
                             a(href="/bird/${bird.id}") { +bird.name.value }
@@ -88,13 +83,15 @@ class HtmlRoutes(private val environment: ApplicationEnvironment, private val lo
                     }
 
                     form(action = "bird", method = FormMethod.post) {
-                        h3 { +"Create a bird" }
-                        input(InputType.text, name = "name") {
-                            placeholder = "name of new bird"
-                        }
-                        +" "
-                        input(InputType.submit) {
-                            value = "Create"
+                        p {
+                            +"Create a bird: "
+                            input(InputType.text, name = "name") {
+                                placeholder = "name of new bird"
+                            }
+                            +" "
+                            input(InputType.submit) {
+                                value = "Create"
+                            }
                         }
                     }
                 }
@@ -133,7 +130,7 @@ class HtmlRoutes(private val environment: ApplicationEnvironment, private val lo
                     val follows = bird.following.map { birds.get(it) }
 
                     call.respondHtml {
-                        head {
+                        birdHead {
                             title(bird.name.value)
                         }
                         body {
@@ -147,12 +144,20 @@ class HtmlRoutes(private val environment: ApplicationEnvironment, private val lo
                             h2 { +"Chirps" }
                             related.forEach { (chirp, from) ->
                                 div {
-                                    +"${chirp.sentAt}, ${from.name}: ${chirp.text}"
-                                    br
-                                    if (chirp.from == bird.id) {
-                                        form(action = "/chirp/${chirp.id}/delete", method = FormMethod.post) {
-                                            input(InputType.submit) {
-                                                value = "Delete chirp"
+                                    form(action = "/chirp/${chirp.id}/delete", method = FormMethod.post) {
+                                        p {
+                                            +"${chirp.sentAt}, "
+                                            if (from == bird) {
+                                                +from.name.value
+                                            } else {
+                                                a(href="/bird/${from.id}") { +from.name.value }
+                                            }
+                                            +": ${chirp.text}"
+                                            if (chirp.from == bird.id) {
+                                                +" "
+                                                input(InputType.submit) {
+                                                    value = "Delete"
+                                                }
                                             }
                                         }
                                     }
@@ -160,43 +165,48 @@ class HtmlRoutes(private val environment: ApplicationEnvironment, private val lo
                             }
 
                             form(action = "/chirp", method = FormMethod.post) {
-                                h3 { +"Chirp something from ${bird.name.value}:" }
-                                input(InputType.hidden, name = "bird") {
-                                    value = bird.id
-                                }
-                                input(InputType.text, name = "text") {
-                                    placeholder = "text to chirp"
-                                }
-                                +" "
-                                input(InputType.submit) {
-                                    value = "Chirp"
+                                p {
+                                    strong { +"${bird.name} chirps: " }
+                                    input(InputType.hidden, name = "bird") {
+                                        value = bird.id
+                                    }
+                                    input(InputType.text, name = "text") {
+                                        placeholder = "text to chirp"
+                                    }
+                                    +" "
+                                    input(InputType.submit) {
+                                        value = "Chirp"
+                                    }
                                 }
                             }
 
-                            h2 { +"Follows" }
+                            h2 { +"${bird.name} follows:" }
                             follows.forEach { following ->
                                 div {
-                                    a(href = "/bird/${following.id}") { +following.name.value }
                                     form(action = "/bird/${bird.id}/unfollow", method = FormMethod.post) {
-                                        input(InputType.hidden, name = "bird") {
-                                            value = following.id
-                                        }
-                                        input(InputType.submit) {
-                                            value = "Unfollow ${following.name}"
+                                        p {
+                                            a(href = "/bird/${following.id}") { +following.name.value }
+                                            input(InputType.hidden, name = "bird") {
+                                                value = following.id
+                                            }
+                                            +" "
+                                            input(InputType.submit) {
+                                                value = "Unfollow"
+                                            }
                                         }
                                     }
                                 }
                             }
 
-
                             form(action = "/bird/${bird.id}/follow", method = FormMethod.post) {
-                                h3 { +"Follow a new bird:" }
-                                input(InputType.text, name = "name") {
-                                    placeholder = " name of bird to follow"
-                                }
-                                +" "
-                                input(InputType.submit) {
-                                    value = "Follow"
+                                p {
+                                    input(InputType.text, name = "name") {
+                                        placeholder = "bird name"
+                                    }
+                                    +" "
+                                    input(InputType.submit) {
+                                        value = "Follow"
+                                    }
                                 }
                             }
                         }

@@ -1,0 +1,41 @@
+html *
+{
+  font-size: 14px;
+  font-family: monospace;
+}
+
+body {
+  background-color: #cdc;
+}
+
+p {
+  margin: 4px 0 4px 0;
+}
+
+input[type=submit] {
+  color: #7aa;
+  background-color: #ded;
+  border: none;
+  font-size: 12px;
+  font-weight: bold;
+  text-transform: uppercase;
+  padding: 2px 8px 2px 8px;
+  margin: -2px -2px -2px -2px;
+  border-radius: 4px;
+  transition: background-color 0.1s ease;
+  transition: color 0.1s ease;
+}
+
+input[type=submit]:hover {
+  color: #ded;
+  background-color: #266;
+}
+
+a:link, a:visited {
+  color: #266;
+}
+
+input[type=text] {
+  border: none;
+  border-bottom: 1px solid #ccc;
+}
