@@ -15,7 +15,7 @@
  */
 
 import external.Adapter
-import io.gladed.watchable.store.Cannot
+import io.gladed.watchable.util.Cannot
 import io.ktor.application.Application
 import io.ktor.application.call
 import io.ktor.application.install
@@ -48,6 +48,7 @@ fun main(args: Array<String>) {
     embeddedServer(Netty, commandLineEnvironment(args)).start(wait = true)
 }
 
+@Suppress("unused") // Invoked externally
 object Main {
     fun setup() {
         embeddedServer(Netty, port = SAMPLE_PORT, host = LOCAL_HOST, watchPaths = listOf("build/classes"),

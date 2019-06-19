@@ -16,6 +16,8 @@
 
 package io.gladed.watchable.store
 
+import io.gladed.watchable.util.Cannot
+import io.gladed.watchable.util.Try
 import io.gladed.watchable.util.guard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.FlowPreview
@@ -114,7 +116,7 @@ class HoldingStore<T : Any>(
 
         override suspend fun remove(key: String) {
             // Retrieve the item, creating a hold for it if necessary, and remove the hold.
-            maybe { get(key) }?.let { map { remove(key) } }?.remove()
+            Try { get(key) }.passOrNull?.let { map { remove(key) } }?.remove()
             back.remove(key)
         }
 

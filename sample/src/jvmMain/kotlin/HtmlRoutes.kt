@@ -27,6 +27,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.mapNotNull
 import kotlinx.coroutines.flow.take
 import kotlinx.coroutines.flow.toList
 import kotlinx.coroutines.withContext
@@ -52,6 +53,7 @@ import model.Chirp
 
 @UseExperimental(FlowPreview::class)
 class HtmlRoutes(private val environment: ApplicationEnvironment, private val logic: Logic) {
+
     private suspend fun <T> withLogic(func: suspend Logic.Scoped.() -> T): T =
         withContext(Dispatchers.Default + Job()) {
             logic.scoped(this).func()
@@ -120,13 +122,16 @@ class HtmlRoutes(private val environment: ApplicationEnvironment, private val lo
             call.respondRedirect("/")
         }
 
+
         // Show a page about a bird
         get("/bird/{birdId}") {
             withLogic {
                 birds.get(call.parameters["birdId"]!!).let { bird ->
-                    val related = ops.relatedChirps(bird.id).take(10).map { chirpKey ->
-                        chirps.get(chirpKey).let { chirp -> chirp to birds.get(chirp.from) }
-                    }.toList()
+                    val related = ops.relatedChirps(bird.id).mapNotNull { chirpKey ->
+                        chirps.get(chirpKey).let { chirp ->
+                            chirp to birds.get(chirp.from)
+                        }
+                    }.take(10).toList()
                     val follows = bird.following.map { birds.get(it) }
 
                     call.respondHtml {
@@ -142,7 +147,7 @@ class HtmlRoutes(private val environment: ApplicationEnvironment, private val lo
                             }
 
                             h2 { +"Chirps" }
-                            related.forEach { (chirp, from) ->
+                            related.reversed().forEach { (chirp, from) ->
                                 div {
                                     form(action = "/chirp/${chirp.id}/delete", method = FormMethod.post) {
                                         p {

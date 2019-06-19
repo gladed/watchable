@@ -16,5 +16,7 @@
 
 package io.gladed.watchable.store
 
+import io.gladed.watchable.util.Cannot
+
 /** Throw an exception to complain that something cannot be done. */
 fun cannot(doSomething: String): Nothing = throw Cannot(doSomething)

@@ -47,7 +47,7 @@ class ApiRoutes(private val logic: Logic) {
     fun Route.routes() {
         get("/") {
             respond {
-                Home(someBirds = birds.keys().take(SHORT_LIST_COUNT).map { Bird.idToPath(it) }.toList())
+                Home(birds = birds.keys().take(SHORT_LIST_COUNT).map { Bird.idToPath(it) }.toList())
             }
         }
         route(BIRD_PATH) { birdRoutes() }

@@ -19,7 +19,7 @@ package store
 import io.gladed.watchable.Change
 import io.gladed.watchable.Watchable
 import io.gladed.watchable.WatchableValue
-import io.gladed.watchable.store.Cannot
+import io.gladed.watchable.util.Cannot
 import io.gladed.watchable.store.Container
 import io.gladed.watchable.store.Hold
 import io.gladed.watchable.store.HoldingStore

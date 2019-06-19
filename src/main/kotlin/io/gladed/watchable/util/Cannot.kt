@@ -14,11 +14,7 @@
  * limitations under the License.
  */
 
-package io.gladed.watchable.store
+package io.gladed.watchable.util
 
 /** Something cannot be done. */
 open class Cannot(doThis: String) : Exception(doThis)
-
-/** Attempt something, returning null if it throws [Cannot]. */
-inline fun <T : Any> maybe(attempt: () -> T): T? =
-    try { attempt() } catch (c: Cannot) { null }

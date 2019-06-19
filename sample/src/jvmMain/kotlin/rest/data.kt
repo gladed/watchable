@@ -35,9 +35,9 @@ object Serializers {
 
 @Serializable
 data class Home(
-    val birds: String = BIRD_PATH,
-    val chirps: String = CHIRP_PATH,
-    val someBirds: List<String>
+    val bird: String = BIRD_PATH,
+    val birds: List<String>,
+    val nextBirds: String? = null
 )
 
 @Serializable
@@ -73,5 +73,5 @@ data class CreateChirp(val text: String)
 @Serializable
 data class ChirpPage(
     val chirps: List<Chirp>,
-    val nextPage: String? = null
+    val nextChirps: String? = null
 )

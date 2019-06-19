@@ -17,7 +17,7 @@
 package store
 
 import impossible
-import io.gladed.watchable.store.Cannot
+import io.gladed.watchable.util.Cannot
 import io.gladed.watchable.store.Store
 import io.gladed.watchable.store.cached
 import io.mockk.coEvery

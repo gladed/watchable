@@ -13,27 +13,28 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
+package util
 
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.Job
-import kotlinx.coroutines.test.TestCoroutineDispatcher
-import kotlinx.coroutines.test.TestCoroutineScope
-import kotlinx.coroutines.test.runBlockingTest
-import org.junit.Assert.fail
+import io.gladed.watchable.store.cannot
 import io.gladed.watchable.util.Cannot
-
-suspend fun impossible(func: suspend () -> Unit) {
-    try {
-        func()
-        fail("should have failed")
-    } catch (c: Cannot) {
-        println("As expected: $c")
-    }
-}
+import io.gladed.watchable.util.Try
+import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.test.runBlockingTest
+import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
+import org.junit.Test
 
 @UseExperimental(ExperimentalCoroutinesApi::class)
-fun runTest(func: suspend TestCoroutineScope.() -> Unit) {
-    TestCoroutineScope(TestCoroutineDispatcher() + Job()).runBlockingTest {
-        func()
+class TryTest {
+    @Test fun `successful try`() = runBlockingTest {
+        val tried = Try { 5 }
+        assertEquals(5, tried.passOrNull)
+        assertNull(tried.failOrNull)
+    }
+
+    @Test fun `unsuccessful try`() = runBlockingTest {
+        val tried = Try<Int> { cannot("get it") }
+        assertEquals("get it", tried.failOrNull?.message)
+        assertNull(tried.passOrNull)
     }
 }

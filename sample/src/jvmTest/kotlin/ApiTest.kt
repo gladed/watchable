@@ -55,13 +55,13 @@ class ApiTest {
 
     @Test fun `get home`() {
         testApp {
-            assertEquals(listOf(), get("", Home.serializer()).someBirds)
+            assertEquals(listOf(), get("", Home.serializer()).birds)
         }
     }
 
     @Test fun `post and get bird`() {
         testApp {
-            val birdsPath = get("", Home.serializer()).birds
+            val birdsPath = get("", Home.serializer()).bird
             val bird = post(birdsPath, CreateBird.serializer(), CreateBird("ostrich"), Bird.serializer())
             assertEquals("ostrich", bird.name)
             assertEquals(bird, get(bird.self, Bird.serializer()))
@@ -70,7 +70,7 @@ class ApiTest {
 
     @Test fun `create and get chirp`() {
         testApp {
-            val birdsPath = get("", Home.serializer()).birds
+            val birdsPath = get("", Home.serializer()).bird
             val bird = post(birdsPath, CreateBird.serializer(), CreateBird("ostrich"), Bird.serializer())
             val chirp = post(bird.chirps, CreateChirp.serializer(), CreateChirp("hello"), Chirp.serializer())
             assertEquals("hello", chirp.text)

@@ -1,9 +1,10 @@
 # Version History
 
 ## 0.6.20
-* `maybe` for use with `cannot`.
-* `sample` now has a full HTML and JSON/REST interface.
-* Remove FileStore as it is too use-case specific for the library.
+* Update to Kotlin 1.3.40.
+* `Try` for use with `cannot`.
+* `sample` now has a full HTML + JSON/REST interface.
+* `FileStore` demoted to sample, too use-case-specific.
 
 ## 0.6.19
 * `lazyGuard` takes suspending func (add on to #97).

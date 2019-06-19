@@ -14,7 +14,7 @@
  * limitations under the License.
  */
 
-import io.gladed.watchable.store.Cannot
+import io.gladed.watchable.util.Cannot
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ObsoleteCoroutinesApi
