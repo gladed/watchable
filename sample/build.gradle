@@ -31,30 +31,7 @@ kotlin {
             }
         }
     }
-    js() {
-        compilations.all {
-            kotlinOptions {
-                languageVersion = "1.3"
-                moduleKind = "umd"
-                sourceMap = true
-                metaInfo = true
-                freeCompilerArgs += ["-Xuse-experimental=kotlin.Experimental"]
-            }
-        }
-    }
     sourceSets {
-        commonMain {
-            dependencies {
-                implementation kotlin('stdlib-common')
-                api "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kotlin_serialization_version"
-            }
-        }
-        commonTest {
-            dependencies {
-                implementation kotlin('test-common')
-                implementation kotlin('test-annotations-common')
-            }
-        }
         jvmMain {
             dependencies {
                 implementation rootProject  // Local version, otherwise use: compile "io.gladed:watchable:x.x.x"
@@ -62,6 +39,7 @@ kotlin {
                 implementation "io.ktor:ktor-server-netty:$ktor_version"
                 implementation "io.ktor:ktor-html-builder:$ktor_version"
                 implementation "ch.qos.logback:logback-classic:$logback_version"
+                implementation "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kotlin_serialization_version"
             }
         }
         jvmTest {
@@ -72,41 +50,10 @@ kotlin {
                 implementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlin_coroutines_version"
             }
         }
-        jsMain {
-            dependencies {
-                implementation kotlin('stdlib-js')
-                implementation "org.jetbrains.kotlinx:kotlinx-serialization-runtime-js:$kotlin_serialization_version"
-            }
-        }
-        jsTest {
-            dependencies {
-                implementation kotlin('test-js')
-            }
-        }
     }
 }
 
-def webFolder = new File(project.buildDir, "../src/jsMain/web")
-def jsCompilations = kotlin.targets.js.compilations
-
-task populateWebFolder(dependsOn: [jsMainClasses]) {
-    doLast {
-        copy {
-            from jsCompilations.main.output
-            from kotlin.sourceSets.jsMain.resources.srcDirs
-            jsCompilations.test.runtimeDependencyFiles.each {
-                if (it.exists() && !it.isDirectory()) {
-                    from zipTree(it.absolutePath).matching { include('*.js','*.css') }
-                }
-            }
-            into webFolder
-        }
-    }
-}
-
-build.dependsOn(populateWebFolder)
-
-task run(type: JavaExec, dependsOn: [jvmMainClasses, jsJar]) {
+task run(type: JavaExec, dependsOn: [jvmMainClasses]) {
     main = "MainKt"
     classpath { [
             kotlin.targets.jvm.compilations.main.output.allOutputs.files,

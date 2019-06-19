@@ -27,7 +27,7 @@ import io.ktor.http.CacheControl
 import io.ktor.http.ContentType
 import io.ktor.http.HttpStatusCode
 import io.ktor.http.content.CachingOptions
-import io.ktor.http.content.files
+import io.ktor.http.content.resources
 import io.ktor.http.content.static
 import io.ktor.response.respond
 import io.ktor.routing.route
@@ -48,18 +48,8 @@ fun main(args: Array<String>) {
     embeddedServer(Netty, commandLineEnvironment(args)).start(wait = true)
 }
 
-actual class Sample {
-    actual fun checkMe() = 42
-}
-
-actual object Platform {
-    actual val name: String = "JVM"
-}
-
 object Main {
     fun setup() {
-        Sample().checkMe()
-        Platform.name
         embeddedServer(Netty, port = SAMPLE_PORT, host = LOCAL_HOST, watchPaths = listOf("build/classes"),
             module = Application::main)
             .start(wait = true)
@@ -77,15 +67,6 @@ fun Application.bind(logic: Logic) {
     val htmlRoutes = HtmlRoutes(environment, logic)
     val currentDir = File(".").absoluteFile
     environment.log.info("Current directory: $currentDir")
-
-    val webDir = listOf(
-            "web",
-            "../src/jsMain/web",
-            "src/jsMain/web"
-        ).map {
-            File(currentDir, it)
-        }.firstOrNull { it.isDirectory }?.absoluteFile ?: error("Can't find 'web' folder for this sample")
-
 
     install(ContentNegotiation) {
         register(ContentType.Application.Json, KotlinSerializationConverter()) {
@@ -118,7 +99,7 @@ fun Application.bind(logic: Logic) {
         htmlRoutes.apply { routes() }
 
         static("/static") {
-            files(webDir)
+            resources("static")
         }
     }
 }
