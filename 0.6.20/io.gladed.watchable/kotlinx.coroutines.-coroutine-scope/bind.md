@@ -1,0 +1,13 @@
+[io.gladed.watchable](../index.md) / [kotlinx.coroutines.CoroutineScope](index.md) / [bind](./bind.md)
+
+# bind
+
+`fun <M, C : `[`Change`](../-change/index.md)`> CoroutineScope.bind(dest: `[`MutableWatchable`](../-mutable-watchable/index.md)`<`[`M`](bind.md#M)`, `[`C`](bind.md#C)`>, origin: `[`Watchable`](../-watchable/index.md)`<`[`C`](bind.md#C)`>): `[`Watcher`](../-watcher/index.md)
+
+Bind [dest](bind.md#io.gladed.watchable$bind(kotlinx.coroutines.CoroutineScope, io.gladed.watchable.MutableWatchable((io.gladed.watchable.bind.M, io.gladed.watchable.bind.C)), io.gladed.watchable.Watchable((io.gladed.watchable.bind.C)))/dest) so that it receives values from [origin](bind.md#io.gladed.watchable$bind(kotlinx.coroutines.CoroutineScope, io.gladed.watchable.MutableWatchable((io.gladed.watchable.bind.M, io.gladed.watchable.bind.C)), io.gladed.watchable.Watchable((io.gladed.watchable.bind.C)))/origin) as long as the calling coroutineContext lives.
+
+`fun <M, C : `[`Change`](../-change/index.md)`, C2 : `[`Change`](../-change/index.md)`> CoroutineScope.bind(dest: `[`MutableWatchable`](../-mutable-watchable/index.md)`<`[`M`](bind.md#M)`, `[`C`](bind.md#C)`>, origin: `[`Watchable`](../-watchable/index.md)`<`[`C2`](bind.md#C2)`>, period: `[`Long`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-long/index.html)` = IMMEDIATE, apply: `[`M`](bind.md#M)`.(`[`C2`](bind.md#C2)`) -> `[`Unit`](https://kotlinlang.org/api/latest/jvm/stdlib/kotlin/-unit/index.html)`): `[`Watcher`](../-watcher/index.md)
+
+Bind [dest](bind.md#io.gladed.watchable$bind(kotlinx.coroutines.CoroutineScope, io.gladed.watchable.MutableWatchable((io.gladed.watchable.bind.M, io.gladed.watchable.bind.C)), io.gladed.watchable.Watchable((io.gladed.watchable.bind.C2)), kotlin.Long, kotlin.Function2((io.gladed.watchable.bind.M, io.gladed.watchable.bind.C2, kotlin.Unit)))/dest) so that it receives changes from [origin](bind.md#io.gladed.watchable$bind(kotlinx.coroutines.CoroutineScope, io.gladed.watchable.MutableWatchable((io.gladed.watchable.bind.M, io.gladed.watchable.bind.C)), io.gladed.watchable.Watchable((io.gladed.watchable.bind.C2)), kotlin.Long, kotlin.Function2((io.gladed.watchable.bind.M, io.gladed.watchable.bind.C2, kotlin.Unit)))/origin) and applies them with [apply](bind.md#io.gladed.watchable$bind(kotlinx.coroutines.CoroutineScope, io.gladed.watchable.MutableWatchable((io.gladed.watchable.bind.M, io.gladed.watchable.bind.C)), io.gladed.watchable.Watchable((io.gladed.watchable.bind.C2)), kotlin.Long, kotlin.Function2((io.gladed.watchable.bind.M, io.gladed.watchable.bind.C2, kotlin.Unit)))/apply) for as long as
+this [CoroutineScope](#) lives.
+
