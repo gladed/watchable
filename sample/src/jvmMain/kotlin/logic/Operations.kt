@@ -1,19 +1,17 @@
 package logic
 
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.flow.filter
-import kotlinx.coroutines.flow.map
-import model.Chirp
 import io.gladed.watchable.store.Store
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.filter
+import kotlinx.coroutines.flow.map
 import model.Bird
+import model.Chirp
 
 /**
  * Perform search operations based on available stores.
  *
  * The default operations are probably not very scalable and should be overridden.
  */
-@UseExperimental(FlowPreview::class)
 open class Operations(private val chirps: Store<Chirp>, private val birds: Store<Bird>) {
     /**
      * Returns the ids of all chirps issued by a bird.

@@ -38,7 +38,7 @@ import org.junit.Before
 import org.junit.Test
 import java.util.UUID
 
-@UseExperimental(ExperimentalCoroutinesApi::class, FlowPreview::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class BindStoreTest {
     data class Thing(val id: String = UUID.randomUUID().toString(), val value: Int, val name: WatchableValue<String>) : Container {
         override val watchables: Watchable<Change> = name

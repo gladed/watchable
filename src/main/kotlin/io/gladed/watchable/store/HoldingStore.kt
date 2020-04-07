@@ -20,7 +20,6 @@ import io.gladed.watchable.util.Cannot
 import io.gladed.watchable.util.Try
 import io.gladed.watchable.util.guard
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
@@ -82,7 +81,6 @@ class HoldingStore<T : Any>(
     }
 
     /** A [Store] whose objects are held when accessing them. */
-    @UseExperimental(FlowPreview::class)
     private inner class SingleStore(val scope: CoroutineScope) : Store<T> {
         override suspend fun put(key: String, value: T) {
             // First, test to see if there's a value present.

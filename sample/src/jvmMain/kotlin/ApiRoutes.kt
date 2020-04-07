@@ -24,7 +24,7 @@ import io.ktor.routing.get
 import io.ktor.routing.post
 import io.ktor.routing.route
 import io.ktor.util.pipeline.PipelineContext
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.take
@@ -40,10 +40,10 @@ import rest.CreateChirp
 import rest.Home
 
 /** Convert REST API requests into [Logic] changes. */
-@UseExperimental(FlowPreview::class)
 class ApiRoutes(private val logic: Logic) {
 
     /** Expose REST APIs for manipulating [Bird] and [Chirp] activities. */
+    @OptIn(ExperimentalCoroutinesApi::class)
     fun Route.routes() {
         get("/") {
             respond {
@@ -62,6 +62,7 @@ class ApiRoutes(private val logic: Logic) {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun Route.birdRoutes() {
         post {
             process { birdRequest: CreateBird ->

@@ -17,16 +17,14 @@
 package store
 
 import impossible
-import io.gladed.watchable.store.Transformer
 import io.gladed.watchable.store.MemoryStore
+import io.gladed.watchable.store.Transformer
 import io.gladed.watchable.store.transform
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.toList
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import runTest
 
-@UseExperimental(FlowPreview::class)
 class TransformerTest {
     private val stringToInt = object : Transformer<String, Int> {
         override fun toTarget(value: String): Int = value.toInt()

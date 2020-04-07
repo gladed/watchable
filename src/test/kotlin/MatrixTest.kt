@@ -41,7 +41,6 @@ import org.junit.runners.Parameterized.Parameter
 import org.junit.runners.Parameterized.Parameters
 
 @RunWith(Parameterized::class)
-@UseExperimental(ExperimentalCoroutinesApi::class)
 class MatrixTest<M, C: Change> {
     private val chooser = Chooser()
 
@@ -133,6 +132,7 @@ class MatrixTest<M, C: Change> {
         assertNotEquals(watchable1, watchable2)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test fun `batch changes together`() = runTest {
         val batches = mutableListOf<List<C>>()
 

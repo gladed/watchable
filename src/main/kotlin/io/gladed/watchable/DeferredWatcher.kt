@@ -20,7 +20,7 @@ import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 
 /** Exposes a [deferred] as a [Watcher]. */
-@UseExperimental(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 internal open class DeferredWatcher(private val deferred: Deferred<Watcher>) : Watcher {
     override fun cancel() {
         if (deferred.isCancelled) return

@@ -17,19 +17,17 @@
 package store
 
 import impossible
-import io.gladed.watchable.util.Cannot
 import io.gladed.watchable.store.Hold
 import io.gladed.watchable.store.HoldingStore
 import io.gladed.watchable.store.Store
 import io.gladed.watchable.store.create
 import io.gladed.watchable.store.holding
+import io.gladed.watchable.util.Cannot
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
-import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
@@ -47,7 +45,6 @@ import org.junit.Test
 import runTest
 import java.util.UUID
 
-@UseExperimental(ObsoleteCoroutinesApi::class, ExperimentalCoroutinesApi::class, FlowPreview::class)
 class HoldingStoreTest {
 
     data class Bird(val id: String = randomUuidString(), val name: String)
@@ -58,10 +55,12 @@ class HoldingStoreTest {
 
     private val hold = mockk<Hold>(relaxUnitFun = true)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     interface HoldingStoreScope : TestCoroutineScope {
         val holdingStore: HoldingStore<Bird>
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun test(func: suspend HoldingStoreScope.() -> Unit) = runTest {
         (object : HoldingStoreScope, TestCoroutineScope by this {
             override val holdingStore = holding(rootStore) {

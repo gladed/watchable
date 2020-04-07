@@ -24,17 +24,19 @@ import kotlinx.serialization.Encoder
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialDescriptor
 import kotlinx.serialization.Serializer
-import kotlinx.serialization.internal.HashSetSerializer
-import kotlinx.serialization.internal.NamedListClassDescriptor
+import kotlinx.serialization.builtins.SetSerializer
+import kotlinx.serialization.setDescriptor
 
 @Serializer(forClass = WatchableList::class)
 class WatchableSetSerializer<T : Any>(valueSerializer: KSerializer<T>) : KSerializer<WatchableSet<T>> {
-    override val descriptor: SerialDescriptor = NamedListClassDescriptor("WatchableSet", valueSerializer.descriptor)
+    override val descriptor: SerialDescriptor = SerialDescriptor("WatchableSet") {
+        setDescriptor(valueSerializer.descriptor)
+    }
 
-    private val setSerializer = HashSetSerializer(valueSerializer)
+    private val setSerializer = SetSerializer(valueSerializer)
 
-    override fun serialize(encoder: Encoder, obj: WatchableSet<T>) {
-        setSerializer.serialize(encoder, obj)
+    override fun serialize(encoder: Encoder, value: WatchableSet<T>) {
+        setSerializer.serialize(encoder, value)
     }
 
     override fun deserialize(decoder: Decoder): WatchableSet<T> =

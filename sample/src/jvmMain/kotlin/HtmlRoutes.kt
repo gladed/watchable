@@ -24,7 +24,7 @@ import io.ktor.routing.Route
 import io.ktor.routing.get
 import io.ktor.routing.post
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.FlowPreview
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.mapNotNull
@@ -51,7 +51,7 @@ import logic.Logic
 import model.Bird
 import model.Chirp
 
-@UseExperimental(FlowPreview::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class HtmlRoutes(private val environment: ApplicationEnvironment, private val logic: Logic) {
 
     private suspend fun <T> withLogic(func: suspend Logic.Scoped.() -> T): T =

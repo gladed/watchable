@@ -24,8 +24,9 @@ import io.gladed.watchable.store.transform
 import kotlinx.serialization.UnstableDefault
 
 /** Convert this [KSerializer] to an [Transformer] of [String] and [T] */
-@UseExperimental(UnstableDefault::class)
+@OptIn(UnstableDefault::class)
 fun <T : Any> KSerializer<T>.toInflator() = object : Transformer<String, T> {
+    @Suppress("DEPRECATION")
     override fun toTarget(value: String) = Json.nonstrict.parse(this@toInflator, value)
     override fun fromTarget(value: T): String = Json.stringify(this@toInflator, value)
 }

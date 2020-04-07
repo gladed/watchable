@@ -1,5 +1,8 @@
 # Version History
 
+## 0.6.21
+* Update dependencies including Kotlin 1.3.71 and others.
+
 ## 0.6.20
 * Update to Kotlin 1.3.40.
 * `Try` for use with `cannot`.

@@ -15,8 +15,6 @@
  */
 
 import external.FileStore
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.toSet
 import kotlinx.coroutines.runBlocking
 import org.hamcrest.CoreMatchers.hasItem
@@ -28,7 +26,6 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
 
-@UseExperimental(ExperimentalCoroutinesApi::class, FlowPreview::class)
 class FileStoreTest {
     @Rule @JvmField val folder = TemporaryFolder()
 
@@ -41,7 +38,7 @@ class FileStoreTest {
 
     @Test fun `put an object`() = runBlocking {
         store.put("^1", "1")
-        assertThat(File(folder.root, "thing").listFiles().map { it.name }, hasItem("^1.txt"))
+        assertThat(File(folder.root, "thing").listFiles()?.map { it.name }, hasItem("^1.txt"))
     }
 
     @Test fun `get an object`() = runBlocking {

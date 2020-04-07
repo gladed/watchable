@@ -19,7 +19,6 @@ package store
 import io.gladed.watchable.Change
 import io.gladed.watchable.Watchable
 import io.gladed.watchable.WatchableValue
-import io.gladed.watchable.util.Cannot
 import io.gladed.watchable.store.Container
 import io.gladed.watchable.store.Hold
 import io.gladed.watchable.store.HoldingStore
@@ -27,6 +26,7 @@ import io.gladed.watchable.store.Store
 import io.gladed.watchable.store.create
 import io.gladed.watchable.store.holding
 import io.gladed.watchable.toWatchableValue
+import io.gladed.watchable.util.Cannot
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
@@ -37,7 +37,6 @@ import kotlinx.coroutines.test.runBlockingTest
 import org.junit.Test
 import java.util.UUID
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
 class ContainerStoreTest {
 
     data class Bird(
@@ -49,10 +48,13 @@ class ContainerStoreTest {
     private val hold = mockk<Hold>(relaxUnitFun = true)
 
     private val rootStore = mockk<Store<Bird>>(relaxUnitFun = true)
+
+    @OptIn(ExperimentalCoroutinesApi::class)
     interface TestScope : TestCoroutineScope {
         val scopeStore: HoldingStore<Bird>
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun test(func: suspend TestScope.() -> Unit) = runBlockingTest {
         (object : TestScope, TestCoroutineScope by this {
             override val scopeStore = holding(rootStore) {

@@ -8,7 +8,6 @@ import io.gladed.watchable.store.Store
 import io.gladed.watchable.store.cannot
 import io.gladed.watchable.store.holding
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.flow.collect
@@ -17,11 +16,10 @@ import model.Chirp
 import kotlin.coroutines.CoroutineContext
 
 /** Implement business logic required by components of the application. */
-@UseExperimental(FlowPreview::class)
 class Logic(
     context: CoroutineContext,
     private val birdStore: Store<Bird>,
-    private val chirpStore: Store<Chirp>,
+    chirpStore: Store<Chirp>,
     val ops: Operations
 ) : CoroutineScope {
     override val coroutineContext = context + Job()
@@ -91,7 +89,6 @@ class Logic(
     }
 
     companion object {
-        const val MAX_REACTION_LENGTH = 6
         const val MAX_CHIRP_LENGTH = 320
     }
 }

@@ -18,13 +18,11 @@ package store
 
 import impossible
 import io.gladed.watchable.store.MemoryStore
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.toList
 import org.junit.Assert.assertEquals
 import org.junit.Test
 import runTest
 
-@UseExperimental(FlowPreview::class)
 class MemoryStoreTest {
     private val store = MemoryStore<Thing>("thing")
     private val thing = Thing(value = 1)

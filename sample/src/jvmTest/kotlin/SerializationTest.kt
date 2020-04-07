@@ -28,7 +28,6 @@ data class Thing(
     val set: WatchableSet<String>
 )
 
-@UseExperimental(UnstableDefault::class)
 class SerializationTest {
     private val thing = Thing(
         "hi".toWatchableValue(),
@@ -36,6 +35,7 @@ class SerializationTest {
         mapOf("hi" to "there").toWatchableMap(),
         setOf("hi").toWatchableSet())
 
+    @OptIn(UnstableDefault::class)
     @Test
     fun `serialize thing`() {
         val string = Json.stringify(Thing.serializer(), thing)

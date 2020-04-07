@@ -32,7 +32,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
-@UseExperimental(ObsoleteCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 class BindValueTest {
     val changes = Channel<Any>(Channel.UNLIMITED)
 
@@ -126,6 +125,7 @@ class BindValueTest {
         assertEquals(5, dest.value)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test fun `watch from different scope`() = runTest {
         val origin = watchableValueOf(5)
         val scope1 = CoroutineScope(coroutineContext)
@@ -138,6 +138,7 @@ class BindValueTest {
         changes.mustBe(ValueChange(5, 6))
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test fun `kill binding scope`() = runTest {
         val origin = watchableValueOf(5)
         val dest = watchableValueOf(6)

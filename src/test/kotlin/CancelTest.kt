@@ -29,7 +29,6 @@ import org.junit.Assert
 import org.junit.Assert.fail
 import org.junit.Test
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
 class CancelTest {
     private lateinit var intValue: WatchableValue<Int>
     val changes = Channel<ValueChange<Int>>(Channel.UNLIMITED)
@@ -52,6 +51,7 @@ class CancelTest {
         }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test fun `callbacks stop when scope cancelled`() = runTest {
         intValue = watchableValueOf(5)
         val scope1 = CoroutineScope(coroutineContext + SupervisorJob())
@@ -66,6 +66,7 @@ class CancelTest {
         changes.mustBe()
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test fun `callbacks stop when job cancelled`() = runTest {
         intValue = watchableValueOf(5)
         val scope1 = CoroutineScope(coroutineContext)

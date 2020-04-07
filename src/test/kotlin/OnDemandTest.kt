@@ -27,7 +27,6 @@ import org.junit.Assert.assertTrue
 import org.junit.Assert.fail
 import org.junit.Test
 
-@UseExperimental(ObsoleteCoroutinesApi::class)
 class OnDemandTest {
 
     interface Exchange
@@ -121,7 +120,7 @@ class OnDemandTest {
         tx(3)
     }
 
-    @UseExperimental(ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test(timeout = 500) fun `receive items delayed`() = runTest {
         watchable.batch(this, 100) { rx(it) }.start()
         pauseDispatcher {

@@ -31,7 +31,7 @@ suspend fun impossible(func: suspend () -> Unit) {
     }
 }
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 fun runTest(func: suspend TestCoroutineScope.() -> Unit) {
     TestCoroutineScope(TestCoroutineDispatcher() + Job()).runBlockingTest {
         func()

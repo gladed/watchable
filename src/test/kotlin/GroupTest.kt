@@ -26,7 +26,6 @@ import kotlinx.coroutines.channels.Channel
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
 class GroupTest {
     val changes = Channel<GroupChange>(Channel.UNLIMITED)
 
@@ -68,6 +67,7 @@ class GroupTest {
         changes.mustBe()
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test fun `cancel watching of a group`() = runTest {
         val intValue = watchableValueOf(1)
         val setValue = watchableSetOf("1")
@@ -80,6 +80,7 @@ class GroupTest {
         changes.mustBe()
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test fun `start a group of watchables`() = runTest {
         val intValue = watchableValueOf(1)
         pauseDispatcher {

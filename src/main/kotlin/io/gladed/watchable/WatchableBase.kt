@@ -24,7 +24,6 @@ import io.gladed.watchable.watcher.Inline
 import io.gladed.watchable.watcher.Periodic
 import io.gladed.watchable.watcher.WatcherBase
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 
 /** Base for an object that generates change events of type [C] as its underlying data changes. */
@@ -45,7 +44,6 @@ abstract class WatchableBase<C : Change> : Watchable<C> {
     /** Return the initial change that a new watcher should receive, if any */
     protected abstract fun getInitialChange(): C?
 
-    @UseExperimental(ExperimentalCoroutinesApi::class)
     override fun batch(
         scope: CoroutineScope,
         period: Long,

@@ -18,8 +18,8 @@ package io.gladed.watchable.watcher
 
 import io.gladed.watchable.Change
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.channels.onReceiveOrNull
 import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.selects.select
@@ -29,7 +29,6 @@ import kotlin.coroutines.CoroutineContext
 /**
  * Buffers changes and shares them out every so often.
  */
-@UseExperimental(ExperimentalCoroutinesApi::class, ObsoleteCoroutinesApi::class)
 internal class Periodic<C : Change>(
     context: CoroutineContext,
     /** A non-zero period between change announcements. */
@@ -44,7 +43,7 @@ internal class Periodic<C : Change>(
 
     init {
         launch {
-            @Suppress("EmptyWhileBlock") // Intended
+            @Suppress("ControlFlowWithEmptyBody", "EmptyWhileBlock") // Infinte loop until handleChanges returns false
             while (handleChanges()) { }
         }
     }
@@ -52,8 +51,10 @@ internal class Periodic<C : Change>(
     /** Return the current system time. */
     private fun now() = System.currentTimeMillis()
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private suspend fun handleChanges(): Boolean = select {
-        changeChannel.onReceiveOrNull { received ->
+        val clause = changeChannel.onReceiveOrNull()
+        clause { received ->
             if (received == null) {
                 action(outstanding)
                 false

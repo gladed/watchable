@@ -18,7 +18,7 @@ import rest.CreateChirp
 import rest.Home
 import kotlin.test.assertEquals
 
-@UseExperimental(UnstableDefault::class)
+@OptIn(UnstableDefault::class)
 class ApiTest {
     @Rule @JvmField val folder = TemporaryFolder()
 

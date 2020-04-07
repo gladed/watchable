@@ -107,7 +107,7 @@ class ReadmeTest {
         outputIs("""2""")
     }
 
-    @UseExperimental(ExperimentalCoroutinesApi::class)
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test fun `Batching readme`() = runTest {
         pauseDispatcher {
             val list = listOf(4, 5).toWatchableList()

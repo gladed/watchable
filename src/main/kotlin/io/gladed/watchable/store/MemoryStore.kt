@@ -22,7 +22,6 @@ import kotlinx.coroutines.flow.asFlow
 import kotlinx.coroutines.flow.flatMapConcat
 
 /** A store entirely in RAM. */
-@UseExperimental(FlowPreview::class)
 class MemoryStore<T : Any>(private val name: String) : Store<T> {
 
     private val map = mutableMapOf<String, T>().guard()
@@ -39,6 +38,7 @@ class MemoryStore<T : Any>(private val name: String) : Store<T> {
     }
 
     /** Return the keys available in memory at the moment the flow is first consumed. */
+    @OptIn(FlowPreview::class)
     override fun keys() = listOf(map).asFlow().flatMapConcat {
         map { keys.toSet() }.asFlow()
     }

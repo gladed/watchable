@@ -109,20 +109,23 @@ fun <T : Any> cover(obj: T) {
     }
 }
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 fun runTest(func: suspend TestCoroutineScope.() -> Unit) {
     TestCoroutineScope(TestCoroutineDispatcher() + Job()).runBlockingTest {
         func()
     }
 }
 
-@UseExperimental(ObsoleteCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class, ObsoleteCoroutinesApi::class)
+@Suppress("DEPRECATION") // how else to redirect receiveOrNull?
 suspend fun <C> ReceiveChannel<C>.mustBe(vararg items: C) {
     if (items.isEmpty()) {
         assertEquals(null, poll())
     } else {
         for (item in items) {
-            val rx = withTimeoutOrNull(150) { receiveOrNull() }
+            val rx = withTimeoutOrNull(150) {
+                receiveOrNull()
+            }
             log("Rx: ${rx ?: "timeout"}")
             assertEquals(item, rx)
         }

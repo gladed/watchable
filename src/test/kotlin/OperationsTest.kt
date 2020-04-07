@@ -24,7 +24,6 @@ import kotlinx.coroutines.channels.Channel
 import org.junit.Assert
 import org.junit.Test
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
 class OperationsTest {
     val changes = Channel<Int>(Channel.UNLIMITED)
 
@@ -36,6 +35,7 @@ class OperationsTest {
         Assert.assertTrue(result.isCompleted)
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     @Test fun `gentle stop of watch`() = runTest {
         val watchable = 5.toWatchableValue()
         val watcher = watch(watchable) { changes.send(it.value) }

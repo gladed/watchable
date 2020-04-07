@@ -24,7 +24,6 @@ import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.yield
 import org.junit.Test
 
-@UseExperimental(kotlinx.coroutines.ObsoleteCoroutinesApi::class, kotlinx.coroutines.ExperimentalCoroutinesApi::class)
 class SubscriptionTest {
     val changes = Channel<SetChange<Int>>(Channel.UNLIMITED)
     private val set = watchableSetOf(1)

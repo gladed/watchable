@@ -22,8 +22,6 @@ import io.gladed.watchable.WatchableMap
 import io.gladed.watchable.Watcher
 import io.gladed.watchable.util.guard
 import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.flow.collect
 import kotlin.coroutines.CoroutineContext
@@ -76,13 +74,12 @@ fun <U : Any, T : Any> Store<T>.transform(transformer: Transformer<T, U>): Store
 
 /**
  * Load up a [WatchableMap] with all items in this [Store], and persisting changes from the map to the store
- * as they happen until [scope] completes.
+ * as they happen until this [CoroutineScope] completes.
  *
  * Changes to items implementing [Container] will trigger a put into the store.
  *
  * This is a one-way bind; external changes to the [Store] will not be reflected in [map].
  */
-@UseExperimental(ExperimentalCoroutinesApi::class, FlowPreview::class)
 fun <T : Any> CoroutineScope.bind(store: Store<T>, map: WatchableMap<String, T>, period: Long): Watcher {
     val setup = async {
         val containerWatchers = mutableMapOf<String, Watcher>().guard()

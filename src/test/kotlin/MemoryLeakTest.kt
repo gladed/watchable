@@ -24,7 +24,6 @@ import io.gladed.watchable.watchableListOf
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.Channel
@@ -34,8 +33,8 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import java.lang.ref.WeakReference
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @Suppress("UNUSED_VALUE") // We mean to release items when we are done with them.
-@UseExperimental(ObsoleteCoroutinesApi::class, ExperimentalCoroutinesApi::class)
 class MemoryLeakTest {
     val changes = Channel<ListChange<Int>>(Channel.UNLIMITED)
 

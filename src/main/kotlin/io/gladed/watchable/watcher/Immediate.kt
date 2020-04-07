@@ -18,7 +18,6 @@ package io.gladed.watchable.watcher
 
 import io.gladed.watchable.Change
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.ObsoleteCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.Channel.Factory.UNLIMITED
 import kotlinx.coroutines.channels.consumeEach
@@ -28,7 +27,7 @@ import kotlin.coroutines.CoroutineContext
 /**
  * Launch changes into a scope to be processed soon.
  */
-@UseExperimental(ObsoleteCoroutinesApi::class, ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 internal class Immediate<C : Change>(
     context: CoroutineContext,
     private val action: suspend (List<C>) -> Unit

@@ -16,7 +16,6 @@
 package util
 
 import io.gladed.watchable.store.cannot
-import io.gladed.watchable.util.Cannot
 import io.gladed.watchable.util.Try
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.test.runBlockingTest
@@ -24,7 +23,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class TryTest {
     @Test fun `successful try`() = runBlockingTest {
         val tried = Try { 5 }

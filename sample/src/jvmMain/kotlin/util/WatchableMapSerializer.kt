@@ -22,23 +22,25 @@ import io.gladed.watchable.toWatchableMap
 import kotlinx.serialization.Decoder
 import kotlinx.serialization.Encoder
 import kotlinx.serialization.KSerializer
+import kotlinx.serialization.SerialDescriptor
 import kotlinx.serialization.Serializer
-import kotlinx.serialization.internal.HashMapSerializer
-import kotlinx.serialization.internal.NamedMapClassDescriptor
-import kotlinx.serialization.internal.StringSerializer
+import kotlinx.serialization.builtins.MapSerializer
+import kotlinx.serialization.builtins.serializer
+import kotlinx.serialization.mapDescriptor
 
 @Serializer(forClass = WatchableList::class)
 class WatchableMapSerializer<T : Any>(
     stringSerializer: KSerializer<String>,
     valueSerializer: KSerializer<T>
 ) : KSerializer<WatchableMap<String, T>> {
-    override val descriptor = NamedMapClassDescriptor("WatchableMap",
-        stringSerializer.descriptor, valueSerializer.descriptor)
+    override val descriptor = SerialDescriptor("WatchableMap") {
+        mapDescriptor(stringSerializer.descriptor, valueSerializer.descriptor)
+    }
 
-    private val mapSerializer = HashMapSerializer(StringSerializer, valueSerializer)
+    private val mapSerializer = MapSerializer(String.serializer(), valueSerializer)
 
-    override fun serialize(encoder: Encoder, obj: WatchableMap<String, T>) {
-        mapSerializer.serialize(encoder, obj)
+    override fun serialize(encoder: Encoder, value: WatchableMap<String, T>) {
+        mapSerializer.serialize(encoder, value)
     }
 
     override fun deserialize(decoder: Decoder): WatchableMap<String, T> =

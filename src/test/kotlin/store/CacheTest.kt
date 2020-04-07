@@ -17,14 +17,13 @@
 package store
 
 import impossible
-import io.gladed.watchable.util.Cannot
 import io.gladed.watchable.store.Store
 import io.gladed.watchable.store.cached
+import io.gladed.watchable.util.Cannot
 import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.sync.Mutex
@@ -35,16 +34,17 @@ import org.junit.Test
 import runTest
 import java.util.UUID
 
-@UseExperimental(FlowPreview::class, ExperimentalCoroutinesApi::class)
 class CacheTest {
     data class Thing(val id: String = UUID.randomUUID().toString(), val value: Int)
 
     private val store = mockk<Store<Thing>>(relaxUnitFun = true)
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     interface CacheTestScope : TestCoroutineScope {
         val cache: Store<Thing>
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     private fun test(func: suspend CacheTestScope.() -> Unit) = runTest {
         (object : CacheTestScope, TestCoroutineScope by this {
             override val cache = store.cached(coroutineContext)

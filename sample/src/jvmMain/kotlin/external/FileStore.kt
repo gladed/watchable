@@ -19,6 +19,7 @@ package external
 import io.gladed.watchable.store.Store
 import io.gladed.watchable.store.cannot
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.asFlow
@@ -32,7 +33,6 @@ import java.nio.file.Files
 import java.nio.file.attribute.BasicFileAttributes
 
 /** Read/write strings to files for each key. */
-@UseExperimental(FlowPreview::class)
 class FileStore(
     rootDir: File,
     private val name: String,
@@ -63,11 +63,11 @@ class FileStore(
     }
 
     /** Keys of found files, in order from most recent to oldest. */
+    @OptIn(ExperimentalCoroutinesApi::class, FlowPreview::class)
     override fun keys() = flow<Flow<File>> {
         emit((dir.listFiles() ?: arrayOf()).sortedBy {
             Files.readAttributes(it.toPath(), BasicFileAttributes::class.java).creationTime()
         }.reversed().asFlow())
-
     }.flowOn(Dispatchers.IO).flattenConcat().mapNotNull {
         if (it.name.endsWith(dotSuffix)) {
             it.name.removeSuffix(dotSuffix)

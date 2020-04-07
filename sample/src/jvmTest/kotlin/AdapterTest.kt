@@ -15,8 +15,6 @@
  */
 
 import external.Adapter
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.FlowPreview
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
@@ -27,11 +25,12 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
-@UseExperimental(ExperimentalCoroutinesApi::class, UnstableDefault::class, FlowPreview::class)
+@OptIn(UnstableDefault::class)
 class AdapterTest {
-    @Rule @JvmField val folder = TemporaryFolder()
+    @Rule @JvmField
+    val folder = TemporaryFolder()
+
     private val robin = Bird(name = "robin")
-    private val wren = Bird(name = "wren")
     private val chirp = Chirp(from = robin.id, text = "hi")
 
     @Test fun `read and write`() = runBlocking<Unit> {

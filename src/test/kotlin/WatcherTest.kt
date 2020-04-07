@@ -24,7 +24,7 @@ import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.channels.Channel
 import org.junit.Test
 
-@UseExperimental(ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class WatcherTest {
     val changes = Channel<Any>(Channel.UNLIMITED)
 

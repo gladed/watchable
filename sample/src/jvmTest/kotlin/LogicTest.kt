@@ -26,7 +26,7 @@ import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Test
 
-@UseExperimental(FlowPreview::class, ExperimentalCoroutinesApi::class)
+@OptIn(ExperimentalCoroutinesApi::class)
 class LogicTest {
     private val robin = Bird("robin")
     private val chirp = Chirp(from = robin.id, text = "hi")
@@ -34,7 +34,7 @@ class LogicTest {
     private val birdStore = MemoryStore<Bird>("bird")
     private val chirpStore = MemoryStore<Chirp>("chirp")
 
-    private class Context(
+    private class Context constructor(
         val scope: TestCoroutineScope,
         val logic: Logic
     ): TestCoroutineScope by scope, Logic.Scoped by logic.scoped(scope)

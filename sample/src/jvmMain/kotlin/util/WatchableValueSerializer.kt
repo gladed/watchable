@@ -23,14 +23,16 @@ import kotlinx.serialization.Encoder
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerialDescriptor
 import kotlinx.serialization.Serializer
-import kotlinx.serialization.internal.SerialClassDescImpl
+import kotlinx.serialization.setDescriptor
 
 @Serializer(forClass = WatchableValue::class)
 class WatchableValueSerializer<T : Any>(private val dataSerializer: KSerializer<T>) : KSerializer<WatchableValue<T>> {
-    override val descriptor: SerialDescriptor = SerialClassDescImpl("WatchableValue<${dataSerializer.descriptor.name}>")
+    override val descriptor: SerialDescriptor = SerialDescriptor("WatchableValue<${dataSerializer.descriptor.serialName}>") {
+        setDescriptor(dataSerializer.descriptor)
+    }
 
-    override fun serialize(encoder: Encoder, obj: WatchableValue<T>) {
-        dataSerializer.serialize(encoder, obj.value)
+    override fun serialize(encoder: Encoder, value: WatchableValue<T>) {
+        dataSerializer.serialize(encoder, value.value)
     }
 
     override fun deserialize(decoder: Decoder): WatchableValue<T> =
