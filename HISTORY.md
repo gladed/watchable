@@ -2,7 +2,7 @@
 
 ## 0.6.21
 * Update dependencies including Kotlin 1.3.71 and others.
-* Fixed a problem with Cache failing after first backing failure.
+* Fixed problems with Cache failures after first backing failure.
 
 ## 0.6.20
 * Update to Kotlin 1.3.40.

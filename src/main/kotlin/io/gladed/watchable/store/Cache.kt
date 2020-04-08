@@ -40,6 +40,8 @@ class Cache<T : Any>(
             clearDead()
             get(key)?.get()
         } ?: finding {
+            // If a prior entry already failed go ahead and try again.
+            entries.removeIf { it.value.isCancelled }
             startGetting(key)
         }.await()
 

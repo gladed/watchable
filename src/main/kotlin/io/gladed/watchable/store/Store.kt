@@ -20,8 +20,11 @@ import kotlinx.coroutines.flow.Flow
 
 /** An object that retrieves elements by a String key. */
 interface Store<T : Any> {
+
     /** Return the corresponding element, or throw if not present. */
     suspend fun get(key: String): T
+
+    // Note: we don't provide getOrNull because this would prevent interesting failures from propagating
 
     /** Write something to the store at the given key, overwriting what was there, if anything. */
     suspend fun put(key: String, value: T)

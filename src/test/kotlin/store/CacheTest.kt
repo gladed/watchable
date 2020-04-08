@@ -146,4 +146,12 @@ class CacheTest {
             }
         }
     }
+
+    @Test fun `fail to get then succeed`() = test {
+        coEvery { store.get(thing.id) } throws Cannot("get missing thing")
+        impossible { cache.get(thing.id) }
+
+        coEvery { store.get(thing.id) } returns thing
+        assertEquals(thing, cache.get(thing.id))
+    }
 }
