@@ -128,7 +128,7 @@ class HoldingStore<T : Any>(
             map {
                 getOrPut(key) {
                     // If not there, create a MultiHold for this key
-                    MultiHold(async(SupervisorJob()) {
+                    MultiHold(async(coroutineContext + SupervisorJob()) {
                         val value = getValue()
                         value to startHold(key, value)
                     })

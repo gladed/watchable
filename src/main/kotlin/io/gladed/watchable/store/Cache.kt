@@ -20,6 +20,7 @@ import io.gladed.watchable.util.guard
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Deferred
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.async
 import java.lang.ref.WeakReference
 import kotlin.coroutines.CoroutineContext
@@ -38,11 +39,14 @@ class Cache<T : Any>(
         found {
             clearDead()
             get(key)?.get()
-        } ?: finding { startGetting(key) }.await()
+        } ?: finding {
+            startGetting(key)
+        }.await()
 
     private fun MutableMap<String, Deferred<T>>.startGetting(key: String): Deferred<T> =
         getOrPut(key) {
-            async {
+            // Do this asynchronously, but do not allow its failure to bring down [Cache] context
+            async(coroutineContext + SupervisorJob()) {
                 val result = back.get(key)
                 if (quashFind(key)) {
                     // Only record the result if we quashed the find

@@ -26,6 +26,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.test.TestCoroutineScope
@@ -52,6 +53,7 @@ class CacheTest {
     }
 
     private val thing = Thing(value = 1)
+    private val thing2 = Thing(value = 2)
 
     @Test fun `put puts`() = test {
         cache.put(thing.id, thing)
@@ -127,4 +129,21 @@ class CacheTest {
         }
     }
 
+    @Test fun `fail to get twice`() = test {
+        coEvery { store.get(thing.id) } throws Cannot("get missing thing")
+        coEvery { store.get(thing2.id) } throws Cannot("get missing thing")
+
+        coroutineScope {
+            impossible {
+                cache.get(thing.id)
+            }
+        }
+
+        coroutineScope {
+            // This should fail normally, not with JobCancellationException
+            impossible {
+                cache.get(thing2.id)
+            }
+        }
+    }
 }
