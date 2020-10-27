@@ -37,7 +37,7 @@ class ApiTest {
         handleRequest(HttpMethod.Get, "/api$path").run {
             assertEquals(HttpStatusCode.OK, response.status())
             println(response.content)
-            Json.parse(responseSerializer, response.content!!)
+            Json.decodeFromString(responseSerializer, response.content!!)
         }
 
     fun <T : Any, U: Any> TestApplicationEngine.post(
@@ -47,10 +47,10 @@ class ApiTest {
         responseSerializer: KSerializer<U>): U =
         handleRequest(HttpMethod.Post, "/api$path") {
             addHeader("Content-Type", "application/json")
-            setBody(Json.stringify(requestSerializer, request))
+            setBody(Json.encodeToString(requestSerializer, request))
         }.run {
             assertEquals(HttpStatusCode.OK, response.status())
-            Json.parse(responseSerializer, response.content!!)
+            Json.decodeFromString(responseSerializer, response.content!!)
         }
 
     @Test fun `get home`() {

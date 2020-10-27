@@ -1,5 +1,8 @@
 # Version History
 
+## 0.6.22
+* Update to Kotlin 1.4.10 and others.
+
 ## 0.6.21
 * Update dependencies including Kotlin 1.3.71 and others.
 * Fixed problems with Cache failures after first backing failure.

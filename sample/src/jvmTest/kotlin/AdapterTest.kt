@@ -54,7 +54,7 @@ class AdapterTest {
     }
 
     @Test fun `show objects`() {
-        println(Json.stringify(Bird.serializer(), robin))
-        println(Json.stringify(Chirp.serializer(), chirp))
+        println(Json.encodeToString(Bird.serializer(), robin))
+        println(Json.encodeToString(Chirp.serializer(), chirp))
     }
 }

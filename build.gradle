@@ -1,12 +1,12 @@
 buildscript {
     ext {
-        kotlin_version = '1.3.71'
-        kotlin_coroutines_version = '1.3.5'
-        dokka_version = '0.9.18'
+        detekt_version = '1.14.2' // Must match plugin ID below
+        dokka_version = '1.4.10'
         jvm_version = '1.8'
+        kotlin_coroutines_version = '1.4.0'
+        kotlin_version = '1.4.10'
         mockk_version = '1.9.3'
-        detekt_version = '1.7.3'
-        watchable_version = '0.6.21' // Version to publish
+        watchable_version = '0.6.22' // Version to publish
     }
 
     repositories {
@@ -25,7 +25,7 @@ buildscript {
 
 plugins {
     id "com.github.hierynomus.license" version "0.15.0"
-    id "io.gitlab.arturbosch.detekt" version "1.7.3"
+    id "io.gitlab.arturbosch.detekt" version "1.14.2"
     id "org.sonarqube" version "2.7"
     id "com.jfrog.bintray" version "1.8.4"
     id "maven-publish"
@@ -52,9 +52,10 @@ dependencies {
     api "org.jetbrains.kotlin:kotlin-stdlib:$kotlin_version"
     api "org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlin_coroutines_version"
 
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13'
     testImplementation "io.mockk:mockk:$mockk_version"
     testImplementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlin_coroutines_version"
+    testImplementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
 
     detektPlugins "io.gitlab.arturbosch.detekt:detekt-formatting:$detekt_version"
 }
@@ -126,19 +127,6 @@ detekt {
     baseline = file("$projectDir/src/config/baseline.xml")
 }
 
-dokka {
-    outputDirectory = "$buildDir/javadoc"
-    outputFormat = "javadoc"
-    reportUndocumented = false
-    externalDocumentationLink {
-        url = new URL("http://docs.oracle.com/javase/8/docs/api/")
-    }
-}
-
-task dokkaGfm(type: org.jetbrains.dokka.gradle.DokkaTask){
-    outputDirectory = "$buildDir/gfm"
-    outputFormat = "gfm"
-}
 
 license {
     skipExistingHeaders = true
@@ -152,9 +140,9 @@ task sourcesJar(type: Jar) {
     from sourceSets.main.allSource
 }
 
-task javadocJar(type: Jar, dependsOn: dokka) {
+task javadocJar(type: Jar, dependsOn: dokkaJavadoc) {
     classifier = "javadoc"
-    from dokka.outputDirectory
+    from dokkaJavadoc.outputDirectory
 }
 
 task printVersion {
@@ -223,4 +211,3 @@ publishing {
         }
     }
 }
-

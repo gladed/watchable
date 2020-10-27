@@ -29,11 +29,10 @@ import io.ktor.util.pipeline.PipelineContext
 import io.ktor.utils.io.ByteReadChannel
 import kotlinx.serialization.KSerializer
 import kotlinx.serialization.SerializationStrategy
-import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
 
 /** Ktor content converter for explicitly registered @Serializable classes. */
-@OptIn(UnstableDefault::class, KtorExperimentalAPI::class)
+@OptIn(KtorExperimentalAPI::class)
 class KotlinSerializationConverter : ContentConverter {
     var serializers = mutableMapOf<Class<*>, KSerializer<*>>()
 
@@ -43,7 +42,7 @@ class KotlinSerializationConverter : ContentConverter {
         serializers[context.subject.type.javaObjectType]?.let {
             val bytes = context.subject.value as? ByteReadChannel ?: return null
             @Suppress("DEPRECATION")
-            Json.nonstrict.parse(it, bytes.readRemaining(MAX_REQUEST_SIZE, 0).readText())
+            Json.decodeFromString(it, bytes.readRemaining(MAX_REQUEST_SIZE, 0).readText())
         }
 
     override suspend fun convertForSend(
@@ -53,7 +52,7 @@ class KotlinSerializationConverter : ContentConverter {
     ): Any? =
         serializers[value.javaClass]?.let { serializer ->
             @Suppress("UNCHECKED_CAST") // Necessary to extract known-good serializer
-            TextContent(Json.stringify(serializer as SerializationStrategy<Any>, value),
+            TextContent(Json.encodeToString(serializer as SerializationStrategy<Any>, value),
                 contentType.withCharset(context.call.suitableCharset()))
         }
 

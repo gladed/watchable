@@ -51,7 +51,6 @@ class MatrixTest<M, C: Change> {
     @Parameter(3) lateinit var modificationMaker: (M, Chooser) -> ((M) -> Unit)
     @Parameter(4) lateinit var finalMod: (M) -> Unit
 
-
     private lateinit var watchable1: MutableWatchable<M, C>
     private lateinit var watchable2: MutableWatchable<M, C>
 
@@ -59,7 +58,6 @@ class MatrixTest<M, C: Change> {
     private fun M.modify() {
         modificationMaker(this, chooser).invoke(this)
     }
-
 
     @Before fun setup() {
         watchable1 = maker1()
@@ -253,19 +251,20 @@ class MatrixTest<M, C: Change> {
         }
 
         @Parameters(name = "{0}") @JvmStatic fun parameters() = listOf(
-            arrayOf(
+            // NOTE: <Any> must be present to appease the compiler
+            arrayOf<Any>(
                 "WatchableMap",
                 { watchableMapOf(111 to "111") },
                 { watchableMapOf(222 to "222") },
                 mapModificationMaker,
                 { map: MutableMap<Int, String> -> map[MAX_SIZE] = MAX_SIZE.toString() }),
-            arrayOf(
+            arrayOf<Any>(
                 "WatchableList",
                 { watchableListOf(111) },
                 { watchableListOf(222) },
                 listModificationMaker,
                 { list: MutableList<Int> -> list += MAX_SIZE }),
-            arrayOf(
+            arrayOf<Any>(
                 "WatchableSet",
                 { watchableSetOf(111) },
                 { watchableSetOf(222) },

@@ -18,18 +18,21 @@ package util
 
 import io.gladed.watchable.WatchableValue
 import io.gladed.watchable.toWatchableValue
-import kotlinx.serialization.Decoder
-import kotlinx.serialization.Encoder
+import kotlinx.serialization.ExperimentalSerializationApi
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.SerialDescriptor
 import kotlinx.serialization.Serializer
-import kotlinx.serialization.setDescriptor
+import kotlinx.serialization.descriptors.buildClassSerialDescriptor
+import kotlinx.serialization.descriptors.setSerialDescriptor
+import kotlinx.serialization.encoding.Decoder
+import kotlinx.serialization.encoding.Encoder
 
+@OptIn(ExperimentalSerializationApi::class)
 @Serializer(forClass = WatchableValue::class)
 class WatchableValueSerializer<T : Any>(private val dataSerializer: KSerializer<T>) : KSerializer<WatchableValue<T>> {
-    override val descriptor: SerialDescriptor = SerialDescriptor("WatchableValue<${dataSerializer.descriptor.serialName}>") {
-        setDescriptor(dataSerializer.descriptor)
-    }
+    override val descriptor =
+        buildClassSerialDescriptor("WatchableValue<${dataSerializer.descriptor.serialName}>") {
+            setSerialDescriptor(dataSerializer.descriptor)
+        }
 
     override fun serialize(encoder: Encoder, value: WatchableValue<T>) {
         dataSerializer.serialize(encoder, value.value)

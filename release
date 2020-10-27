@@ -33,7 +33,7 @@ read -p "Release $VERSION with HISTORY.md (above) after $LAST_TAG (y/n)? " CONT
 sed -i "s@\(io.gladed:watchable:\|download.svg?version=\|watchable/watchable/\)[0-9\.]\+@\1$VERSION@g" README.md
 
 echo "Building"
-./gradlew clean detekt check dokkaGfm bintrayUpload
+./gradlew clean detekt check dokkaHtml bintrayUpload
 
 echo "Pushing to git"
 git add README.md
@@ -43,7 +43,7 @@ git push --tags
 git push
 
 echo "Releasing docs..."
-mv build/gfm $VERSION
+mv build/dokka/html $VERSION
 git checkout gh-pages
 git pull
 rm latest

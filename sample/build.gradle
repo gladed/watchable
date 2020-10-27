@@ -1,17 +1,14 @@
 buildscript {
-    ext.kotlin_version = '1.3.71'
+    ext.kotlin_version = '1.4.10'
     repositories {
         jcenter()
-    }
-    dependencies {
-        classpath "org.jetbrains.kotlin:kotlin-serialization:$kotlin_version"
     }
 }
 
 plugins {
-    id 'kotlin-multiplatform'
+    id 'org.jetbrains.kotlin.multiplatform'
+    id 'org.jetbrains.kotlin.plugin.serialization' version "$kotlin_version"
 }
-apply plugin: 'kotlinx-serialization'
 
 repositories {
     jcenter()
@@ -21,25 +18,35 @@ repositories {
 
 def ktor_version = '1.3.2'
 def logback_version = '1.2.3'
-def kotlin_serialization_version = '0.20.0'
 
 kotlin {
-    jvm() {
+    jvm {
+        withJava()
         compilations.all {
             kotlinOptions {
-                freeCompilerArgs += ["-Xuse-experimental=kotlin.Experimental"]
+                freeCompilerArgs += ["-Xopt-in=kotlin.RequiresOptIn"]
             }
         }
     }
     sourceSets {
-        jvmMain {
+        commonMain {
             dependencies {
                 implementation rootProject  // Local version, otherwise use: compile "io.gladed:watchable:x.x.x"
+                implementation "org.jetbrains.kotlinx:kotlinx-serialization-json:1.0.0"
+            }
+        }
+        commonTest {
+            dependencies {
+                implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-test:1.4.0'
+            }
+        }
+        jvmMain {
+            dependencies {
                 implementation kotlin('stdlib-jdk8')
                 implementation "io.ktor:ktor-server-netty:$ktor_version"
                 implementation "io.ktor:ktor-html-builder:$ktor_version"
                 implementation "ch.qos.logback:logback-classic:$logback_version"
-                implementation "org.jetbrains.kotlinx:kotlinx-serialization-runtime:$kotlin_serialization_version"
+                implementation "org.jetbrains.kotlin:kotlin-reflect:$kotlin_version"
             }
         }
         jvmTest {
@@ -47,7 +54,6 @@ kotlin {
                 implementation kotlin('test')
                 implementation kotlin('test-junit')
                 implementation "io.ktor:ktor-server-test-host:$ktor_version"
-                implementation "org.jetbrains.kotlinx:kotlinx-coroutines-test:$kotlin_coroutines_version"
             }
         }
     }
