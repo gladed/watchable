@@ -1,0 +1,7 @@
+$dokka.format:html-v1
+$dokka.linkExtension:html
+
+io.gladed.watchable
+io.gladed.watchable.store
+io.gladed.watchable.util
+
