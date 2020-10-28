@@ -4,7 +4,7 @@
 [![CodeCov](https://codecov.io/github/gladed/watchable/coverage.svg?branch=master)](https://codecov.io/github/gladed/watchable)
 [![detekt](https://img.shields.io/badge/code%20style-%E2%9D%A4-FF4081.svg)](https://arturbosch.github.io/detekt/)
 [![Kotlin](https://img.shields.io/badge/Kotlin-1.4.10-blue.svg)](https://kotlinlang.org/)
-[![API Docs](https://img.shields.io/badge/API_Docs-latest-purple.svg)](https://gladed.github.io/watchable/latest/io.gladed.watchable/)
+[![API Docs](https://img.shields.io/badge/API_Docs-latest-purple.svg)](https://gladed.github.io/watchable/latest/watchable/)
 
 # Watchable
 
@@ -53,7 +53,7 @@ dependencies {
 
 ## Watchable Data Types
 
-[`WatchableList`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-list/), [`WatchableSet`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-set/), and [`WatchableMap`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-map/) allow access to wrapped List, Set, and Map data. [`WatchableValue`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-value/) wraps a single object value of any type.
+[`WatchableList`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-watchable-list), [`WatchableSet`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-watchable-set/), and [`WatchableMap`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-watchable-map/) allow access to wrapped List, Set, and Map data. [`WatchableValue`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-watchable-value/) wraps a single object value of any type.
 
 ```kotlin
 val list = watchableListOf(1, 2, 3)
@@ -75,7 +75,7 @@ map.put(2, "2") // Suspends if concurrent modification attempted
 println(map) // Prints {1=1, 2=2}
 ```
 
-To perform multiple operations while protecting from concurrent access, [`invoke`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/use.html) the object:
+To perform multiple operations while protecting from concurrent access, [`invoke`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-mutable-watchable/use.html) the object:
 
 ```kotlin
 val list = watchableListOf(1, 2, 3)
@@ -87,7 +87,7 @@ Some Kotlin extension functions on List are unreliable if the data is modified f
 
 ## Watching for Changes
 
-Watch any `Watchable` for changes from within any `CoroutineScope` using [`watch`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable/watch.html):
+Watch any `Watchable` for changes from within any `CoroutineScope` using [`watch`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-watchable/watch.html):
 
 ```kotlin
 val set = watchableSetOf(1, 2)
@@ -107,7 +107,7 @@ Watchable objects send out an "Initial" change to reflect the current state at t
 
 ## Batching
 
-It's possible to listen for lists of changes, collected and delivered in-order periodically. See the documentation for [`batch`](https://gladed.github.io/watchable/latest/io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/batch.html), especially the `minPeriod` parameter.
+It's possible to listen for lists of changes, collected and delivered in-order periodically. See the documentation for [`batch`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/kotlinx.coroutines.-coroutine-scope/batch.html), especially the `minPeriod` parameter.
 
 ```kotlin
 val list = listOf(4, 5).toWatchableList()
@@ -138,7 +138,7 @@ map.put(1, "3")
 
 ## Binding
 
-A [`bind`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/bind.html) is just a `watch` that connects a target watchable to an originating watchable, so that the target automatically receives all changes from the origin.
+A [`bind`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-mutable-watchable/bind.html) is just a `watch` that connects a target watchable to an originating watchable, so that the target automatically receives all changes from the origin.
 
 ```kotlin
 val origin = listOf(4, 5).toWatchableList()
@@ -163,7 +163,7 @@ println(target) // 2
 
 ## Grouping
 
-You can [`group`](https://gladed.github.io/watchable/latest/io.gladed.watchable/group.html) several watchables into a [`WatchableGroup`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watchable-group/) so that you receive changes for both:
+You can [`group`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/group.html) several watchables into a [`WatchableGroup`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-watchable-group/) so that you receive changes for both:
 
 ```kotlin
 val set = setOf("a").toWatchableSet()
@@ -182,13 +182,13 @@ set += "b"
 
 ## Read-Only Watchables
 
-You can use any [`MutableWatchable`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/)'s [`readOnly`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-mutable-watchable/read-only.html) function to return a `Watchable` which cannot be changed externally. The copy may still be watched normally.
+You can use any [`MutableWatchable`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-mutable-watchable/)'s [`readOnly`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-mutable-watchable/read-only.html) function to return a `Watchable` which cannot be changed externally. The copy may still be watched normally.
 
 ## Object Lifetime
 
 All operations (`watch`, `bind`, `simple`, etc.) are initiated from a `CoroutineScope`. When that scope completes, the corresponding operations cease. No additional cleanup code is required.
 
-In addition, all operations return a [`Watcher`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watcher/). You can use this to wait for the [`start`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watcher/start.html) of the operation, immediately [`cancel`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watcher/cancel.html), or gracefully [`stop`](https://gladed.github.io/watchable/latest/io.gladed.watchable/-watcher/stop.html) it to allow outstanding changes to be processed first.
+In addition, all operations return a [`Watcher`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-watcher/). You can use this to wait for the [`start`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-watcher/start.html) of the operation, immediately [`cancel`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-watcher/cancel.html), or gracefully [`stop`](https://gladed.github.io/watchable/latest/watchable/io.gladed.watchable/-watcher/stop.html) it to allow outstanding changes to be processed first.
 
 ```kotlin
 val list = watchableListOf(1)
