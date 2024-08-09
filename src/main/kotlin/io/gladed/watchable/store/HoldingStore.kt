@@ -82,6 +82,7 @@ class HoldingStore<T : Any>(
 
     /** A [Store] whose objects are held when accessing them. */
     private inner class SingleStore(val scope: CoroutineScope) : Store<T> {
+        @Suppress("SwallowedException")
         override suspend fun put(key: String, value: T) {
             // First, test to see if there's a value present.
             try {

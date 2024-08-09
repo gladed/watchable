@@ -1,7 +1,7 @@
 buildscript {
     ext {
-        detekt_version = '1.14.2' // Must match plugin ID below
-        dokka_version = '1.4.10'
+        detekt_version = '1.16.0' // Must match plugin ID below
+        dokka_version = '1.9.20'
         jvm_version = '1.8'
         kotlin_coroutines_version = '1.4.0'
         kotlin_version = '1.4.10'
@@ -11,7 +11,6 @@ buildscript {
 
     repositories {
         mavenCentral()
-        jcenter()
         maven {
             url = 'https://plugins.gradle.org/m2/'
         }
@@ -24,10 +23,9 @@ buildscript {
 }
 
 plugins {
-    id "com.github.hierynomus.license" version "0.15.0"
-    id "io.gitlab.arturbosch.detekt" version "1.14.2"
+    id "com.github.hierynomus.license" version "0.16.1"
+    id "io.gitlab.arturbosch.detekt" version "1.16.0"
     id "org.sonarqube" version "2.7"
-    id "com.jfrog.bintray" version "1.8.4"
     id "maven-publish"
 }
 
@@ -44,7 +42,7 @@ description = "Listenable data structures using Kotlin coroutines"
 
 repositories {
     mavenCentral()
-    jcenter()
+    maven { url "https://maven.pkg.jetbrains.space/public/p/kotlinx-html/maven" }
 }
 
 dependencies {
@@ -70,12 +68,13 @@ tasks.withType(JavaCompile) {
 compileKotlin.kotlinOptions {
     allWarningsAsErrors = true
     jvmTarget = "$ext.jvm_version"
-    freeCompilerArgs += ["-Xuse-experimental=kotlin.Experimental"]
+    freeCompilerArgs += ["-Xuse-experimental=kotlin.Experimental", "-Xopt-in=kotlin.RequiresOptIn"]
 }
 
 compileTestKotlin.kotlinOptions {
     jvmTarget = "$ext.jvm_version"
-    freeCompilerArgs += ["-Xuse-experimental=kotlin.Experimental"]
+    freeCompilerArgs += ["-Xuse-experimental=kotlin.Experimental", "-Xopt-in=kotlin.RequiresOptIn"]
+
 }
 
 test {
@@ -152,24 +151,6 @@ task printVersion {
 artifacts {
     archives sourcesJar
     archives javadocJar
-}
-
-bintray {
-    user = project.properties['bintray.user']
-    key = project.properties['bintray.key']
-    publications = ['mavenPublication']
-    pkg {
-        repo = project.name
-        name = project.name
-        userOrg = 'gladed'
-        licenses = [ 'Apache-2.0' ]
-        vcsUrl = 'https://github.com/gladed/watchable.git'
-        version {
-            name = project.version
-            desc = project.version
-            released = new Date()
-        }
-    }
 }
 
 publishing {

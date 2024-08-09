@@ -2,7 +2,7 @@ version: 2
 jobs:
   build:
     docker:
-      - image: circleci/openjdk:8-jdk
+      - image: cimg/openjdk:8.0.402
 
     working_directory: ~/repo
 
@@ -24,13 +24,15 @@ jobs:
             - v1-dependencies-{{ checksum "build.gradle" }}-{{ checksum ".circleci/config.yml" }}
             - v1-dependencies-
 
-      - run:
-          name: Update SonarQube
-          command: gradle sonarqube -Dsonar.projectKey=gladed_watchable -Dsonar.organization=gladed-github -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=$SONAR_LOGIN
+# TODO #101: Restore this
+# README: [![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=gladed_watchable&metric=alert_status)](https://sonarcloud.io/dashboard?id=gladed_watchable)
+#      - run:
+#          name: Update SonarQube
+#          command: gradle sonarqube -Dsonar.projectKey=gladed_watchable -Dsonar.organization=gladed-github -Dsonar.host.url=https://sonarcloud.io -Dsonar.login=$SONAR_LOGIN
 
       - run:
           name: Build and test
-          command: gradle detekt check
+          command: gradle detekt check --info --stacktrace
 
       - run:
           name: Update codecov.io
