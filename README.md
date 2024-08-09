@@ -41,11 +41,11 @@ Add to `build.gradle`:
 
 ```gradle
 repositories {
-    jcenter()
+    maven { url 'https://www.jitpack.io' }
 }
 
 dependencies {
-    compile 'io.gladed:watchable:0.6.22'
+    implementation 'com.github.gladed:watchable:v0.6.21'
 }
 ```
 
