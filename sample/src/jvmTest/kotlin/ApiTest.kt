@@ -6,7 +6,6 @@ import io.ktor.server.testing.handleRequest
 import io.ktor.server.testing.setBody
 import io.ktor.server.testing.withTestApplication
 import kotlinx.serialization.KSerializer
-import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
 import org.junit.Rule
 import org.junit.Test
@@ -18,7 +17,6 @@ import rest.CreateChirp
 import rest.Home
 import kotlin.test.assertEquals
 
-@OptIn(UnstableDefault::class)
 class ApiTest {
     @Rule @JvmField val folder = TemporaryFolder()
 

@@ -64,7 +64,7 @@ internal class MultiHold<E, T : Any>(val hold: Deferred<Pair<T, Hold>>) {
     suspend fun stop() {
         // If the request isn't done then cancel it
         hold.cancel()
-        @Suppress("EmptyCatchBlock")
+        @Suppress("SwallowedException", "EmptyCatchBlock")
         try {
             // Stop watching if not already cancelled
             if (!hold.isCancelled) {

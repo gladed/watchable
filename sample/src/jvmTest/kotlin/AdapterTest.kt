@@ -16,7 +16,6 @@
 
 import external.Adapter
 import kotlinx.coroutines.runBlocking
-import kotlinx.serialization.UnstableDefault
 import kotlinx.serialization.json.Json
 import model.Bird
 import model.Chirp
@@ -25,7 +24,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 
-@OptIn(UnstableDefault::class)
 class AdapterTest {
     @Rule @JvmField
     val folder = TemporaryFolder()
